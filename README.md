@@ -1,1 +1,1 @@
-# panoptes
+# panoptes streaming telemetry
