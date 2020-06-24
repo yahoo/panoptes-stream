@@ -1,0 +1,19 @@
+devices:
+  - host: core1.nbc
+    tlscert: /etc/cert/file.crt
+    tlskey: /etc/cert/file.key
+    sensors:
+      - sensor1
+      - sensor2
+
+sensors:
+  sensor1:
+    path: /interfaces/interface/state
+    mode: on_change
+    service: juniper.gnmi
+  sensor2:
+    path: /interfaces/interface
+    mode: on_change
+    service: juniper.gnmi
+
+redial: 5
