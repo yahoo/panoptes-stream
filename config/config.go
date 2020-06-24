@@ -1,12 +1,20 @@
 package config
 
 type Config interface {
-	Get() []Devices
+	Devices() []Device
+	Global() Global
 }
 
-type Device struct {
-	Host    string
-	Sensors []Sensor
+type DeviceConfig struct {
+	Host string
+	Port int
+
+	TLSCert string
+	TLSKey  string
+	TLSCa   string
+
+	username string
+	password string
 }
 
 type Sensor struct {
@@ -15,4 +23,14 @@ type Sensor struct {
 	Path     string
 	Mode     string
 	Interval uint64
+}
+
+type Device struct {
+	DeviceConfig
+
+	Sensors []*Sensor
+}
+
+type Global struct {
+	Redial int
 }
