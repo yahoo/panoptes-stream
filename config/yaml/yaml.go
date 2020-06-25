@@ -11,8 +11,10 @@ import (
 )
 
 type yaml struct {
-	devices []config.Device
-	global  config.Global
+	devices   []config.Device
+	producers []config.Producer
+	databases []config.Database
+	global    config.Global
 }
 
 type device struct {
@@ -21,20 +23,34 @@ type device struct {
 	Sensors []string
 }
 
+type producer struct {
+	ConfigFile string `yaml:"configFile"`
+}
+
+type database struct {
+	Config string
+}
+
 type yamlConfig struct {
-	Devices []device
-	Sensors map[string]config.Sensor
+	Devices   []device
+	Sensors   map[string]config.Sensor
+	Producers map[string]producer
+	Databases map[string]database
 
 	config.Global `yaml:",inline"`
 }
 
 // LoadConfig constructs new yaml config
-func LoadConfig() config.Config {
-	cfg := read()
+func LoadConfig(file string) config.Config {
+	cfg := &yamlConfig{}
+	if err := read(file, cfg); err != nil {
+		log.Fatal(err)
+	}
 
 	return &yaml{
-		devices: parse(cfg),
-		global:  cfg.Global,
+		devices:   configDevices(cfg),
+		producers: configProducers(cfg.Producers),
+		global:    cfg.Global,
 	}
 }
 
@@ -46,7 +62,15 @@ func (y *yaml) Global() config.Global {
 	return y.global
 }
 
-func parse(y *yamlConfig) []config.Device {
+func (y *yaml) Producers() []config.Producer {
+	return y.producers
+}
+
+func (y *yaml) Databases() []config.Database {
+	return y.databases
+}
+
+func configDevices(y *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
 	for name, sensor := range y.Sensors {
 		sensor := sensor
@@ -74,19 +98,18 @@ func parse(y *yamlConfig) []config.Device {
 	return devices
 }
 
-func read() *yamlConfig {
-	cfg := yamlConfig{}
-	b, err := ioutil.ReadFile("etc/config.yaml")
+func read(file string, c interface{}) error {
+	b, err := ioutil.ReadFile(file)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	err = yml.Unmarshal(b, &cfg)
+	err = yml.Unmarshal(b, c)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
-	return &cfg
+	return nil
 }
 
 func conv(d device) config.Device {
@@ -95,4 +118,21 @@ func conv(d device) config.Device {
 	json.Unmarshal(b, &cd)
 	cd.Sensors = nil
 	return cd
+}
+
+func configProducers(p map[string]producer) []config.Producer {
+	var producers []config.Producer
+	for name, pConfig := range p {
+		cfg := make(map[string]interface{})
+		if err := read(pConfig.ConfigFile, &cfg); err != nil {
+			log.Fatal(err)
+		}
+
+		producers = append(producers, config.Producer{
+			Name:   name,
+			Config: cfg,
+		})
+	}
+
+	return producers
 }
