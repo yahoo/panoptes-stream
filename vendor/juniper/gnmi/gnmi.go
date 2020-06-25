@@ -2,7 +2,6 @@ package gnmi
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log"
 	"math"
@@ -30,18 +29,19 @@ func Register() {
 	telemetry.Register("juniper.gnmi", New)
 }
 
-type KeyValues map[string]interface{}
+//type KeyValues map[string]interface{}
 
+// GNMI ...
 type GNMI struct {
 	conn          *grpc.ClientConn
 	subscriptions []*gpb.Subscription
 
 	dataChan chan *gpb.SubscribeResponse
-	outChan  telemetry.KVChan
+	outChan  telemetry.DSChan
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.KVChan) telemetry.NMI {
+func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.DSChan) telemetry.NMI {
 	var subscriptions []*gpb.Subscription
 
 	for _, sensor := range sensors {
@@ -116,8 +116,8 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
-				kv := g.decoder(resp)
-				kv.prettyPrint()
+				ds := g.decoder(resp)
+				ds.PrettyPrint()
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
@@ -129,12 +129,12 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) KeyValues {
-	kv := make(KeyValues)
-	kv["__service__"] = "gnmi_v0.7.0"
+func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
+	ds := make(telemetry.DataStore)
+	ds["__service__"] = "gnmi_v0.7.0"
 
-	kv["__update_timestamp__"] = resp.Update.GetTimestamp()
-	kv["__prefix__"] = path.ToStrings(resp.Update.GetPrefix(), true)
+	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
+	ds["__prefix__"] = path.ToStrings(resp.Update.GetPrefix(), true)
 
 	for _, update := range resp.Update.Update {
 		var value interface{}
@@ -181,24 +181,14 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) KeyValues {
 		}
 
 		if value != nil {
-			kv[key] = value
+			ds[key] = value
 		} else if jsondata != nil {
 			// TODO
 		}
 
 	}
 
-	return kv
-}
-
-func (kv KeyValues) prettyPrint() error {
-	b, err := json.MarshalIndent(kv, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(b))
-	return nil
+	return ds
 }
 
 func isGNMIInterfacesSensor(p []string) bool {

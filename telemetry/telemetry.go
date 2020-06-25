@@ -2,29 +2,41 @@ package telemetry
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"google.golang.org/grpc"
 )
 
-// Constructor ...
-type Constructor func(*grpc.ClientConn, []*config.Sensor, KVChan) NMI
+// NMIFactory ...
+type NMIFactory func(*grpc.ClientConn, []*config.Sensor, DSChan) NMI
 
 // NMI ...
 type NMI interface {
 	Start(context.Context) error
 }
 
-// KV ...
-type KV map[string]interface{}
+// DataStore ...
+type DataStore map[string]interface{}
 
-// KVChan ...
-type KVChan chan KV
+// DSChan ...
+type DSChan chan DataStore
 
 // R ...
-var R = make(map[string]Constructor)
+var R = make(map[string]NMIFactory)
 
 // Register ...
-func Register(n string, c Constructor) {
+func Register(n string, c NMIFactory) {
 	R[n] = c
+}
+
+func (ds DataStore) PrettyPrint() error {
+	b, err := json.MarshalIndent(ds, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	fmt.Println(string(b))
+	return nil
 }

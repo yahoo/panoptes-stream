@@ -33,7 +33,7 @@ func main() {
 			defer wg.Done()
 			for sName, sensors := range device.Sensors {
 				log.Println(sName, sensors)
-				outChan := make(telemetry.KVChan, 1)
+				outChan := make(telemetry.DSChan, 1)
 				f := telemetry.R[sName]
 				t := f(conn, sensors, outChan)
 				err := t.Start(context.Background())

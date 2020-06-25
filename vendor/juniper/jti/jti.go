@@ -2,8 +2,6 @@ package jti
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
 	"log"
 	"regexp"
 	"strings"
@@ -21,8 +19,6 @@ func Register() {
 	telemetry.Register("juniper.jti", New)
 }
 
-type KeyValues map[string]interface{}
-
 type JTI struct {
 	conn   *grpc.ClientConn
 	client jpb.OpenConfigTelemetryClient
@@ -32,7 +28,7 @@ type JTI struct {
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.KVChan) telemetry.NMI {
+func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.DSChan) telemetry.NMI {
 	paths := []*jpb.Path{}
 	for _, sensor := range sensors {
 		path := &jpb.Path{
@@ -83,56 +79,56 @@ func (j *JTI) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			kv := j.decoder(d)
-			kv.prettyPrint()
+			ds := j.decoder(d)
+			ds.PrettyPrint()
 		case <-ctx.Done():
 			return
 		}
 	}
 }
 
-func (j *JTI) decoder(d *jpb.OpenConfigData) KeyValues {
-	kv := make(KeyValues)
-	kv["__service__"] = "jti_v1.0"
+func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
+	ds := make(telemetry.DataStore)
+	ds["__service__"] = "jti_v1.0"
 
 	for _, v := range d.Kv {
 		switch v.Value.(type) {
 		case *jpb.KeyValue_StrValue:
-			kv[v.Key] = v.GetStrValue()
+			ds[v.Key] = v.GetStrValue()
 			break
 		case *jpb.KeyValue_DoubleValue:
-			kv[v.Key] = v.GetDoubleValue()
+			ds[v.Key] = v.GetDoubleValue()
 			break
 		case *jpb.KeyValue_IntValue:
-			kv[v.Key] = v.GetIntValue()
+			ds[v.Key] = v.GetIntValue()
 			break
 		case *jpb.KeyValue_SintValue:
-			kv[v.Key] = v.GetSintValue()
+			ds[v.Key] = v.GetSintValue()
 			break
 		case *jpb.KeyValue_UintValue:
-			kv[v.Key] = v.GetUintValue()
+			ds[v.Key] = v.GetUintValue()
 			break
 		case *jpb.KeyValue_BytesValue:
-			kv[v.Key] = v.GetBytesValue()
+			ds[v.Key] = v.GetBytesValue()
 			break
 		case *jpb.KeyValue_BoolValue:
-			kv[v.Key] = v.GetBoolValue()
+			ds[v.Key] = v.GetBoolValue()
 			break
 		}
 	}
 
-	jHeaderKV := make(KeyValues)
-	jHeaderKV["system_id"] = d.SystemId
-	jHeaderKV["component_id"] = d.ComponentId
-	jHeaderKV["sub_component_id"] = d.SubComponentId
-	jHeaderKV["path"] = d.Path
+	jHeader := make(telemetry.DataStore)
+	jHeader["system_id"] = d.SystemId
+	jHeader["component_id"] = d.ComponentId
+	jHeader["sub_component_id"] = d.SubComponentId
+	jHeader["path"] = d.Path
 
-	jHeaderKV["timestamp"] = d.Timestamp
-	jHeaderKV["SequenceNumber"] = d.SequenceNumber
+	jHeader["timestamp"] = d.Timestamp
+	jHeader["SequenceNumber"] = d.SequenceNumber
 
-	kv["__juniper_jpb_header__"] = jHeaderKV
+	ds["__juniper_jpb_header__"] = jHeader
 
-	return kv
+	return ds
 }
 
 func getJTIPathKValues(p string, valuesOnly bool) []string {
@@ -151,14 +147,4 @@ func getJTIPathKValues(p string, valuesOnly bool) []string {
 		}
 	}
 	return kv
-}
-
-func (kv KeyValues) prettyPrint() error {
-	b, err := json.MarshalIndent(kv, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	fmt.Println(string(b))
-	return nil
 }
