@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"sync"
 
@@ -21,7 +22,7 @@ func main() {
 	wg := sync.WaitGroup{}
 	for _, device := range y.Devices() {
 		log.Println(device.Host)
-		conn, err := grpc.Dial(device.Host)
+		conn, err := grpc.Dial(device.Host, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
 		if err != nil {
 			// TODO
 			log.Fatal(err)
@@ -34,7 +35,11 @@ func main() {
 				log.Println(sName, sensors)
 				outChan := make(telemetry.KVChan, 1)
 				f := telemetry.R[sName]
-				f(conn, sensors, outChan)
+				t := f(conn, sensors, outChan)
+				err := t.Start(context.Background())
+				if err != nil {
+					log.Println(err)
+				}
 			}
 		}(device)
 
