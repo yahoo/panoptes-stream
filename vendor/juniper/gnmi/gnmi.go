@@ -118,6 +118,11 @@ func (g *GNMI) worker(ctx context.Context) {
 			case *gpb.SubscribeResponse_Update:
 				ds := g.decoder(resp)
 				ds.PrettyPrint()
+
+				select {
+				case g.outChan <- ds:
+				default:
+				}
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
@@ -187,6 +192,8 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 		}
 
 	}
+
+	//TODO ADD OUTPUT Info
 
 	return ds
 }
