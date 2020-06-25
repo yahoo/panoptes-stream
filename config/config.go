@@ -28,7 +28,7 @@ type Sensor struct {
 type Device struct {
 	DeviceConfig
 
-	Sensors []*Sensor
+	Sensors map[string][]*Sensor
 }
 
 type Global struct {

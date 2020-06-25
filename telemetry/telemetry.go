@@ -1,16 +1,30 @@
 package telemetry
 
 import (
-	"fmt"
+	"context"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"google.golang.org/grpc"
 )
 
-var R = make(map[string]string)
+// Constructor ...
+type Constructor func(*grpc.ClientConn, []*config.Sensor, KVChan) NMI
 
-type Telemetry interface {
-	Subscribe()
+// NMI ...
+type NMI interface {
+	Start(context.Context) error
 }
 
-func Register(t Telemetry) {
-	fmt.Println("hello")
-	R["Q"] = "B"
+// KV ...
+type KV map[string]interface{}
+
+// KVChan ...
+type KVChan chan KV
+
+// R ...
+var R = make(map[string]Constructor)
+
+// Register ...
+func Register(n string, c Constructor) {
+	R[n] = c
 }

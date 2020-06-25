@@ -21,46 +21,53 @@ import (
 	apb "github.com/golang/protobuf/ptypes/any"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	_ "github.com/openconfig/gnmi/proto/gnmi_ext"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
 func Register() {
-	telemetry.Register(nil)
+	log.Println("gnmi registerd")
+	telemetry.Register("juniper.gnmi", New)
 }
 
 type KeyValues map[string]interface{}
 
-type gnmi struct {
+type GNMI struct {
 	conn          *grpc.ClientConn
-	client        gpb.GNMIClient
 	subscriptions []*gpb.Subscription
 
 	dataChan chan *gpb.SubscribeResponse
+	outChan  telemetry.KVChan
 }
 
-func NewGNMI(cfg *config) *gnmi {
+// New ...
+func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.KVChan) telemetry.NMI {
 	var subscriptions []*gpb.Subscription
-	for _, sensor := range cfg.Sensors {
-		if sensor.Type == "gnmi" {
-			path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
 
-			mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
-			sampleInterval, _ := time.ParseDuration("10s")
-			subscriptions = append(subscriptions, &gpb.Subscription{
-				Path:              path,
-				Mode:              gpb.SubscriptionMode(mode),
-				SampleInterval:    uint64(sampleInterval.Nanoseconds()),
-				SuppressRedundant: false,
-			})
-		}
+	for _, sensor := range sensors {
+		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
+
+		mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
+		sampleInterval := time.Duration(sensor.Interval) * time.Second
+		subscriptions = append(subscriptions, &gpb.Subscription{
+			Path:              path,
+			Mode:              gpb.SubscriptionMode(mode),
+			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
+			SuppressRedundant: false,
+		})
 	}
-	return &gnmi{
+
+	return &GNMI{
+		conn:          conn,
 		subscriptions: subscriptions,
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
+		outChan:       outChan,
 	}
 }
 
-func (g *gnmi) run(ctx context.Context) {
-	g.client = gpb.NewGNMIClient(g.conn)
+// Start ...
+func (g *GNMI) Start(ctx context.Context) error {
+	client := gpb.NewGNMIClient(g.conn)
 	subReq := &gpb.SubscribeRequest{
 		Request: &gpb.SubscribeRequest_Subscribe{
 			Subscribe: &gpb.SubscriptionList{
@@ -72,14 +79,14 @@ func (g *gnmi) run(ctx context.Context) {
 		},
 	}
 
-	subClient, err := g.client.Subscribe(ctx)
+	subClient, err := client.Subscribe(ctx)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	err = subClient.Send(subReq)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	for i := 0; i < 1; i++ {
@@ -87,17 +94,17 @@ func (g *gnmi) run(ctx context.Context) {
 	}
 
 	for ctx.Err() == nil {
-		var resp *gpb.SubscribeResponse
-		if resp, err = subClient.Recv(); err != nil {
-			log.Println(err)
-			break
+		resp, err := subClient.Recv()
+		if err != nil {
+			return err
 		}
 
 		g.dataChan <- resp
 	}
 
+	return nil
 }
-func (g *gnmi) worker(ctx context.Context) {
+func (g *GNMI) worker(ctx context.Context) {
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -110,9 +117,11 @@ func (g *gnmi) worker(ctx context.Context) {
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
 				kv := g.decoder(resp)
-				kv.PrettyPrint()
+				kv.prettyPrint()
 			case *gpb.SubscribeResponse_SyncResponse:
+				// TODO
 			case *gpb.SubscribeResponse_Error:
+				log.Println("gpb error:", resp)
 			}
 		case <-ctx.Done():
 			return
@@ -120,7 +129,7 @@ func (g *gnmi) worker(ctx context.Context) {
 	}
 }
 
-func (g *gnmi) decoder(resp *gpb.SubscribeResponse_Update) KeyValues {
+func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) KeyValues {
 	kv := make(KeyValues)
 	kv["__service__"] = "gnmi_v0.7.0"
 
@@ -182,7 +191,7 @@ func (g *gnmi) decoder(resp *gpb.SubscribeResponse_Update) KeyValues {
 	return kv
 }
 
-func (kv KeyValues) PrettyPrint() error {
+func (kv KeyValues) prettyPrint() error {
 	b, err := json.MarshalIndent(kv, "", "  ")
 	if err != nil {
 		return err

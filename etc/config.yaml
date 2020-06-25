@@ -5,6 +5,7 @@ devices:
     sensors:
       - sensor1
       - sensor2
+      - sensor3
 
 sensors:
   sensor1:
@@ -15,5 +16,9 @@ sensors:
     path: /interfaces/interface
     mode: on_change
     service: juniper.gnmi
+  sensor3:
+    path: /interfaces/interface
+    mode: on_change
+    service: cisco.gnmi
 
 redial: 5

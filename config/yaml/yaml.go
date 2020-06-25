@@ -57,6 +57,7 @@ func parse(y *yamlConfig) []config.Device {
 	for _, d := range y.Devices {
 
 		device := conv(d)
+		device.Sensors = make(map[string][]*config.Sensor)
 
 		for _, s := range d.Sensors {
 			sensor, ok := sensors[s]
@@ -64,7 +65,7 @@ func parse(y *yamlConfig) []config.Device {
 				log.Fatal("sensor not exist ", s)
 			}
 
-			device.Sensors = append(device.Sensors, sensor)
+			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
 		}
 
 		devices = append(devices, device)
