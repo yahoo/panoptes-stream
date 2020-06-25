@@ -8,9 +8,10 @@ import (
 	"regexp"
 	"strings"
 
+	jpb "juniper/proto/OCJuniper"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	jpb "git.vzbuilders.com/marshadrad/panoptes/vendor/juniper/proto/OCJuniper"
 	"google.golang.org/grpc"
 )
 
