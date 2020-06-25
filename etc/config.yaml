@@ -1,11 +1,10 @@
 devices:
-  - host: core1.nbc
+  - host: core1.nca:50051
     tlscert: /etc/cert/file.crt
     tlskey: /etc/cert/file.key
     sensors:
       - sensor1
       - sensor2
-      - sensor3
 
 sensors:
   sensor1:
@@ -16,9 +15,5 @@ sensors:
     path: /interfaces/interface
     mode: on_change
     service: juniper.gnmi
-  sensor3:
-    path: /interfaces/interface
-    mode: on_change
-    service: cisco.gnmi
 
 redial: 5
