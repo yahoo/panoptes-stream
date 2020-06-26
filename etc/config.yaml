@@ -17,7 +17,7 @@ sensors:
     path: /interfaces/interface
     mode: on_change
     service: juniper.gnmi
-    output: kafka1.panoptes
+    output: kafka2.panoptes
 
 producers:
   kafka1:

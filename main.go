@@ -8,7 +8,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/vendor"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/vendor"
 	"google.golang.org/grpc"
 	//log "github.com/golang/glog"
 )
@@ -16,9 +16,9 @@ import (
 func main() {
 	vendor.Register()
 
-	log.Println("panoptes", telemetry.R)
+	y := yaml.LoadConfig("etc/config.yaml")
+	log.Printf("Config %#v", y)
 
-	y := yaml.LoadConfig()
 	wg := sync.WaitGroup{}
 	for _, device := range y.Devices() {
 		log.Println(device.Host)
@@ -34,9 +34,9 @@ func main() {
 			for sName, sensors := range device.Sensors {
 				log.Println(sName, sensors)
 				outChan := make(telemetry.DSChan, 1)
-				f := telemetry.R[sName]
-				t := f(conn, sensors, outChan)
-				err := t.Start(context.Background())
+				nmiNew := telemetry.GetNMIFactory(sName)
+				nmi := nmiNew(conn, sensors, outChan)
+				err := nmi.Start(context.Background())
 				if err != nil {
 					log.Println(err)
 				}
