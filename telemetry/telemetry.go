@@ -28,9 +28,6 @@ type NMI interface {
 // DataStore ...
 type DataStore map[string]interface{}
 
-// DSChan ...
-type DSChan chan DataStore
-
 type ExtDataStore struct {
 	Output string
 	DS     DataStore
