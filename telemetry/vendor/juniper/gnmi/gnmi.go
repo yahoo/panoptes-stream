@@ -2,7 +2,6 @@ package gnmi
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"math"
 	"strings"
@@ -202,28 +201,4 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	//TODO ADD OUTPUT Info
 
 	return ds
-}
-
-func isGNMIInterfacesSensor(p []string) bool {
-	if len(p) < 3 {
-		return false
-	}
-
-	if p[0] == "interfaces" && p[1] == "interface" {
-		return true
-	}
-
-	return false
-}
-
-func getGNMIIfNameFromPrefix(p []string) string {
-	if len(p) == 3 {
-		return p[2]
-	}
-
-	if len(p) == 6 {
-		return fmt.Sprintf("%s.%s", p[2], p[5])
-	}
-
-	return "unknown"
 }
