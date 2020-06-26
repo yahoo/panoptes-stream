@@ -16,6 +16,7 @@ sensors:
   sensor2:
     path: /interfaces/interface/state/counters
     mode: sample
+    interval: 10
     service: juniper.gnmi
     output: kafka1::panoptes
 
