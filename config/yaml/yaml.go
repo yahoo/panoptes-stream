@@ -13,7 +13,6 @@ import (
 type yaml struct {
 	devices   []config.Device
 	producers []config.Producer
-	databases []config.Database
 	global    config.Global
 }
 
@@ -65,10 +64,6 @@ func (y *yaml) Global() config.Global {
 
 func (y *yaml) Producers() []config.Producer {
 	return y.producers
-}
-
-func (y *yaml) Databases() []config.Database {
-	return y.databases
 }
 
 func configDevices(y *yamlConfig) []config.Device {
