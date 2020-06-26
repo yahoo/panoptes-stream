@@ -24,6 +24,7 @@ type device struct {
 }
 
 type producer struct {
+	Service    string `yaml:"service"`
 	ConfigFile string `yaml:"configFile"`
 }
 
@@ -129,8 +130,9 @@ func configProducers(p map[string]producer) []config.Producer {
 		}
 
 		producers = append(producers, config.Producer{
-			Name:   name,
-			Config: cfg,
+			Name:    name,
+			Service: pConfig.Service,
+			Config:  cfg,
 		})
 	}
 

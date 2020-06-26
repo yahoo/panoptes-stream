@@ -36,13 +36,15 @@ type Device struct {
 }
 
 type Producer struct {
-	Name   string
-	Config map[string]interface{}
+	Name    string
+	Service string
+	Config  map[string]interface{}
 }
 
 type Database struct {
-	Name   string
-	Config map[string]interface{}
+	Name    string
+	Service string
+	Config  map[string]interface{}
 }
 
 type Global struct {
