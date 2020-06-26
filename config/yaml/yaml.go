@@ -27,15 +27,10 @@ type producer struct {
 	ConfigFile string `yaml:"configFile"`
 }
 
-type database struct {
-	Config string
-}
-
 type yamlConfig struct {
 	Devices   []device
 	Sensors   map[string]config.Sensor
 	Producers map[string]producer
-	Databases map[string]database
 
 	config.Global `yaml:",inline"`
 }
