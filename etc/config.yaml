@@ -21,4 +21,5 @@ sensors:
 
 producers:
   kafka1:
+    service: kafka
     configFile: etc/kafka.yaml
