@@ -125,7 +125,7 @@ func (g *GNMI) worker(ctx context.Context) {
 				select {
 				case g.outChan <- telemetry.ExtDataStore{
 					DS:     ds,
-					Output: "unknown",
+					Output: "kafka1::topic",
 				}:
 				default:
 				}
