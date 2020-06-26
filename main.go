@@ -7,6 +7,7 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
+	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/vendor"
 	"google.golang.org/grpc"
@@ -15,6 +16,7 @@ import (
 
 func main() {
 	vendor.Register()
+	mqueue.Register()
 
 	y := yaml.LoadConfig("etc/config.yaml")
 	log.Printf("Config %#v", y)
