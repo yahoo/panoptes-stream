@@ -12,15 +12,13 @@ sensors:
     path: /interfaces/interface/state
     mode: on_change
     service: juniper.gnmi
-    output: kafka1.panoptes
+    output: kafka1::panoptes
   sensor2:
-    path: /interfaces/interface
-    mode: on_change
+    path: /interfaces/interface/state/counters
+    mode: sample
     service: juniper.gnmi
-    output: kafka2.panoptes
+    output: kafka1::panoptes
 
 producers:
   kafka1:
-    configFile: etc/kafka.yaml
-  kafka2:
     configFile: etc/kafka.yaml
