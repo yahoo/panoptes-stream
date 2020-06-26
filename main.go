@@ -3,8 +3,7 @@ package main
 import (
 	"context"
 	"log"
-	"strings"
-	"sync"
+	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
@@ -25,43 +24,58 @@ func main() {
 	outChan := make(telemetry.ExtDSChan, 1)
 	cfg := yaml.LoadConfig("etc/config.yaml")
 
-	dp := demux.New(cfg, outChan) //demux{chMap: make(map[string]telemetry.ExtDSChan)}
-	//dp.prepare(y)
-	//go dp.dispatcher(outChan)
+	dp := demux.New(cfg, outChan)
 	dp.Init()
 	go dp.Start(ctx)
 
-	wg := sync.WaitGroup{}
+	p := NewPanoptes(ctx, outChan)
 	for _, device := range cfg.Devices() {
-		log.Println(device.Host)
-		conn, err := grpc.Dial(device.Host, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
-		if err != nil {
-			// TODO
-			log.Fatal(err)
-		}
+		p.subscribe(device)
+	}
 
-		wg.Add(1)
-		go func(device config.Device) {
-			defer wg.Done()
-			for sName, sensors := range device.Sensors {
-				log.Println(sName, sensors)
-				nmiNew := telemetry.GetNMIFactory(sName)
-				nmi := nmiNew(conn, sensors, outChan)
-				err := nmi.Start(context.Background())
+	<-ctx.Done()
+}
+
+type panoptes struct {
+	register map[string]context.CancelFunc
+	ctx      context.Context
+	outChan  telemetry.ExtDSChan
+}
+
+func NewPanoptes(ctx context.Context, outChan telemetry.ExtDSChan) *panoptes {
+	return &panoptes{
+		register: make(map[string]context.CancelFunc),
+		ctx:      ctx,
+		outChan:  outChan,
+	}
+}
+
+func (p *panoptes) subscribe(device config.Device) {
+	var ctx context.Context
+	ctx, p.register[device.Host] = context.WithCancel(p.ctx)
+
+	for sName, sensors := range device.Sensors {
+		go func(sName string, sensors []*config.Sensor) {
+			for {
+				conn, err := grpc.Dial(device.Host, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				NewNMI := telemetry.GetNMIFactory(sName)
+				nmi := NewNMI(conn, sensors, p.outChan)
+				err = nmi.Start(ctx)
 				if err != nil {
 					log.Println(err)
 				}
 
-				for _, sensor := range sensors {
-					log.Printf(" SS %#v", strings.Split(sensor.Output, "::")[0])
-				}
+				<-time.After(time.Second * 10)
 			}
-		}(device)
-
+		}(sName, sensors)
 	}
+}
 
-	// dispatch fun (outChan) to producer or database
-
-	wg.Wait()
-
+func (p *panoptes) unsubscribe(device config.Device) {
+	cancel := p.register[device.Host]
+	cancel()
 }
