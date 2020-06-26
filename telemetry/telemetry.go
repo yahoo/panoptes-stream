@@ -18,7 +18,7 @@ type telemetryRegister struct {
 }
 
 // NMIFactory ...
-type NMIFactory func(*grpc.ClientConn, []*config.Sensor, DSChan) NMI
+type NMIFactory func(*grpc.ClientConn, []*config.Sensor, ExtDSChan) NMI
 
 // NMI ...
 type NMI interface {
@@ -30,6 +30,13 @@ type DataStore map[string]interface{}
 
 // DSChan ...
 type DSChan chan DataStore
+
+type ExtDataStore struct {
+	Output string
+	DS     DataStore
+}
+
+type ExtDSChan chan ExtDataStore
 
 func (tr *telemetryRegister) set(name string, nf NMIFactory) {
 	tr.Lock()

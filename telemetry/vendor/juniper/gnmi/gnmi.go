@@ -37,11 +37,11 @@ type GNMI struct {
 	subscriptions []*gpb.Subscription
 
 	dataChan chan *gpb.SubscribeResponse
-	outChan  telemetry.DSChan
+	outChan  telemetry.ExtDSChan
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.DSChan) telemetry.NMI {
+func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var subscriptions []*gpb.Subscription
 
 	for _, sensor := range sensors {
@@ -119,8 +119,14 @@ func (g *GNMI) worker(ctx context.Context) {
 				ds := g.decoder(resp)
 				ds.PrettyPrint()
 
+				// get sensor from __juniper_telemetry_header__
+				// find the output from sensors []*config.Sensor  output -> kafka1::panoptes
+
 				select {
-				case g.outChan <- ds:
+				case g.outChan <- telemetry.ExtDataStore{
+					DS:     ds,
+					Output: "unknown",
+				}:
 				default:
 				}
 			case *gpb.SubscribeResponse_SyncResponse:

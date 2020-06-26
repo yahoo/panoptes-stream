@@ -28,7 +28,7 @@ type JTI struct {
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.DSChan) telemetry.NMI {
+func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	paths := []*jpb.Path{}
 	for _, sensor := range sensors {
 		path := &jpb.Path{
