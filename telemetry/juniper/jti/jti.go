@@ -25,6 +25,7 @@ type JTI struct {
 	paths  []*jpb.Path
 
 	dataChan chan *jpb.OpenConfigData
+	outChan  telemetry.ExtDSChan
 }
 
 // New ...
@@ -42,6 +43,7 @@ func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtD
 		conn:     conn,
 		paths:    paths,
 		dataChan: make(chan *jpb.OpenConfigData, 100),
+		outChan:  outChan,
 	}
 }
 
@@ -66,6 +68,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		if err != nil {
 			break
 		}
+		log.Println("===========")
 		j.dataChan <- d
 	}
 
@@ -80,7 +83,15 @@ func (j *JTI) worker(ctx context.Context) {
 				return
 			}
 			ds := j.decoder(d)
-			ds.PrettyPrint()
+			//ds.PrettyPrint()
+			select {
+			case j.outChan <- telemetry.ExtDataStore{
+				DS:     ds,
+				Output: "kafka1::topic",
+			}:
+			default:
+			}
+
 		case <-ctx.Done():
 			return
 		}
@@ -88,35 +99,6 @@ func (j *JTI) worker(ctx context.Context) {
 }
 
 func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
-	ds := make(telemetry.DataStore)
-	ds["__service__"] = "jti_v1.0"
-
-	for _, v := range d.Kv {
-		switch v.Value.(type) {
-		case *jpb.KeyValue_StrValue:
-			ds[v.Key] = v.GetStrValue()
-			break
-		case *jpb.KeyValue_DoubleValue:
-			ds[v.Key] = v.GetDoubleValue()
-			break
-		case *jpb.KeyValue_IntValue:
-			ds[v.Key] = v.GetIntValue()
-			break
-		case *jpb.KeyValue_SintValue:
-			ds[v.Key] = v.GetSintValue()
-			break
-		case *jpb.KeyValue_UintValue:
-			ds[v.Key] = v.GetUintValue()
-			break
-		case *jpb.KeyValue_BytesValue:
-			ds[v.Key] = v.GetBytesValue()
-			break
-		case *jpb.KeyValue_BoolValue:
-			ds[v.Key] = v.GetBoolValue()
-			break
-		}
-	}
-
 	jHeader := make(telemetry.DataStore)
 	jHeader["system_id"] = d.SystemId
 	jHeader["component_id"] = d.ComponentId
@@ -124,11 +106,61 @@ func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
 	jHeader["path"] = d.Path
 
 	jHeader["timestamp"] = d.Timestamp
-	jHeader["SequenceNumber"] = d.SequenceNumber
+	jHeader["sequence_number"] = d.SequenceNumber
 
-	ds["__juniper_jpb_header__"] = jHeader
+	jHeader["__service__"] = "jti_v1.0"
+
+	dsSlice := []telemetry.DataStore{}
+	var ds = make(telemetry.DataStore)
+
+	for _, v := range d.Kv {
+
+		if v.Key == "__prefix__" {
+			if _, ok := ds[v.Key]; ok {
+				dsSlice = append(dsSlice, ds)
+				ds = make(telemetry.DataStore)
+			}
+
+			ds[v.Key] = v.GetStrValue()
+			continue
+		}
+
+		if _, ok := ds["__prefix__"]; !ok {
+			jHeader[v.Key] = getValue(v)
+			continue
+		}
+
+		ds[v.Key] = getValue(v)
+
+	}
+
+	// last dataset
+	dsSlice = append(dsSlice, ds)
+	ds = make(telemetry.DataStore)
+	ds["__juniper_telemetry_header__"] = jHeader
+	ds["dataset"] = dsSlice
 
 	return ds
+}
+func getValue(v *jpb.KeyValue) interface{} {
+	switch v.Value.(type) {
+	case *jpb.KeyValue_StrValue:
+		return v.GetStrValue()
+	case *jpb.KeyValue_DoubleValue:
+		return v.GetDoubleValue()
+	case *jpb.KeyValue_IntValue:
+		return v.GetIntValue()
+	case *jpb.KeyValue_SintValue:
+		return v.GetSintValue()
+	case *jpb.KeyValue_UintValue:
+		return v.GetUintValue()
+	case *jpb.KeyValue_BytesValue:
+		return v.GetBytesValue()
+	case *jpb.KeyValue_BoolValue:
+		return v.GetBoolValue()
+	}
+
+	return "na"
 }
 
 func getJTIPathKValues(p string, valuesOnly bool) []string {
