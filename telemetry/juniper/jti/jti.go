@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"strings"
 
-	jpb "juniper/proto/OCJuniper"
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"

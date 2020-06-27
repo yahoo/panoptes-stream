@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"juniper/proto/GnmiJuniperTelemetryHeader"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
 
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 

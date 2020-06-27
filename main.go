@@ -10,7 +10,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/vendor"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/register"
 	"google.golang.org/grpc"
 	//log "github.com/golang/glog"
 )
@@ -18,7 +18,7 @@ import (
 func main() {
 	ctx := context.Background()
 
-	vendor.Register()
+	register.Vendor()
 	mqueue.Register()
 
 	outChan := make(telemetry.ExtDSChan, 1)
