@@ -4,7 +4,6 @@ devices:
     tlsKeyFile: /etc/cert/file.key
     caFile: /etc/cert/ca.crt
     sensors:
-      - sensor1
       - sensor2
 
 sensors:
@@ -14,10 +13,16 @@ sensors:
     service: juniper.gnmi
     output: kafka1::panoptes
   sensor2:
-    path: /interfaces/interface/state/counters
+    path: /interfaces/interface/state/counters/
     mode: sample
     interval: 10
-    service: juniper.gnmi
+    service: juniper.jti
+    output: kafka1::panoptes
+  sensor3:
+    path: /network-instances/network-instance/
+    mode: sample
+    interval: 10
+    service: juniper.jti
     output: kafka1::panoptes
 
 producers:
