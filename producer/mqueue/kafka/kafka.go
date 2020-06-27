@@ -28,6 +28,6 @@ func (k *Kafka) Start() {
 			break
 		}
 
-		log.Println("kafka value ", v)
+		v.DS.PrettyPrint()
 	}
 }
