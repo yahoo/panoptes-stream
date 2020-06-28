@@ -1,23 +1,17 @@
 package kafka
 
 import (
-	"log"
-
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"go.uber.org/zap"
 )
 
 type Kafka struct {
 	ch telemetry.ExtDSChan
 }
 
-func Register() {
-	log.Println("kafka register")
-	producer.Register("kafka", New)
-}
-
-func New(cfg config.Producer, inChan telemetry.ExtDSChan) producer.Producer {
+func New(cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
 	return &Kafka{ch: inChan}
 }
 

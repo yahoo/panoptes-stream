@@ -8,6 +8,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
+	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/register"
@@ -27,11 +28,14 @@ func main() {
 
 	telemetry.SetLogger(lg)
 	register.RegisterVendor()
-	mqueue.Register()
+
+	// producer
+	producerRegistrar := producer.NewRegistrar(lg)
+	mqueue.Register(producerRegistrar)
 
 	outChan := make(telemetry.ExtDSChan, 1)
 
-	dp := demux.New(cfg, outChan)
+	dp := demux.New(cfg, lg, producerRegistrar, outChan)
 	dp.Init()
 	go dp.Start(ctx)
 

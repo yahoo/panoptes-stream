@@ -5,24 +5,40 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"go.uber.org/zap"
 )
 
-var reg = producerRegister{p: make(map[string]ProducerFactory)}
+type ProducerFactory func(config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
 
-type ProducerFactory func(config.Producer, telemetry.ExtDSChan) Producer
-
-type producerRegister struct {
-	p map[string]ProducerFactory
+type ProducerRegistrar struct {
+	p  map[string]ProducerFactory
+	lg *zap.Logger
 	sync.RWMutex
 }
 
-func (pr *producerRegister) set(name string, m ProducerFactory) {
+func NewRegistrar(lg *zap.Logger) *ProducerRegistrar {
+	return &ProducerRegistrar{
+		p:  make(map[string]ProducerFactory),
+		lg: lg,
+	}
+}
+
+func (pr *ProducerRegistrar) Register(name string, pf ProducerFactory) {
+	pr.lg.Info("producer/register", zap.String("mq", name))
+	pr.set(name, pf)
+}
+
+func (pr *ProducerRegistrar) GetProducerFactory(name string) (ProducerFactory, bool) {
+	return pr.get(name)
+}
+
+func (pr *ProducerRegistrar) set(name string, m ProducerFactory) {
 	pr.Lock()
 	defer pr.Unlock()
 	pr.p[name] = m
 }
 
-func (pr *producerRegister) get(name string) (ProducerFactory, bool) {
+func (pr *ProducerRegistrar) get(name string) (ProducerFactory, bool) {
 	pr.RLock()
 	defer pr.RUnlock()
 	v, ok := pr.p[name]
@@ -32,12 +48,4 @@ func (pr *producerRegister) get(name string) (ProducerFactory, bool) {
 
 type Producer interface {
 	Start()
-}
-
-func Register(name string, pf ProducerFactory) {
-	reg.set(name, pf)
-}
-
-func GetProducerFactory(name string) (ProducerFactory, bool) {
-	return reg.get(name)
 }
