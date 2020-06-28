@@ -15,10 +15,8 @@ import (
 )
 
 // Register ...
-func Register() string {
-	regName := "juniper.jti"
-	telemetry.Register(regName, New)
-	return regName
+func Register() {
+	telemetry.Register("juniper.jti", New)
 }
 
 type JTI struct {

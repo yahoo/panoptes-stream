@@ -24,10 +24,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-func Register() string {
-	regName := "juniper.gnmi"
-	telemetry.Register(regName, New)
-	return regName
+func Register() {
+	telemetry.Register("juniper.gnmi", New)
 }
 
 //type KeyValues map[string]interface{}

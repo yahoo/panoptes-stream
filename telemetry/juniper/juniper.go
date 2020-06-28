@@ -5,10 +5,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/jti"
 )
 
-func Register() []string {
-	var reg []string
-	reg = append(reg, gnmi.Register())
-	reg = append(reg, jti.Register())
-
-	return reg
+func Register() {
+	gnmi.Register()
+	jti.Register()
 }

@@ -11,7 +11,10 @@ import (
 	"google.golang.org/grpc"
 )
 
-var reg = &telemetryRegister{nmi: make(map[string]NMIFactory)}
+var (
+	reg = &telemetryRegister{nmi: make(map[string]NMIFactory)}
+	lg  = zap.NewNop()
+)
 
 type telemetryRegister struct {
 	nmi map[string]NMIFactory
@@ -50,6 +53,7 @@ func (tr *telemetryRegister) get(name string) NMIFactory {
 
 // Register ...
 func Register(n string, nf NMIFactory) {
+	lg.Info("telemetry/register", zap.String("nmi", n))
 	reg.set(n, nf)
 }
 
@@ -65,4 +69,8 @@ func (ds DataStore) PrettyPrint() error {
 
 	fmt.Println(string(b))
 	return nil
+}
+
+func SetLogger(logger *zap.Logger) {
+	lg = logger
 }

@@ -25,7 +25,8 @@ func main() {
 
 	ctx := context.Background()
 
-	register.RegisterVendor(lg)
+	telemetry.SetLogger(lg)
+	register.RegisterVendor()
 	mqueue.Register()
 
 	outChan := make(telemetry.ExtDSChan, 1)
