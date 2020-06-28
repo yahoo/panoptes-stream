@@ -2,16 +2,15 @@ package jti
 
 import (
 	"context"
-	"log"
 	"regexp"
 	"strings"
 
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"google.golang.org/grpc"
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
 )
 
 // JTI ...
@@ -50,9 +49,6 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 	}
 }
 
-func (j *JTI) subscribe() {
-}
-
 // Start ...
 func (j *JTI) Start(ctx context.Context) error {
 	j.client = jpb.NewOpenConfigTelemetryClient(j.conn)
@@ -71,7 +67,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		if err != nil {
 			break
 		}
-		log.Println("===========")
+
 		j.dataChan <- d
 	}
 
@@ -92,7 +88,7 @@ func (j *JTI) worker(ctx context.Context) {
 			if len(path) > 1 {
 				output, ok := j.pathOutput[path[1]]
 				if !ok {
-					log.Println("error jti path map", d.Path)
+					j.lg.Warn("path to output not found", zap.String("path", d.Path))
 					continue
 				}
 
@@ -104,7 +100,7 @@ func (j *JTI) worker(ctx context.Context) {
 				default:
 				}
 			} else {
-				log.Println("error jti path")
+				j.lg.Warn("path not found", zap.String("path", d.Path))
 			}
 
 		case <-ctx.Done():
