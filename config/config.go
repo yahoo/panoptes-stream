@@ -4,6 +4,7 @@ type Config interface {
 	Devices() []Device
 	Producers() []Producer
 	Global() Global
+	Informer()
 }
 
 type DeviceConfig struct {
@@ -42,4 +43,5 @@ type Producer struct {
 
 type Global struct {
 	Redial int
+	Logger map[string]interface{}
 }
