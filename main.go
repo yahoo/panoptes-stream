@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-	"log"
+	"encoding/json"
 	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -11,24 +11,30 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/register"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
 	"google.golang.org/grpc"
-	//log "github.com/golang/glog"
 )
 
 func main() {
+	cfg := yaml.LoadConfig("etc/config.yaml")
+	lg := GetLogger(cfg.Global().Logger)
+	defer lg.Sync()
+
+	lg.Info("starting ...")
+
 	ctx := context.Background()
 
-	register.Vendor()
+	register.RegisterVendor(lg)
 	mqueue.Register()
 
 	outChan := make(telemetry.ExtDSChan, 1)
-	cfg := yaml.LoadConfig("etc/config.yaml")
 
 	dp := demux.New(cfg, outChan)
 	dp.Init()
 	go dp.Start(ctx)
 
-	p := NewPanoptes(ctx, outChan)
+	p := NewPanoptes(ctx, lg, outChan)
 	for _, device := range cfg.Devices() {
 		p.subscribe(device)
 	}
@@ -40,13 +46,16 @@ type panoptes struct {
 	register map[string]context.CancelFunc
 	ctx      context.Context
 	outChan  telemetry.ExtDSChan
+
+	lg *zap.Logger
 }
 
-func NewPanoptes(ctx context.Context, outChan telemetry.ExtDSChan) *panoptes {
+func NewPanoptes(ctx context.Context, lg *zap.Logger, outChan telemetry.ExtDSChan) *panoptes {
 	return &panoptes{
 		register: make(map[string]context.CancelFunc),
 		ctx:      ctx,
 		outChan:  outChan,
+		lg:       lg,
 	}
 }
 
@@ -59,14 +68,14 @@ func (p *panoptes) subscribe(device config.Device) {
 			for {
 				conn, err := grpc.Dial(device.Host, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
 				if err != nil {
-					log.Fatal(err)
-				}
-
-				NewNMI := telemetry.GetNMIFactory(sName)
-				nmi := NewNMI(conn, sensors, p.outChan)
-				err = nmi.Start(ctx)
-				if err != nil {
-					log.Println(err)
+					p.lg.Error("connect to device", zap.Error(err))
+				} else {
+					NewNMI := telemetry.GetNMIFactory(sName)
+					nmi := NewNMI(p.lg, conn, sensors, p.outChan)
+					err = nmi.Start(ctx)
+					if err != nil {
+						p.lg.Warn("nmi start error", zap.Error(err))
+					}
 				}
 
 				<-time.After(time.Second * 10)
@@ -78,4 +87,28 @@ func (p *panoptes) subscribe(device config.Device) {
 func (p *panoptes) unsubscribe(device config.Device) {
 	cancel := p.register[device.Host]
 	cancel()
+}
+
+func GetLogger(lcfg map[string]interface{}) *zap.Logger {
+	var cfg zap.Config
+	b, err := json.Marshal(lcfg)
+	if err != nil {
+		panic(err)
+	}
+
+	if err := json.Unmarshal(b, &cfg); err != nil {
+		panic(err)
+	}
+
+	cfg.EncoderConfig = zap.NewProductionEncoderConfig()
+	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.EncodeCaller = nil
+
+	logger, err := cfg.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return logger
 }

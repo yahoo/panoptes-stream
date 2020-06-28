@@ -2,12 +2,13 @@ package gnmi
 
 import (
 	"context"
-	"log"
+	"fmt"
 	"math"
 	"strings"
 	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
+	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 
@@ -23,9 +24,10 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-func Register() {
-	log.Println("gnmi registerd")
-	telemetry.Register("juniper.gnmi", New)
+func Register() string {
+	regName := "juniper.gnmi"
+	telemetry.Register(regName, New)
+	return regName
 }
 
 //type KeyValues map[string]interface{}
@@ -37,10 +39,12 @@ type GNMI struct {
 
 	dataChan chan *gpb.SubscribeResponse
 	outChan  telemetry.ExtDSChan
+
+	lg *zap.Logger
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
+func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var subscriptions []*gpb.Subscription
 
 	for _, sensor := range sensors {
@@ -131,7 +135,8 @@ func (g *GNMI) worker(ctx context.Context) {
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
-				log.Println("gpb error:", resp)
+				err := fmt.Errorf("%s", resp)
+				g.lg.Error("error in sub response", zap.Error(err))
 			}
 		case <-ctx.Done():
 			return
@@ -175,7 +180,7 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 			anyMsg := value.(*apb.Any)
 			anyMsgName, err := ptypes.AnyMessageName(anyMsg)
 			if err != nil {
-				log.Println("ERR:", err)
+				g.lg.Error("proto any message invalid", zap.Error(err))
 			}
 			if anyMsgName == "GnmiJuniperTelemetryHeader" {
 				hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}

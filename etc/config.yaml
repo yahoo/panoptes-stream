@@ -29,3 +29,11 @@ producers:
   kafka1:
     service: kafka
     configFile: etc/kafka.yaml
+
+logger:
+  level: "debug"
+  encoding: console
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stderr

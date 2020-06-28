@@ -61,6 +61,9 @@ func (y *yaml) Producers() []config.Producer {
 	return y.producers
 }
 
+func (y *yaml) Informer() {
+}
+
 func configDevices(y *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
 	for name, sensor := range y.Sensors {

@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )
 
@@ -18,7 +19,7 @@ type telemetryRegister struct {
 }
 
 // NMIFactory ...
-type NMIFactory func(*grpc.ClientConn, []*config.Sensor, ExtDSChan) NMI
+type NMIFactory func(*zap.Logger, *grpc.ClientConn, []*config.Sensor, ExtDSChan) NMI
 
 // NMI ...
 type NMI interface {

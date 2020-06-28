@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
+	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
@@ -14,9 +15,10 @@ import (
 )
 
 // Register ...
-func Register() {
-	log.Println("jti registerd")
-	telemetry.Register("juniper.jti", New)
+func Register() string {
+	regName := "juniper.jti"
+	telemetry.Register(regName, New)
+	return regName
 }
 
 type JTI struct {
@@ -26,12 +28,13 @@ type JTI struct {
 
 	dataChan chan *jpb.OpenConfigData
 	outChan  telemetry.ExtDSChan
+	lg       *zap.Logger
 
 	pathOutput map[string]string
 }
 
 // New ...
-func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
+func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	paths := []*jpb.Path{}
 	pathOutput := make(map[string]string)
 
