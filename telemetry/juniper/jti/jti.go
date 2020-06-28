@@ -26,24 +26,30 @@ type JTI struct {
 
 	dataChan chan *jpb.OpenConfigData
 	outChan  telemetry.ExtDSChan
+
+	pathOutput map[string]string
 }
 
 // New ...
 func New(conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	paths := []*jpb.Path{}
+	pathOutput := make(map[string]string)
+
 	for _, sensor := range sensors {
 		path := &jpb.Path{
 			Path:            sensor.Path,
 			SampleFrequency: uint32(sensor.Interval) * 1000,
 		}
 		paths = append(paths, path)
+		pathOutput[sensor.Path] = sensor.Output
 	}
 
 	return &JTI{
-		conn:     conn,
-		paths:    paths,
-		dataChan: make(chan *jpb.OpenConfigData, 100),
-		outChan:  outChan,
+		conn:       conn,
+		paths:      paths,
+		dataChan:   make(chan *jpb.OpenConfigData, 100),
+		outChan:    outChan,
+		pathOutput: pathOutput,
 	}
 }
 
@@ -76,6 +82,8 @@ func (j *JTI) Start(ctx context.Context) error {
 }
 
 func (j *JTI) worker(ctx context.Context) {
+	regxPath := regexp.MustCompile("/:(/.*/):")
+
 	for {
 		select {
 		case d, ok := <-j.dataChan:
@@ -83,13 +91,23 @@ func (j *JTI) worker(ctx context.Context) {
 				return
 			}
 			ds := j.decoder(d)
-			//ds.PrettyPrint()
-			select {
-			case j.outChan <- telemetry.ExtDataStore{
-				DS:     ds,
-				Output: "kafka1::topic",
-			}:
-			default:
+			path := regxPath.FindStringSubmatch(d.Path)
+			if len(path) > 1 {
+				output, ok := j.pathOutput[path[1]]
+				if !ok {
+					log.Println("error jti path map", d.Path)
+					continue
+				}
+
+				select {
+				case j.outChan <- telemetry.ExtDataStore{
+					DS:     ds,
+					Output: output,
+				}:
+				default:
+				}
+			} else {
+				log.Println("error jti path")
 			}
 
 		case <-ctx.Done():
