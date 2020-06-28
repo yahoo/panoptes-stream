@@ -24,12 +24,6 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-func Register() {
-	telemetry.Register("juniper.gnmi", New)
-}
-
-//type KeyValues map[string]interface{}
-
 // GNMI ...
 type GNMI struct {
 	conn          *grpc.ClientConn

@@ -3,9 +3,10 @@ package producer
 import (
 	"sync"
 
+	"go.uber.org/zap"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"go.uber.org/zap"
 )
 
 type ProducerFactory func(config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer

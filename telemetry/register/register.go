@@ -1,9 +1,10 @@
 package register
 
 import (
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper"
 )
 
-func RegisterVendor() {
-	juniper.Register()
+func RegisterVendor(telemetryRegistrar *telemetry.TelemetryRegistrar) {
+	juniper.Register(telemetryRegistrar)
 }

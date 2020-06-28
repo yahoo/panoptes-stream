@@ -6,20 +6,11 @@ import (
 	"fmt"
 	"sync"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-)
 
-var (
-	reg = &telemetryRegister{nmi: make(map[string]NMIFactory)}
-	lg  = zap.NewNop()
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
-
-type telemetryRegister struct {
-	nmi map[string]NMIFactory
-	sync.RWMutex
-}
 
 // NMIFactory ...
 type NMIFactory func(*zap.Logger, *grpc.ClientConn, []*config.Sensor, ExtDSChan) NMI
@@ -39,26 +30,39 @@ type ExtDataStore struct {
 
 type ExtDSChan chan ExtDataStore
 
-func (tr *telemetryRegister) set(name string, nf NMIFactory) {
+type TelemetryRegistrar struct {
+	nmi map[string]NMIFactory
+	lg  *zap.Logger
+	sync.RWMutex
+}
+
+func NewRegistrar(lg *zap.Logger) *TelemetryRegistrar {
+	return &TelemetryRegistrar{
+		nmi: make(map[string]NMIFactory),
+		lg:  lg,
+	}
+}
+
+func (tr *TelemetryRegistrar) Register(name string, tf NMIFactory) {
+	tr.lg.Info("telemetry/register", zap.String("nmi", name))
+	tr.set(name, tf)
+}
+
+func (tr *TelemetryRegistrar) GetNMIFactory(name string) (NMIFactory, bool) {
+	return tr.get(name)
+}
+
+func (tr *TelemetryRegistrar) set(name string, nf NMIFactory) {
 	tr.Lock()
 	defer tr.Unlock()
 	tr.nmi[name] = nf
 }
 
-func (tr *telemetryRegister) get(name string) NMIFactory {
+func (tr *TelemetryRegistrar) get(name string) (NMIFactory, bool) {
 	tr.RLock()
 	defer tr.RUnlock()
-	return tr.nmi[name]
-}
-
-// Register ...
-func Register(n string, nf NMIFactory) {
-	lg.Info("telemetry/register", zap.String("nmi", n))
-	reg.set(n, nf)
-}
-
-func GetNMIFactory(name string) NMIFactory {
-	return reg.get(name)
+	v, ok := tr.nmi[name]
+	return v, ok
 }
 
 func (ds DataStore) PrettyPrint() error {
@@ -69,8 +73,4 @@ func (ds DataStore) PrettyPrint() error {
 
 	fmt.Println(string(b))
 	return nil
-}
-
-func SetLogger(logger *zap.Logger) {
-	lg = logger
 }

@@ -5,6 +5,10 @@ import (
 	"encoding/json"
 	"time"
 
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
@@ -12,9 +16,6 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/register"
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"google.golang.org/grpc"
 )
 
 func main() {
@@ -26,12 +27,13 @@ func main() {
 
 	ctx := context.Background()
 
-	telemetry.SetLogger(lg)
-	register.RegisterVendor()
-
 	// producer
 	producerRegistrar := producer.NewRegistrar(lg)
 	mqueue.Register(producerRegistrar)
+
+	// telemetry
+	telemetryRegistrar := telemetry.NewRegistrar(lg)
+	register.RegisterVendor(telemetryRegistrar)
 
 	outChan := make(telemetry.ExtDSChan, 1)
 
@@ -39,7 +41,7 @@ func main() {
 	dp.Init()
 	go dp.Start(ctx)
 
-	p := NewPanoptes(ctx, lg, outChan)
+	p := NewPanoptes(ctx, lg, telemetryRegistrar, outChan)
 	for _, device := range cfg.Devices() {
 		p.subscribe(device)
 	}
@@ -48,19 +50,20 @@ func main() {
 }
 
 type panoptes struct {
-	register map[string]context.CancelFunc
-	ctx      context.Context
-	outChan  telemetry.ExtDSChan
-
-	lg *zap.Logger
+	register           map[string]context.CancelFunc
+	ctx                context.Context
+	lg                 *zap.Logger
+	outChan            telemetry.ExtDSChan
+	telemetryRegistrar *telemetry.TelemetryRegistrar
 }
 
-func NewPanoptes(ctx context.Context, lg *zap.Logger, outChan telemetry.ExtDSChan) *panoptes {
+func NewPanoptes(ctx context.Context, lg *zap.Logger, tr *telemetry.TelemetryRegistrar, outChan telemetry.ExtDSChan) *panoptes {
 	return &panoptes{
-		register: make(map[string]context.CancelFunc),
-		ctx:      ctx,
-		outChan:  outChan,
-		lg:       lg,
+		register:           make(map[string]context.CancelFunc),
+		ctx:                ctx,
+		lg:                 lg,
+		outChan:            outChan,
+		telemetryRegistrar: tr,
 	}
 }
 
@@ -75,7 +78,7 @@ func (p *panoptes) subscribe(device config.Device) {
 				if err != nil {
 					p.lg.Error("connect to device", zap.Error(err))
 				} else {
-					NewNMI := telemetry.GetNMIFactory(sName)
+					NewNMI, _ := p.telemetryRegistrar.GetNMIFactory(sName)
 					nmi := NewNMI(p.lg, conn, sensors, p.outChan)
 					err = nmi.Start(ctx)
 					if err != nil {

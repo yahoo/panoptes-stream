@@ -14,11 +14,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-// Register ...
-func Register() {
-	telemetry.Register("juniper.jti", New)
-}
-
+// JTI ...
 type JTI struct {
 	conn   *grpc.ClientConn
 	client jpb.OpenConfigTelemetryClient
