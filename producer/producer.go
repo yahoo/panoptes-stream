@@ -10,6 +10,10 @@ import (
 
 type ProducerFactory func(config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
 
+type Producer interface {
+	Start()
+}
+
 type ProducerRegistrar struct {
 	p  map[string]ProducerFactory
 	lg *zap.Logger
@@ -44,8 +48,4 @@ func (pr *ProducerRegistrar) get(name string) (ProducerFactory, bool) {
 	v, ok := pr.p[name]
 
 	return v, ok
-}
-
-type Producer interface {
-	Start()
 }
