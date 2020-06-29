@@ -11,9 +11,12 @@ import (
 )
 
 type yaml struct {
+	filename  string
 	devices   []config.Device
 	producers []config.Producer
 	global    config.Global
+
+	informer chan struct{}
 }
 
 type device struct {
@@ -36,17 +39,25 @@ type yamlConfig struct {
 }
 
 // LoadConfig constructs new yaml config
-func LoadConfig(file string) config.Config {
+func LoadConfig(filename string) config.Config {
 	cfg := &yamlConfig{}
-	if err := read(file, cfg); err != nil {
+	if err := read(filename, cfg); err != nil {
 		log.Fatal(err)
 	}
 
-	return &yaml{
+	y := &yaml{
+		filename: filename,
+
 		devices:   configDevices(cfg),
 		producers: configProducers(cfg.Producers),
 		global:    cfg.Global,
+
+		informer: make(chan struct{}, 1),
 	}
+
+	go y.watcher()
+
+	return y
 }
 
 func (y *yaml) Devices() []config.Device {
@@ -59,9 +70,6 @@ func (y *yaml) Global() config.Global {
 
 func (y *yaml) Producers() []config.Producer {
 	return y.producers
-}
-
-func (y *yaml) Informer() {
 }
 
 func configDevices(y *yamlConfig) []config.Device {

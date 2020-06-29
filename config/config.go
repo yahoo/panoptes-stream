@@ -4,7 +4,7 @@ type Config interface {
 	Devices() []Device
 	Producers() []Producer
 	Global() Global
-	Informer()
+	Informer() chan struct{}
 }
 
 type DeviceConfig struct {
