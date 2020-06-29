@@ -17,7 +17,7 @@ sensors:
     mode: sample
     interval: 10
     service: juniper.jti
-    output: kafka1::panoptes
+    output: console::stdout
   sensor3:
     path: /network-instances/network-instance/
     mode: sample
@@ -29,6 +29,8 @@ producers:
   kafka1:
     service: kafka
     configFile: etc/kafka.yaml
+  console:
+    service: console
 
 logger:
   level: "debug"
