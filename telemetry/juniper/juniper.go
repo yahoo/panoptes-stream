@@ -7,6 +7,6 @@ import (
 )
 
 func Register(telemetryRegistrar *telemetry.Registrar) {
-	telemetryRegistrar.Register("juniper.gnmi", gnmi.New)
-	telemetryRegistrar.Register("juniper.jti", jti.New)
+	telemetryRegistrar.Register("juniper.gnmi", gnmi.Version(), gnmi.New)
+	telemetryRegistrar.Register("juniper.jti", jti.Version(), jti.New)
 }

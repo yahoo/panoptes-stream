@@ -2,6 +2,7 @@ package jti
 
 import (
 	"context"
+	"fmt"
 	"regexp"
 	"strings"
 
@@ -12,6 +13,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
 )
+
+var jtiVersion = "1.0"
 
 // JTI ...
 type JTI struct {
@@ -119,7 +122,7 @@ func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
 	jHeader["timestamp"] = d.Timestamp
 	jHeader["sequence_number"] = d.SequenceNumber
 
-	jHeader["__service__"] = "jti_v1.0"
+	jHeader["__service__"] = fmt.Sprintf("jti_v%", jtiVersion)
 
 	dsSlice := []telemetry.DataStore{}
 	var ds = make(telemetry.DataStore)
@@ -190,4 +193,8 @@ func getJTIPathKValues(p string, valuesOnly bool) []string {
 		}
 	}
 	return kv
+}
+
+func Version() string {
+	return jtiVersion
 }

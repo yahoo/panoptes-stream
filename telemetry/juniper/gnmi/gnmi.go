@@ -24,6 +24,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
+var gnmiVersion = "0.7.0"
+
 // GNMI ...
 type GNMI struct {
 	conn          *grpc.ClientConn
@@ -138,7 +140,7 @@ func (g *GNMI) worker(ctx context.Context) {
 
 func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	ds := make(telemetry.DataStore)
-	ds["__service__"] = "gnmi_v0.7.0"
+	ds["__service__"] = fmt.Sprintf("gnmi_v%", gnmiVersion)
 
 	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
 	ds["__prefix__"] = path.ToStrings(resp.Update.GetPrefix(), true)
@@ -198,4 +200,8 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	//TODO ADD OUTPUT Info
 
 	return ds
+}
+
+func Version() string {
+	return gnmiVersion
 }

@@ -43,8 +43,8 @@ func NewRegistrar(lg *zap.Logger) *Registrar {
 	}
 }
 
-func (tr *Registrar) Register(name string, tf NMIFactory) {
-	tr.lg.Info("telemetry/register", zap.String("nmi", name))
+func (tr *Registrar) Register(name, version string, tf NMIFactory) {
+	tr.lg.Info("telemetry/register", zap.String("name", name), zap.String("version", version))
 	tr.set(name, tf)
 }
 
