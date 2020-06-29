@@ -118,8 +118,11 @@ func configProducers(p map[string]producer) []config.Producer {
 	var producers []config.Producer
 	for name, pConfig := range p {
 		cfg := make(map[string]interface{})
-		if err := read(pConfig.ConfigFile, &cfg); err != nil {
-			log.Fatal(err)
+
+		if name != "console" {
+			if err := read(pConfig.ConfigFile, &cfg); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 		producers = append(producers, config.Producer{
