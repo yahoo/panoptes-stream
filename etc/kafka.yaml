@@ -1,5 +1,6 @@
 brokers:
   - 127.0.0.1:9092
+batchSize: 100
 topics:
   - interface
   - bgp
