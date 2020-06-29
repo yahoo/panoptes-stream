@@ -23,7 +23,7 @@ sensors:
     mode: sample
     interval: 10
     service: juniper.jti
-    output: kafka1::panoptes
+    output: kafka1::bgp
 
 producers:
   kafka1:
