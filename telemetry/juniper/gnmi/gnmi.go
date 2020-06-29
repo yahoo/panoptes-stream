@@ -140,7 +140,7 @@ func (g *GNMI) worker(ctx context.Context) {
 
 func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	ds := make(telemetry.DataStore)
-	ds["__service__"] = fmt.Sprintf("gnmi_v%", gnmiVersion)
+	ds["__service__"] = fmt.Sprintf("gnmi_v%s", gnmiVersion)
 
 	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
 	ds["__prefix__"] = path.ToStrings(resp.Update.GetPrefix(), true)

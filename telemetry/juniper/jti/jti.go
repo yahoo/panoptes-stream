@@ -122,7 +122,7 @@ func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
 	jHeader["timestamp"] = d.Timestamp
 	jHeader["sequence_number"] = d.SequenceNumber
 
-	jHeader["__service__"] = fmt.Sprintf("jti_v%", jtiVersion)
+	jHeader["__service__"] = fmt.Sprintf("jti_v%s", jtiVersion)
 
 	dsSlice := []telemetry.DataStore{}
 	var ds = make(telemetry.DataStore)
@@ -193,8 +193,4 @@ func getJTIPathKValues(p string, valuesOnly bool) []string {
 		}
 	}
 	return kv
-}
-
-func Version() string {
-	return jtiVersion
 }
