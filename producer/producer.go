@@ -28,8 +28,8 @@ func NewRegistrar(lg *zap.Logger) *Registrar {
 	}
 }
 
-func (pr *Registrar) Register(name, kind string, pf ProducerFactory) {
-	pr.lg.Info("producer/register", zap.String(kind, name))
+func (pr *Registrar) Register(name, vendor string, pf ProducerFactory) {
+	pr.lg.Info("producer/register", zap.String("name", name), zap.String("vendor", vendor))
 	pr.set(name, pf)
 }
 

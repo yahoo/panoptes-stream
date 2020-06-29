@@ -6,5 +6,5 @@ import (
 )
 
 func Register(producerRegistrar *producer.Registrar) {
-	producerRegistrar.Register("kafka", "mq", kafka.New)
+	producerRegistrar.Register("kafka", "segment.io", kafka.New)
 }

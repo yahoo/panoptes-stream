@@ -15,7 +15,7 @@ type Console struct {
 }
 
 func New(cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
-	return &Console{ch: inChan, }
+	return &Console{ch: inChan}
 }
 
 func (c *Console) Start() {
@@ -36,5 +36,5 @@ func (c *Console) Start() {
 }
 
 func Register(producerRegistrar *producer.Registrar) {
-	producerRegistrar.Register("console", "debug", New)
+	producerRegistrar.Register("console", "-", New)
 }
