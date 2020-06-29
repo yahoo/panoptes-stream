@@ -102,6 +102,7 @@ func (j *JTI) worker(ctx context.Context) {
 				}:
 				default:
 				}
+
 			} else {
 				j.lg.Warn("path not found", zap.String("path", d.Path))
 			}
