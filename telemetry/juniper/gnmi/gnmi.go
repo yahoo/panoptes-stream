@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"regexp"
 	"strings"
 	"time"
 
@@ -33,13 +34,15 @@ type GNMI struct {
 
 	dataChan chan *gpb.SubscribeResponse
 	outChan  telemetry.ExtDSChan
+	lg       *zap.Logger
 
-	lg *zap.Logger
+	pathOutput map[string]string
 }
 
 // New ...
 func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
-	var subscriptions []*gpb.Subscription
+	subscriptions := []*gpb.Subscription{}
+	pathOutput := make(map[string]string)
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
@@ -52,6 +55,8 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
 			SuppressRedundant: false,
 		})
+
+		pathOutput[sensor.Path] = sensor.Output
 	}
 
 	return &GNMI{
@@ -59,6 +64,7 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 		subscriptions: subscriptions,
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
+		pathOutput:    pathOutput,
 	}
 }
 
@@ -102,6 +108,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
+	regxPath := regexp.MustCompile("/:(/.*/):")
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -114,18 +121,28 @@ func (g *GNMI) worker(ctx context.Context) {
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
 				ds := g.decoder(resp)
-				//ds.PrettyPrint()
+				jHPath := ds["__path__"].(string)
+				delete(ds, "__path__")
+				path := regxPath.FindStringSubmatch(jHPath)
+				if len(path) > 1 {
+					output, ok := g.pathOutput[path[1]]
+					if !ok {
+						g.lg.Warn("path to output not found", zap.String("path", jHPath))
+						continue
+					}
 
-				// get sensor from __juniper_telemetry_header__
-				// find the output from sensors []*config.Sensor  output -> kafka1::panoptes
+					select {
+					case g.outChan <- telemetry.ExtDataStore{
+						DS:     ds,
+						Output: output,
+					}:
+					default:
+					}
 
-				select {
-				case g.outChan <- telemetry.ExtDataStore{
-					DS:     ds,
-					Output: "kafka1::topic",
-				}:
-				default:
+				} else {
+					g.lg.Warn("path not found", zap.String("path", jHPath))
 				}
+
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
@@ -180,6 +197,7 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 				hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
 				ptypes.UnmarshalAny(anyMsg, &hdr)
 				value = hdr
+				ds["__path__"] = hdr.Path
 			}
 		case *gpb.TypedValue_LeaflistVal:
 			// TODO
