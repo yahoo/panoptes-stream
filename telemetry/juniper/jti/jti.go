@@ -194,3 +194,7 @@ func getJTIPathKValues(p string, valuesOnly bool) []string {
 	}
 	return kv
 }
+
+func Version() string {
+	return jtiVersion
+}
