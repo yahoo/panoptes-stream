@@ -6,7 +6,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/jti"
 )
 
-func Register(telemetryRegistrar *telemetry.TelemetryRegistrar) {
+func Register(telemetryRegistrar *telemetry.Registrar) {
 	telemetryRegistrar.Register("juniper.gnmi", gnmi.New)
 	telemetryRegistrar.Register("juniper.jti", jti.New)
 }

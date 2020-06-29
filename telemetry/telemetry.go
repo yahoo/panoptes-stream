@@ -3,7 +3,7 @@ package telemetry
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"os"
 	"sync"
 
 	"go.uber.org/zap"
@@ -30,47 +30,51 @@ type ExtDataStore struct {
 
 type ExtDSChan chan ExtDataStore
 
-type TelemetryRegistrar struct {
+type Registrar struct {
 	nmi map[string]NMIFactory
 	lg  *zap.Logger
 	sync.RWMutex
 }
 
-func NewRegistrar(lg *zap.Logger) *TelemetryRegistrar {
-	return &TelemetryRegistrar{
+func NewRegistrar(lg *zap.Logger) *Registrar {
+	return &Registrar{
 		nmi: make(map[string]NMIFactory),
 		lg:  lg,
 	}
 }
 
-func (tr *TelemetryRegistrar) Register(name string, tf NMIFactory) {
+func (tr *Registrar) Register(name string, tf NMIFactory) {
 	tr.lg.Info("telemetry/register", zap.String("nmi", name))
 	tr.set(name, tf)
 }
 
-func (tr *TelemetryRegistrar) GetNMIFactory(name string) (NMIFactory, bool) {
+func (tr *Registrar) GetNMIFactory(name string) (NMIFactory, bool) {
 	return tr.get(name)
 }
 
-func (tr *TelemetryRegistrar) set(name string, nf NMIFactory) {
+func (tr *Registrar) set(name string, nf NMIFactory) {
 	tr.Lock()
 	defer tr.Unlock()
 	tr.nmi[name] = nf
 }
 
-func (tr *TelemetryRegistrar) get(name string) (NMIFactory, bool) {
+func (tr *Registrar) get(name string) (NMIFactory, bool) {
 	tr.RLock()
 	defer tr.RUnlock()
 	v, ok := tr.nmi[name]
 	return v, ok
 }
 
-func (ds DataStore) PrettyPrint() error {
+func (ds DataStore) PrettyPrint(fdType string) error {
 	b, err := json.MarshalIndent(ds, "", "  ")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(string(b))
+	if fdType == "stdout" {
+		os.Stdout.Write(b)
+	} else {
+		os.Stderr.Write(b)
+	}
 	return nil
 }

@@ -15,35 +15,35 @@ type Producer interface {
 	Start()
 }
 
-type ProducerRegistrar struct {
+type Registrar struct {
 	p  map[string]ProducerFactory
 	lg *zap.Logger
 	sync.RWMutex
 }
 
-func NewRegistrar(lg *zap.Logger) *ProducerRegistrar {
-	return &ProducerRegistrar{
+func NewRegistrar(lg *zap.Logger) *Registrar {
+	return &Registrar{
 		p:  make(map[string]ProducerFactory),
 		lg: lg,
 	}
 }
 
-func (pr *ProducerRegistrar) Register(name string, pf ProducerFactory) {
-	pr.lg.Info("producer/register", zap.String("mq", name))
+func (pr *Registrar) Register(name, kind string, pf ProducerFactory) {
+	pr.lg.Info("producer/register", zap.String(kind, name))
 	pr.set(name, pf)
 }
 
-func (pr *ProducerRegistrar) GetProducerFactory(name string) (ProducerFactory, bool) {
+func (pr *Registrar) GetProducerFactory(name string) (ProducerFactory, bool) {
 	return pr.get(name)
 }
 
-func (pr *ProducerRegistrar) set(name string, m ProducerFactory) {
+func (pr *Registrar) set(name string, m ProducerFactory) {
 	pr.Lock()
 	defer pr.Unlock()
 	pr.p[name] = m
 }
 
-func (pr *ProducerRegistrar) get(name string) (ProducerFactory, bool) {
+func (pr *Registrar) get(name string) (ProducerFactory, bool) {
 	pr.RLock()
 	defer pr.RUnlock()
 	v, ok := pr.p[name]

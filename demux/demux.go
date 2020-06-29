@@ -16,10 +16,10 @@ type Demux struct {
 	lg     *zap.Logger
 	inChan telemetry.ExtDSChan
 	chMap  map[string]telemetry.ExtDSChan
-	pr     *producer.ProducerRegistrar
+	pr     *producer.Registrar
 }
 
-func New(cfg config.Config, lg *zap.Logger, pr *producer.ProducerRegistrar, inChan telemetry.ExtDSChan) *Demux {
+func New(cfg config.Config, lg *zap.Logger, pr *producer.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		cfg:    cfg,
 		lg:     lg,

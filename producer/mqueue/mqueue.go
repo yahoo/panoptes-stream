@@ -5,6 +5,6 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue/kafka"
 )
 
-func Register(producerRegistrar *producer.ProducerRegistrar) {
-	producerRegistrar.Register("kafka", kafka.New)
+func Register(producerRegistrar *producer.Registrar) {
+	producerRegistrar.Register("kafka", "mq", kafka.New)
 }

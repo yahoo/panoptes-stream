@@ -5,10 +5,6 @@ import (
 	"encoding/json"
 	"time"
 
-	"go.uber.org/zap"
-	"go.uber.org/zap/zapcore"
-	"google.golang.org/grpc"
-
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
@@ -16,6 +12,9 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/register"
+	"go.uber.org/zap"
+	"go.uber.org/zap/zapcore"
+	"google.golang.org/grpc"
 )
 
 func main() {
@@ -26,6 +25,8 @@ func main() {
 	lg.Info("starting ...")
 
 	ctx := context.Background()
+
+	register.RegisterVendor()
 
 	// producer
 	producerRegistrar := producer.NewRegistrar(lg)
@@ -54,10 +55,10 @@ type panoptes struct {
 	ctx                context.Context
 	lg                 *zap.Logger
 	outChan            telemetry.ExtDSChan
-	telemetryRegistrar *telemetry.TelemetryRegistrar
+	telemetryRegistrar *telemetry.Registrar
 }
 
-func NewPanoptes(ctx context.Context, lg *zap.Logger, tr *telemetry.TelemetryRegistrar, outChan telemetry.ExtDSChan) *panoptes {
+func NewPanoptes(ctx context.Context, lg *zap.Logger, tr *telemetry.Registrar, outChan telemetry.ExtDSChan) *panoptes {
 	return &panoptes{
 		register:           make(map[string]context.CancelFunc),
 		ctx:                ctx,

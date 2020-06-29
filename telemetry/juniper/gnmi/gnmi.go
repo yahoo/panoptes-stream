@@ -112,7 +112,7 @@ func (g *GNMI) worker(ctx context.Context) {
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
 				ds := g.decoder(resp)
-				ds.PrettyPrint()
+				//ds.PrettyPrint()
 
 				// get sensor from __juniper_telemetry_header__
 				// find the output from sensors []*config.Sensor  output -> kafka1::panoptes

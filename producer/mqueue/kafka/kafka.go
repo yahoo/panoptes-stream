@@ -22,6 +22,6 @@ func (k *Kafka) Start() {
 			break
 		}
 
-		v.DS.PrettyPrint()
+		v.DS.PrettyPrint("stdout")
 	}
 }
