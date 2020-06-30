@@ -39,10 +39,10 @@ type yamlConfig struct {
 }
 
 // LoadConfig constructs new yaml config
-func LoadConfig(filename string) config.Config {
+func LoadConfig(filename string) (config.Config, error) {
 	cfg := &yamlConfig{}
-	if err := read(filename, cfg); err != nil {
-		log.Fatal(err)
+	if err := Read(filename, cfg); err != nil {
+		return &yaml{}, err
 	}
 
 	y := &yaml{
@@ -57,7 +57,7 @@ func LoadConfig(filename string) config.Config {
 
 	go y.watcher()
 
-	return y
+	return y, nil
 }
 
 func (y *yaml) Devices() []config.Device {
@@ -100,8 +100,8 @@ func configDevices(y *yamlConfig) []config.Device {
 	return devices
 }
 
-func read(file string, c interface{}) error {
-	b, err := ioutil.ReadFile(file)
+func Read(filename string, c interface{}) error {
+	b, err := ioutil.ReadFile(filename)
 	if err != nil {
 		return err
 	}
@@ -128,7 +128,7 @@ func configProducers(p map[string]producer) []config.Producer {
 		cfg := make(map[string]interface{})
 
 		if name != "console" {
-			if err := read(pConfig.ConfigFile, &cfg); err != nil {
+			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
 				log.Fatal(err)
 			}
 		}
