@@ -3,7 +3,7 @@ package config
 import "encoding/json"
 
 type DeviceTemplate struct {
-	DeviceConfig
+	DeviceConfig `yaml:",inline"`
 
 	Sensors []string
 }
