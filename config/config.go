@@ -11,8 +11,8 @@ type DeviceConfig struct {
 	Host string
 	Port int
 
-	username string
-	password string
+	Username string
+	Password string
 }
 
 type Sensor struct {
