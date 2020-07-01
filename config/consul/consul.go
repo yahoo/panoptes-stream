@@ -36,7 +36,9 @@ func New(filename string) (config.Config, error) {
 	var (
 		err    error
 		cfg    = &consulConfig{}
-		consul = &consul{}
+		consul = &consul{
+			informer: make(chan struct{}, 1),
+		}
 	)
 
 	if err := yaml.Read(filename, cfg); err != nil {
@@ -72,6 +74,8 @@ func New(filename string) (config.Config, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	go consul.watch("config/global")
 
 	return consul, nil
 }

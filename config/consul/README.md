@@ -28,5 +28,8 @@ value: {"service": "juniper.jti", "path": "/interfaces/interface", "mode": "samp
 ```
 
 - folder: config/global/
-key: global variable
+key: global 
 value: global value
+example:
+key: config/global
+value: {"level":"debug", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}
