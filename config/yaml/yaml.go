@@ -38,8 +38,8 @@ type yamlConfig struct {
 	config.Global `yaml:",inline"`
 }
 
-// LoadConfig constructs new yaml config
-func LoadConfig(filename string) (config.Config, error) {
+// New constructs new yaml config
+func New(filename string) (config.Config, error) {
 	cfg := &yamlConfig{}
 	if err := Read(filename, cfg); err != nil {
 		return &yaml{}, err
