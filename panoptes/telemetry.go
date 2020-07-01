@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"net"
+	"strconv"
 	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -29,13 +31,23 @@ func NewPanoptes(ctx context.Context, lg *zap.Logger, tr *telemetry.Registrar, o
 }
 
 func (p *panoptes) subscribe(device config.Device) {
-	var ctx context.Context
+	var (
+		ctx  context.Context
+		addr string
+	)
+
 	ctx, p.register[device.Host] = context.WithCancel(p.ctx)
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
 			for {
-				conn, err := grpc.Dial(device.Host, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
+				if device.Port > 0 {
+					addr = net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
+				} else {
+					addr = device.Host
+				}
+
+				conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
 				if err != nil {
 					p.lg.Error("connect to device", zap.Error(err))
 				} else {
