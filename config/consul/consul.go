@@ -17,7 +17,7 @@ type consul struct {
 	filename  string
 	devices   []config.Device
 	producers []config.Producer
-	global    config.Global
+	global    *config.Global
 
 	informer chan struct{}
 }
@@ -53,49 +53,53 @@ func New(filename string) (config.Config, error) {
 
 	kv := consul.client.KV()
 
-	pairs, _, err := kv.List("config/producers/", nil)
+	consul.producers, err = configProducers(kv, "config/producers/")
 	if err != nil {
 		return nil, err
 	}
 
-	consul.producers = configProducers(pairs)
-
-	pairs, _, err = kv.List("config/sensors/", nil)
+	sensors, err := configSensors(kv, "config/sensors/")
 	if err != nil {
 		return nil, err
 	}
 
-	sensors := configSensors(pairs)
-
-	pairs, _, err = kv.List("config/devices/", nil)
+	consul.devices, err = configDevices(kv, "config/devices/", sensors)
 	if err != nil {
 		return nil, err
 	}
 
-	consul.devices = configDevices(pairs, sensors)
+	consul.global, err = configdGlobal(kv, "config/global")
+	if err != nil {
+		return nil, err
+	}
 
 	return consul, nil
 }
 
-func (e *consul) Devices() []config.Device {
-	return e.devices
+func (c *consul) Devices() []config.Device {
+	return c.devices
 }
 
-func (e *consul) Producers() []config.Producer {
-	return e.producers
+func (c *consul) Producers() []config.Producer {
+	return c.producers
 }
 
-func (e *consul) Global() config.Global {
-	return e.global
+func (c *consul) Global() *config.Global {
+	return c.global
 }
 
-func (e *consul) Informer() chan struct{} {
+func (c *consul) Informer() chan struct{} {
 
-	return e.informer
+	return c.informer
 }
 
-func configProducers(pairs api.KVPairs) []config.Producer {
+func configProducers(kv *api.KV, prefix string) ([]config.Producer, error) {
 	var producers []config.Producer
+
+	pairs, _, err := kv.List(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, p := range pairs {
 		// skip folder
@@ -105,18 +109,23 @@ func configProducers(pairs api.KVPairs) []config.Producer {
 
 		producer := config.Producer{}
 		if err := json.Unmarshal(p.Value, &producer); err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		_, producer.Name = path.Split(p.Key)
 		producers = append(producers, producer)
 	}
 
-	return producers
+	return producers, nil
 }
 
-func configSensors(pairs api.KVPairs) map[string]*config.Sensor {
+func configSensors(kv *api.KV, prefix string) (map[string]*config.Sensor, error) {
 	var sensors = make(map[string]*config.Sensor)
+
+	pairs, _, err := kv.List(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, p := range pairs {
 		// skip folder
@@ -126,18 +135,23 @@ func configSensors(pairs api.KVPairs) map[string]*config.Sensor {
 
 		sensor := config.Sensor{}
 		if err := json.Unmarshal(p.Value, &sensor); err != nil {
-			panic(err)
+			return nil, err
 		}
 
 		_, name := path.Split(p.Key)
 		sensors[name] = &sensor
 	}
 
-	return sensors
+	return sensors, nil
 }
 
-func configDevices(pairs api.KVPairs, sensors map[string]*config.Sensor) []config.Device {
+func configDevices(kv *api.KV, prefix string, sensors map[string]*config.Sensor) ([]config.Device, error) {
 	devices := []config.Device{}
+
+	pairs, _, err := kv.List(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	for _, p := range pairs {
 		// skip folder
@@ -156,7 +170,7 @@ func configDevices(pairs api.KVPairs, sensors map[string]*config.Sensor) []confi
 		for _, s := range d.Sensors {
 			sensor, ok := sensors[s]
 			if !ok {
-				panic(fmt.Sprintf("%s sensor not exist", s))
+				return nil, fmt.Errorf("%s sensor not exist", s)
 			}
 
 			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
@@ -165,7 +179,23 @@ func configDevices(pairs api.KVPairs, sensors map[string]*config.Sensor) []confi
 		devices = append(devices, device)
 	}
 
-	return devices
+	return devices, nil
+}
+
+func configdGlobal(kv *api.KV, prefix string) (*config.Global, error) {
+	global := &config.Global{}
+
+	pair, _, err := kv.Get(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(pair.Value, global)
+	if err != nil {
+		return nil, err
+	}
+
+	return global, nil
 }
 
 func conv(d device) config.Device {
