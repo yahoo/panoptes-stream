@@ -2,6 +2,7 @@ package consul
 
 import (
 	"encoding/json"
+	"fmt"
 	"path"
 
 	"github.com/hashicorp/consul/api"
@@ -155,7 +156,7 @@ func configDevices(pairs api.KVPairs, sensors map[string]*config.Sensor) []confi
 		for _, s := range d.Sensors {
 			sensor, ok := sensors[s]
 			if !ok {
-				panic("sensor not exist ", s)
+				panic(fmt.Sprintf("%s sensor not exist", s))
 			}
 
 			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
