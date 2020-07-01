@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.2
+	github.com/hashicorp/consul/api v1.5.0
 	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/openconfig/ygot v0.8.0
 	github.com/segmentio/kafka-go v0.3.7
