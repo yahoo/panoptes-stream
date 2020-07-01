@@ -14,7 +14,7 @@ type yaml struct {
 	filename  string
 	devices   []config.Device
 	producers []config.Producer
-	global    config.Global
+	global    *config.Global
 
 	informer chan struct{}
 }
@@ -50,7 +50,7 @@ func LoadConfig(filename string) (config.Config, error) {
 
 		devices:   configDevices(cfg),
 		producers: configProducers(cfg.Producers),
-		global:    cfg.Global,
+		global:    &cfg.Global,
 
 		informer: make(chan struct{}, 1),
 	}
@@ -64,7 +64,7 @@ func (y *yaml) Devices() []config.Device {
 	return y.devices
 }
 
-func (y *yaml) Global() config.Global {
+func (y *yaml) Global() *config.Global {
 	return y.global
 }
 

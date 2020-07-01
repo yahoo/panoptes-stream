@@ -3,7 +3,7 @@ package config
 type Config interface {
 	Devices() []Device
 	Producers() []Producer
-	Global() Global
+	Global() *Global
 	Informer() chan struct{}
 }
 
