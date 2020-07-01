@@ -22,12 +22,6 @@ type consul struct {
 	informer chan struct{}
 }
 
-type device struct {
-	config.DeviceConfig
-
-	Sensors []string
-}
-
 type consulConfig struct {
 	Address string
 }
@@ -163,12 +157,12 @@ func configDevices(kv *api.KV, prefix string, sensors map[string]*config.Sensor)
 			continue
 		}
 
-		d := device{}
+		d := config.DeviceTemplate{}
 		if err := json.Unmarshal(p.Value, &d); err != nil {
 			panic(err)
 		}
 
-		device := conv(d)
+		device := config.ConvDeviceTemplate(d)
 		device.Sensors = make(map[string][]*config.Sensor)
 
 		for _, s := range d.Sensors {
@@ -200,12 +194,4 @@ func configdGlobal(kv *api.KV, prefix string) (*config.Global, error) {
 	}
 
 	return global, nil
-}
-
-func conv(d device) config.Device {
-	cd := config.Device{}
-	b, _ := json.Marshal(&d)
-	json.Unmarshal(b, &cd)
-	cd.Sensors = nil
-	return cd
 }

@@ -1,7 +1,6 @@
 package yaml
 
 import (
-	"encoding/json"
 	"io/ioutil"
 	"log"
 
@@ -19,19 +18,13 @@ type yaml struct {
 	informer chan struct{}
 }
 
-type device struct {
-	config.DeviceConfig `yaml:",inline"`
-
-	Sensors []string
-}
-
 type producer struct {
 	Service    string `yaml:"service"`
 	ConfigFile string `yaml:"configFile"`
 }
 
 type yamlConfig struct {
-	Devices   []device
+	Devices   []config.DeviceTemplate
 	Sensors   map[string]config.Sensor
 	Producers map[string]producer
 
@@ -82,7 +75,7 @@ func configDevices(y *yamlConfig) []config.Device {
 	devices := []config.Device{}
 	for _, d := range y.Devices {
 
-		device := conv(d)
+		device := config.ConvDeviceTemplate(d)
 		device.Sensors = make(map[string][]*config.Sensor)
 
 		for _, s := range d.Sensors {
@@ -112,14 +105,6 @@ func Read(filename string, c interface{}) error {
 	}
 
 	return nil
-}
-
-func conv(d device) config.Device {
-	cd := config.Device{}
-	b, _ := json.Marshal(&d)
-	json.Unmarshal(b, &cd)
-	cd.Sensors = nil
-	return cd
 }
 
 func configProducers(p map[string]producer) []config.Producer {
