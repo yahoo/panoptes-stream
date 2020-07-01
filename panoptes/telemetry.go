@@ -2,6 +2,9 @@ package main
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
+	"io/ioutil"
 	"net"
 	"strconv"
 	"time"
@@ -10,33 +13,38 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/metadata"
 )
 
 type panoptes struct {
 	register           map[string]context.CancelFunc
-	ctx                context.Context
+	cfg                config.Config
 	lg                 *zap.Logger
 	outChan            telemetry.ExtDSChan
 	telemetryRegistrar *telemetry.Registrar
 }
 
-func NewPanoptes(ctx context.Context, lg *zap.Logger, tr *telemetry.Registrar, outChan telemetry.ExtDSChan) *panoptes {
+func NewPanoptes(cfg config.Config, lg *zap.Logger, tr *telemetry.Registrar, outChan telemetry.ExtDSChan) *panoptes {
 	return &panoptes{
 		register:           make(map[string]context.CancelFunc),
-		ctx:                ctx,
+		cfg:                cfg,
 		lg:                 lg,
 		outChan:            outChan,
 		telemetryRegistrar: tr,
 	}
 }
 
-func (p *panoptes) subscribe(device config.Device) {
+func (p *panoptes) subscribe(parentCtx context.Context, device config.Device) {
 	var (
-		ctx  context.Context
 		addr string
+		ctx  context.Context
+		gCfg *config.Global
 	)
 
-	ctx, p.register[device.Host] = context.WithCancel(p.ctx)
+	ctx, p.register[device.Host] = context.WithCancel(parentCtx)
+
+	gCfg = p.cfg.Global()
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
@@ -47,7 +55,16 @@ func (p *panoptes) subscribe(device config.Device) {
 					addr = device.Host
 				}
 
-				conn, err := grpc.Dial(addr, grpc.WithInsecure(), grpc.WithUserAgent("Panoptes"))
+				opts, err := dialOpts(device, gCfg)
+				if err != nil {
+					p.lg.Error("diap options", zap.Error(err))
+				}
+
+				if len(device.Username) > 0 && len(device.Password) > 0 {
+					ctx = metadata.AppendToOutgoingContext(ctx, "username", device.Username, "password", device.Password)
+				}
+
+				conn, err := grpc.Dial(addr, opts...)
 				if err != nil {
 					p.lg.Error("connect to device", zap.Error(err))
 				} else {
@@ -68,4 +85,54 @@ func (p *panoptes) subscribe(device config.Device) {
 func (p *panoptes) unsubscribe(device config.Device) {
 	cancel := p.register[device.Host]
 	cancel()
+}
+
+func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
+	var caCertPool *x509.CertPool
+	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
+	if err != nil {
+		return nil, err
+	}
+
+	if caCertFile != "" {
+		caCert, err := ioutil.ReadFile(caCertFile)
+		if err != nil {
+			return nil, err
+		}
+
+		caCertPool = x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+	}
+
+	tc := credentials.NewTLS(&tls.Config{
+		Certificates: []tls.Certificate{cert},
+		RootCAs:      caCertPool,
+	})
+
+	return tc, nil
+}
+
+func dialOpts(device config.Device, gCfg *config.Global) ([]grpc.DialOption, error) {
+	var opts []grpc.DialOption
+
+	opts = append(opts, grpc.WithUserAgent("Panoptes"))
+
+	if gCfg.TLSCertFile != "" && gCfg.TLSKeyFile != "" {
+		creds, err := transportClientCreds(
+			gCfg.TLSCertFile,
+			gCfg.TLSKeyFile,
+			gCfg.CAFile,
+		)
+
+		if err != nil {
+			return opts, err
+		}
+
+		opts = append(opts, grpc.WithTransportCredentials(creds))
+
+	} else {
+		opts = append(opts, grpc.WithInsecure())
+	}
+
+	return opts, nil
 }
