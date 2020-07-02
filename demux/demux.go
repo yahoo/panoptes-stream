@@ -59,8 +59,11 @@ func (d *Demux) Start() {
 			continue
 		}
 
-		d.chMap[output[0]] <- extDS
-
+		if _, ok := d.chMap[output[0]]; ok {
+			d.chMap[output[0]] <- extDS
+		} else {
+			d.lg.Error("channel not found", zap.String("name", output[0]))
+		}
 	}
 }
 

@@ -62,7 +62,11 @@ func (k *Kafka) Start() {
 				continue
 			}
 
-			chMap[topic[1]] <- v.DS
+			if _, ok := chMap[topic[1]]; ok {
+				chMap[topic[1]] <- v.DS
+			} else {
+				k.lg.Error("topic not found", zap.String("name", topic[1]))
+			}
 
 		case <-k.ctx.Done():
 			k.lg.Info("kafka fanout has been terminated",
