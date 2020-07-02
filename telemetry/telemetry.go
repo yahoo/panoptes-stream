@@ -102,8 +102,8 @@ func (t *Telemetry) subscribe(device config.Device) {
 }
 
 func (t *Telemetry) unsubscribe(device config.Device) {
-	cancel := t.register[device.Host]
-	cancel()
+	t.register[device.Host]()
+	delete(t.register, device.Host)
 }
 
 // Start subscribe configured devices
