@@ -28,7 +28,7 @@ type Telemetry struct {
 	informer           chan struct{}
 }
 
-type deltaDevices struct {
+type delta struct {
 	add []config.Device
 	del []config.Device
 	mod []config.Device
@@ -47,16 +47,16 @@ func New(ctx context.Context, cfg config.Config, lg *zap.Logger, tr *Registrar, 
 	}
 }
 
-func (p *Telemetry) subscribe(device config.Device) {
+func (t *Telemetry) subscribe(device config.Device) {
 	var (
 		addr string
 		ctx  context.Context
 		gCfg *config.Global
 	)
 
-	ctx, p.register[device.Host] = context.WithCancel(p.ctx)
+	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 
-	gCfg = p.cfg.Global()
+	gCfg = t.cfg.Global()
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
@@ -69,7 +69,7 @@ func (p *Telemetry) subscribe(device config.Device) {
 
 				opts, err := dialOpts(device, gCfg)
 				if err != nil {
-					p.lg.Error("diap options", zap.Error(err))
+					t.lg.Error("diap options", zap.Error(err))
 				}
 
 				if len(device.Username) > 0 && len(device.Password) > 0 {
@@ -79,20 +79,20 @@ func (p *Telemetry) subscribe(device config.Device) {
 
 				conn, err := grpc.Dial(addr, opts...)
 				if err != nil {
-					p.lg.Error("connect to device", zap.Error(err))
+					t.lg.Error("connect to device", zap.Error(err))
 				} else {
-					NewNMI, _ := p.telemetryRegistrar.GetNMIFactory(sName)
-					nmi := NewNMI(p.lg, conn, sensors, p.outChan)
+					NewNMI, _ := t.telemetryRegistrar.GetNMIFactory(sName)
+					nmi := NewNMI(t.lg, conn, sensors, t.outChan)
 					err = nmi.Start(ctx)
 					if err != nil {
-						p.lg.Warn("nmi start error", zap.Error(err))
+						t.lg.Warn("nmi start error", zap.Error(err))
 					}
 				}
 
 				select {
 				case <-time.After(time.Second * 10):
 				case <-ctx.Done():
-					p.lg.Info("unsubscribed", zap.String("host", device.Host),
+					t.lg.Info("unsubscribed", zap.String("host", device.Host),
 						zap.String("service", sName))
 					return
 				}
@@ -101,29 +101,30 @@ func (p *Telemetry) subscribe(device config.Device) {
 	}
 }
 
-func (p *Telemetry) unsubscribe(device config.Device) {
-	cancel := p.register[device.Host]
+func (t *Telemetry) unsubscribe(device config.Device) {
+	cancel := t.register[device.Host]
 	cancel()
 }
 
-func (p *Telemetry) Start() {
-	for _, device := range p.cfg.Devices() {
-		p.subscribe(device)
+// Start subscribe configured devices
+func (t *Telemetry) Start() {
+	for _, device := range t.cfg.Devices() {
+		t.subscribe(device)
 	}
 }
 
-func (p *Telemetry) deltaDevices() *deltaDevices {
+func (t *Telemetry) delta() *delta {
 	oldDevices := make(map[string]config.Device)
 	devices := make(map[string]config.Device)
-	delta := new(deltaDevices)
+	delta := new(delta)
 
-	for _, device := range p.cfg.Devices() {
+	for _, device := range t.cfg.Devices() {
 		oldDevices[device.Host] = device
 	}
 
-	p.cfg.Update()
+	t.cfg.Update()
 
-	for _, device := range p.cfg.Devices() {
+	for _, device := range t.cfg.Devices() {
 		devices[device.Host] = device
 
 		if _, ok := oldDevices[device.Host]; !ok {
@@ -144,26 +145,41 @@ func (p *Telemetry) deltaDevices() *deltaDevices {
 	return delta
 }
 
-func (p *Telemetry) Watcher() {
-	ticker := time.NewTicker(time.Second * 60)
-	go func() {
-		for {
-			<-ticker.C
-			d := p.deltaDevices()
-			for _, device := range d.add {
-				p.subscribe(device)
-			}
+func (t *Telemetry) Update(devices map[string]config.Device) {
+	newDevices := make(map[string]config.Device)
+	delta := new(delta)
 
-			for _, device := range d.del {
-				p.unsubscribe(device)
-			}
+	for _, device := range t.cfg.Devices() {
+		newDevices[device.Host] = device
 
-			for _, device := range d.mod {
-				p.unsubscribe(device)
-				p.subscribe(device)
+		if _, ok := devices[device.Host]; !ok {
+			delta.add = append(delta.add, device)
+		} else {
+			if ok := reflect.DeepEqual(devices[device.Host], device); !ok {
+				delta.mod = append(delta.mod, device)
 			}
 		}
-	}()
+
+	}
+
+	for host, device := range devices {
+		if _, ok := newDevices[host]; !ok {
+			delta.del = append(delta.del, device)
+		}
+	}
+
+	for _, device := range delta.add {
+		t.subscribe(device)
+	}
+
+	for _, device := range delta.del {
+		t.unsubscribe(device)
+	}
+
+	for _, device := range delta.mod {
+		t.unsubscribe(device)
+		t.subscribe(device)
+	}
 }
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
