@@ -3,6 +3,7 @@ package demux
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -19,6 +20,12 @@ type Demux struct {
 	chMap    map[string]telemetry.ExtDSChan
 	pr       *producer.Registrar
 	register map[string]context.CancelFunc
+}
+
+type delta struct {
+	add []config.Producer
+	del []config.Producer
+	mod []config.Producer
 }
 
 func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Registrar, inChan telemetry.ExtDSChan) *Demux {
@@ -78,6 +85,44 @@ func (d *Demux) subscribe(producer config.Producer) error {
 }
 
 func (d *Demux) unsubscribe(producer config.Producer) {
-	cancel := d.register[producer.Name]
-	cancel()
+	d.register[producer.Name]()
+	delete(d.register, producer.Name)
+	delete(d.chMap, producer.Name)
+}
+
+func (d *Demux) Update(producers map[string]config.Producer) {
+	newProducers := make(map[string]config.Producer)
+	delta := new(delta)
+
+	for _, producer := range d.cfg.Producers() {
+		newProducers[producer.Name] = producer
+
+		if _, ok := producers[producer.Name]; !ok {
+			delta.add = append(delta.add, producer)
+		} else {
+			if ok := reflect.DeepEqual(producers[producer.Name], producer); !ok {
+				delta.mod = append(delta.mod, producer)
+			}
+		}
+
+	}
+
+	for name, producer := range producers {
+		if _, ok := newProducers[name]; !ok {
+			delta.del = append(delta.del, producer)
+		}
+	}
+
+	for _, producer := range delta.add {
+		d.subscribe(producer)
+	}
+
+	for _, producer := range delta.del {
+		d.unsubscribe(producer)
+	}
+
+	for _, producer := range delta.mod {
+		d.unsubscribe(producer)
+		d.subscribe(producer)
+	}
 }
