@@ -113,38 +113,6 @@ func (t *Telemetry) Start() {
 	}
 }
 
-func (t *Telemetry) delta() *delta {
-	oldDevices := make(map[string]config.Device)
-	devices := make(map[string]config.Device)
-	delta := new(delta)
-
-	for _, device := range t.cfg.Devices() {
-		oldDevices[device.Host] = device
-	}
-
-	t.cfg.Update()
-
-	for _, device := range t.cfg.Devices() {
-		devices[device.Host] = device
-
-		if _, ok := oldDevices[device.Host]; !ok {
-			delta.add = append(delta.add, device)
-		} else {
-			if ok := reflect.DeepEqual(oldDevices[device.Host], device); !ok {
-				delta.mod = append(delta.mod, device)
-			}
-		}
-	}
-
-	for host, device := range oldDevices {
-		if _, ok := devices[host]; !ok {
-			delta.del = append(delta.del, device)
-		}
-	}
-
-	return delta
-}
-
 func (t *Telemetry) Update(devices map[string]config.Device) {
 	newDevices := make(map[string]config.Device)
 	delta := new(delta)
