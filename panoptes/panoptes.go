@@ -16,7 +16,14 @@ var (
 )
 
 func main() {
-	cfg := yaml.LoadConfig("etc/config.yaml")
+	// cfg, err := consul.New("etc/consul.yaml")
+	// if err != nil {
+	// 	log.Println(err)
+	// }
+
+	//_ = cs
+
+	cfg, _ := yaml.New("etc/config.yaml")
 	lg := GetLogger(cfg.Global().Logger)
 	defer lg.Sync()
 
@@ -38,10 +45,9 @@ func main() {
 	dp.Init()
 	go dp.Start(ctx)
 
-	p := NewPanoptes(ctx, lg, telemetryRegistrar, outChan)
-	for _, device := range cfg.Devices() {
-		p.subscribe(device)
-	}
+	p := NewPanoptes(cfg, lg, telemetryRegistrar, outChan)
+	p.watcher()
+	p.Start(ctx)
 
 	<-ctx.Done()
 }
