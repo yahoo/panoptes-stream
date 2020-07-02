@@ -45,8 +45,8 @@ func main() {
 	dp.Init()
 	go dp.Start(ctx)
 
-	p := NewPanoptes(cfg, lg, telemetryRegistrar, outChan)
-	p.watcher()
+	p := telemetry.New(ctx, cfg, lg, telemetryRegistrar, outChan)
+	p.Watcher()
 	p.Start(ctx)
 
 	<-ctx.Done()
