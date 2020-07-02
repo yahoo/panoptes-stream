@@ -65,7 +65,8 @@ func (k *Kafka) Start() {
 			chMap[topic[1]] <- v.DS
 
 		case <-k.ctx.Done():
-			k.lg.Info("kafka fanout has been terminated")
+			k.lg.Info("kafka fanout has been terminated",
+				zap.String("brokers", strings.Join(k.cfg.Brokers, ",")))
 			return
 		}
 	}
@@ -83,7 +84,7 @@ func (k *Kafka) start(ch chan telemetry.DataStore, topic string) {
 		Balancer: &kafka.LeastBytes{},
 	})
 
-	k.lg.Info("kafka subscribed", zap.String("brokers",
+	k.lg.Info("kafka producer set up", zap.String("brokers",
 		strings.Join(k.cfg.Brokers, ",")), zap.String("topic", topic))
 
 	for {
