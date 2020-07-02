@@ -12,6 +12,7 @@ import (
 )
 
 type Demux struct {
+	ctx    context.Context
 	cfg    config.Config
 	lg     *zap.Logger
 	inChan telemetry.ExtDSChan
@@ -19,28 +20,28 @@ type Demux struct {
 	pr     *producer.Registrar
 }
 
-func New(cfg config.Config, lg *zap.Logger, pr *producer.Registrar, inChan telemetry.ExtDSChan) *Demux {
+func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
+		ctx:    ctx,
 		cfg:    cfg,
 		lg:     lg,
+		pr:     pr,
 		inChan: inChan,
 		chMap:  make(map[string]telemetry.ExtDSChan),
-		pr:     pr,
 	}
 }
 
 func (d *Demux) Init() error {
-	// TODO same proc for db
-	for _, p := range d.cfg.Producers() {
-		mqNew, ok := d.pr.GetProducerFactory(p.Service)
+	for _, producer := range d.cfg.Producers() {
+		mqNew, ok := d.pr.GetProducerFactory(producer.Service)
 		if !ok {
 			return errors.New("producer not exist")
 		}
 
 		// register channel
-		d.chMap[p.Name] = make(telemetry.ExtDSChan, 1)
+		d.chMap[producer.Name] = make(telemetry.ExtDSChan, 1)
 		// construct
-		m := mqNew(p, d.lg, d.chMap[p.Name])
+		m := mqNew(d.ctx, producer, d.lg, d.chMap[producer.Name])
 		// start the producer
 		go m.Start()
 	}
