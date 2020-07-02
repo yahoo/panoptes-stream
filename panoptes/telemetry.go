@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"io/ioutil"
 	"net"
+	"reflect"
 	"strconv"
 	"time"
 
@@ -20,14 +21,23 @@ import (
 type panoptes struct {
 	register           map[string]context.CancelFunc
 	cfg                config.Config
+	ctx                context.Context
 	lg                 *zap.Logger
 	outChan            telemetry.ExtDSChan
 	telemetryRegistrar *telemetry.Registrar
+	informer           chan struct{}
+}
+
+type deltaDevices struct {
+	add []config.Device
+	del []config.Device
+	mod []config.Device
 }
 
 func NewPanoptes(cfg config.Config, lg *zap.Logger, tr *telemetry.Registrar, outChan telemetry.ExtDSChan) *panoptes {
 	return &panoptes{
 		register:           make(map[string]context.CancelFunc),
+		informer:           make(chan struct{}, 1),
 		cfg:                cfg,
 		lg:                 lg,
 		outChan:            outChan,
@@ -76,7 +86,12 @@ func (p *panoptes) subscribe(parentCtx context.Context, device config.Device) {
 					}
 				}
 
-				<-time.After(time.Second * 10)
+				select {
+				case <-time.After(time.Second * 10):
+				case <-ctx.Done():
+					p.lg.Info("unsubscribed", zap.String("host", device.Host), zap.String("service", sName))
+					return
+				}
 			}
 		}(sName, sensors)
 	}
@@ -85,6 +100,67 @@ func (p *panoptes) subscribe(parentCtx context.Context, device config.Device) {
 func (p *panoptes) unsubscribe(device config.Device) {
 	cancel := p.register[device.Host]
 	cancel()
+}
+
+func (p *panoptes) Start(ctx context.Context) {
+	p.ctx = ctx
+	for _, device := range p.cfg.Devices() {
+		p.subscribe(ctx, device)
+	}
+}
+
+func (p *panoptes) deltaDevices() *deltaDevices {
+	oldDevices := make(map[string]config.Device)
+	devices := make(map[string]config.Device)
+	delta := new(deltaDevices)
+
+	for _, device := range p.cfg.Devices() {
+		oldDevices[device.Host] = device
+	}
+
+	p.cfg.Update()
+
+	for _, device := range p.cfg.Devices() {
+		devices[device.Host] = device
+
+		if _, ok := oldDevices[device.Host]; !ok {
+			delta.add = append(delta.add, device)
+		} else {
+			if ok := reflect.DeepEqual(oldDevices[device.Host], device); !ok {
+				delta.mod = append(delta.mod, device)
+			}
+		}
+	}
+
+	for host, device := range oldDevices {
+		if _, ok := devices[host]; !ok {
+			delta.del = append(delta.del, device)
+		}
+	}
+
+	return delta
+}
+
+func (p *panoptes) watcher() {
+	ticker := time.NewTicker(time.Second * 60)
+	go func() {
+		for {
+			<-ticker.C
+			d := p.deltaDevices()
+			for _, device := range d.add {
+				p.subscribe(p.ctx, device)
+			}
+
+			for _, device := range d.del {
+				p.unsubscribe(device)
+			}
+
+			for _, device := range d.mod {
+				p.unsubscribe(device)
+				p.subscribe(p.ctx, device)
+			}
+		}
+	}()
 }
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
