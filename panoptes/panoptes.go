@@ -47,7 +47,7 @@ func main() {
 
 	p := telemetry.New(ctx, cfg, lg, telemetryRegistrar, outChan)
 	p.Watcher()
-	p.Start(ctx)
+	p.Start()
 
 	<-ctx.Done()
 }

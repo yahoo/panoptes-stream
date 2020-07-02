@@ -47,14 +47,14 @@ func New(ctx context.Context, cfg config.Config, lg *zap.Logger, tr *Registrar, 
 	}
 }
 
-func (p *Telemetry) subscribe(parentCtx context.Context, device config.Device) {
+func (p *Telemetry) subscribe(device config.Device) {
 	var (
 		addr string
 		ctx  context.Context
 		gCfg *config.Global
 	)
 
-	ctx, p.register[device.Host] = context.WithCancel(parentCtx)
+	ctx, p.register[device.Host] = context.WithCancel(p.ctx)
 
 	gCfg = p.cfg.Global()
 
@@ -106,10 +106,9 @@ func (p *Telemetry) unsubscribe(device config.Device) {
 	cancel()
 }
 
-func (p *Telemetry) Start(ctx context.Context) {
-	p.ctx = ctx
+func (p *Telemetry) Start() {
 	for _, device := range p.cfg.Devices() {
-		p.subscribe(ctx, device)
+		p.subscribe(device)
 	}
 }
 
@@ -152,7 +151,7 @@ func (p *Telemetry) Watcher() {
 			<-ticker.C
 			d := p.deltaDevices()
 			for _, device := range d.add {
-				p.subscribe(p.ctx, device)
+				p.subscribe(device)
 			}
 
 			for _, device := range d.del {
@@ -161,7 +160,7 @@ func (p *Telemetry) Watcher() {
 
 			for _, device := range d.mod {
 				p.unsubscribe(device)
-				p.subscribe(p.ctx, device)
+				p.subscribe(device)
 			}
 		}
 	}()
