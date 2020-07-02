@@ -33,17 +33,17 @@ type yamlConfig struct {
 
 // New constructs new yaml config
 func New(filename string) (config.Config, error) {
-	cfg := &yamlConfig{}
-	if err := Read(filename, cfg); err != nil {
+	yamlCfg := &yamlConfig{}
+	if err := Read(filename, yamlCfg); err != nil {
 		return &yaml{}, err
 	}
 
 	y := &yaml{
 		filename: filename,
 
-		devices:   configDevices(cfg),
-		producers: configProducers(cfg.Producers),
-		global:    &cfg.Global,
+		devices:   configDevices(yamlCfg),
+		producers: configProducers(yamlCfg.Producers),
+		global:    &yamlCfg.Global,
 
 		informer: make(chan struct{}, 1),
 	}
@@ -54,14 +54,15 @@ func New(filename string) (config.Config, error) {
 }
 
 func (y *yaml) Update() error {
-	cfg := &yamlConfig{}
-	if err := Read(y.filename, cfg); err != nil {
+	yamlCfg := &yamlConfig{}
+
+	if err := Read(y.filename, yamlCfg); err != nil {
 		return err
 	}
 
-	y.devices = configDevices(cfg)
-	y.producers = configProducers(cfg.Producers)
-	y.global = &cfg.Global
+	y.devices = configDevices(yamlCfg)
+	y.producers = configProducers(yamlCfg.Producers)
+	y.global = &yamlCfg.Global
 
 	return nil
 }
