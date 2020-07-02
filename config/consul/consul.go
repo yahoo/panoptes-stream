@@ -91,6 +91,11 @@ func (c *consul) Informer() chan struct{} {
 	return c.informer
 }
 
+func (c *consul) Update() error {
+	// TODO
+	return nil
+}
+
 func configProducers(kv *api.KV, prefix string) ([]config.Producer, error) {
 	var producers []config.Producer
 

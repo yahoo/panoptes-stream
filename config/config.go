@@ -5,6 +5,7 @@ type Config interface {
 	Producers() []Producer
 	Global() *Global
 	Informer() chan struct{}
+	Update() error
 }
 
 type DeviceConfig struct {

@@ -53,6 +53,19 @@ func New(filename string) (config.Config, error) {
 	return y, nil
 }
 
+func (y *yaml) Update() error {
+	cfg := &yamlConfig{}
+	if err := Read(y.filename, cfg); err != nil {
+		return err
+	}
+
+	y.devices = configDevices(cfg)
+	y.producers = configProducers(cfg.Producers)
+	y.global = &cfg.Global
+
+	return nil
+}
+
 func (y *yaml) Devices() []config.Device {
 	return y.devices
 }
