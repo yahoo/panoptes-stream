@@ -1,6 +1,7 @@
 package producer
 
 import (
+	"context"
 	"sync"
 
 	"go.uber.org/zap"
@@ -9,7 +10,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-type ProducerFactory func(config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
+type ProducerFactory func(context.Context, config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
 
 type Producer interface {
 	Start()

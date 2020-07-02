@@ -1,6 +1,7 @@
 package console
 
 import (
+	"context"
 	"strings"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -14,7 +15,7 @@ type Console struct {
 	lg *zap.Logger
 }
 
-func New(cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
+func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
 	return &Console{ch: inChan}
 }
 
