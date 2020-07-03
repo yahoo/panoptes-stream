@@ -40,7 +40,12 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 			SampleFrequency: uint32(sensor.Interval) * 1000,
 		}
 		paths = append(paths, path)
-		pathOutput[sensor.Path] = sensor.Output
+
+		if strings.HasSuffix(sensor.Path, "/") {
+			pathOutput[sensor.Path] = sensor.Output
+		} else {
+			pathOutput[fmt.Sprintf("%s/", sensor.Path)] = sensor.Output
+		}
 	}
 
 	return &JTI{
