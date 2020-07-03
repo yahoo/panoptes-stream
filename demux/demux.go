@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"go.uber.org/zap"
@@ -19,6 +20,7 @@ type Demux struct {
 	inChan   telemetry.ExtDSChan
 	chMap    map[string]telemetry.ExtDSChan
 	pr       *producer.Registrar
+	db       *database.Registrar
 	register map[string]context.CancelFunc
 }
 
@@ -28,12 +30,14 @@ type delta struct {
 	mod []config.Producer
 }
 
-func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Registrar, inChan telemetry.ExtDSChan) *Demux {
+func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Registrar,
+	db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		ctx:      ctx,
 		cfg:      cfg,
 		lg:       lg,
 		pr:       pr,
+		db:       db,
 		inChan:   inChan,
 		chMap:    make(map[string]telemetry.ExtDSChan),
 		register: make(map[string]context.CancelFunc),
@@ -41,8 +45,17 @@ func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Re
 }
 
 func (d *Demux) Init() error {
+	// producer
 	for _, producer := range d.cfg.Producers() {
-		err := d.subscribe(producer)
+		err := d.subscribeProducer(producer)
+		if err != nil {
+			return err
+		}
+	}
+
+	// database
+	for _, database := range d.cfg.Databases() {
+		err := d.subscribeDatabase(database)
 		if err != nil {
 			return err
 		}
@@ -67,10 +80,10 @@ func (d *Demux) Start() {
 	}
 }
 
-func (d *Demux) subscribe(producer config.Producer) error {
+func (d *Demux) subscribeProducer(producer config.Producer) error {
 	var ctx context.Context
 
-	mqNew, ok := d.pr.GetProducerFactory(producer.Service)
+	New, ok := d.pr.GetProducerFactory(producer.Service)
 	if !ok {
 		return errors.New("producer not exist")
 	}
@@ -80,14 +93,35 @@ func (d *Demux) subscribe(producer config.Producer) error {
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := mqNew(ctx, producer, d.lg, d.chMap[producer.Name])
+	m := New(ctx, producer, d.lg, d.chMap[producer.Name])
 	// start the producer
 	go m.Start()
 
 	return nil
 }
 
-func (d *Demux) unsubscribe(producer config.Producer) {
+func (d *Demux) subscribeDatabase(database config.Database) error {
+	var ctx context.Context
+
+	New, ok := d.db.GetDatabaseFactory(database.Service)
+	if !ok {
+		d.lg.Info(database.Service)
+		return errors.New("database not exist")
+	}
+
+	// register channel
+	d.chMap[database.Name] = make(telemetry.ExtDSChan, 1)
+	// register cancelFunnc
+	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
+	// construct
+	db := New(ctx, database, d.lg, d.chMap[database.Name])
+	// start the database agent
+	go db.Start()
+
+	return nil
+}
+
+func (d *Demux) unsubscribeProducer(producer config.Producer) {
 	d.register[producer.Name]()
 	delete(d.register, producer.Name)
 	delete(d.chMap, producer.Name)
@@ -117,15 +151,15 @@ func (d *Demux) Update(producers map[string]config.Producer) {
 	}
 
 	for _, producer := range delta.add {
-		d.subscribe(producer)
+		d.subscribeProducer(producer)
 	}
 
 	for _, producer := range delta.del {
-		d.unsubscribe(producer)
+		d.unsubscribeProducer(producer)
 	}
 
 	for _, producer := range delta.mod {
-		d.unsubscribe(producer)
-		d.subscribe(producer)
+		d.unsubscribeProducer(producer)
+		d.subscribeProducer(producer)
 	}
 }
