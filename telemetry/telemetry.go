@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -22,10 +23,17 @@ type Telemetry struct {
 	register           map[string]context.CancelFunc
 	cfg                config.Config
 	ctx                context.Context
-	lg                 *zap.Logger
+	logger             *zap.Logger
 	outChan            ExtDSChan
 	telemetryRegistrar *Registrar
+	status             *Status
 	informer           chan struct{}
+}
+
+type Status struct {
+	TotalDevices     uint64
+	ConnectedDevices uint64
+	Reconnect        uint64
 }
 
 type delta struct {
@@ -35,14 +43,15 @@ type delta struct {
 }
 
 // New creates a new telemetry
-func New(ctx context.Context, cfg config.Config, lg *zap.Logger, tr *Registrar, outChan ExtDSChan) *Telemetry {
+func New(ctx context.Context, cfg config.Config, logger *zap.Logger, tr *Registrar, outChan ExtDSChan) *Telemetry {
 	return &Telemetry{
 		ctx:                ctx,
 		cfg:                cfg,
-		lg:                 lg,
+		logger:             logger,
 		register:           make(map[string]context.CancelFunc),
 		informer:           make(chan struct{}, 1),
 		outChan:            outChan,
+		status:             &Status{},
 		telemetryRegistrar: tr,
 	}
 }
@@ -55,6 +64,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 	)
 
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
+	atomic.AddUint64(&t.status.TotalDevices, 1)
 
 	gCfg = t.cfg.Global()
 
@@ -69,7 +79,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 				opts, err := dialOpts(device, gCfg)
 				if err != nil {
-					t.lg.Error("diap options", zap.Error(err))
+					t.logger.Error("diap options", zap.Error(err))
 				}
 
 				if len(device.Username) > 0 && len(device.Password) > 0 {
@@ -79,20 +89,25 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 				conn, err := grpc.Dial(addr, opts...)
 				if err != nil {
-					t.lg.Error("connect to device", zap.Error(err))
+					t.logger.Error("connect to device", zap.Error(err))
 				} else {
-					NewNMI, _ := t.telemetryRegistrar.GetNMIFactory(sName)
-					nmi := NewNMI(t.lg, conn, sensors, t.outChan)
+					atomic.AddUint64(&t.status.ConnectedDevices, 1)
+
+					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
+					nmi := new(t.logger, conn, sensors, t.outChan)
 					err = nmi.Start(ctx)
+
 					if err != nil {
-						t.lg.Warn("nmi start error", zap.Error(err))
+						atomic.AddUint64(&t.status.ConnectedDevices, ^uint64(0))
+						t.logger.Warn("nmi start error", zap.Error(err))
 					}
 				}
 
 				select {
-				case <-time.After(time.Second * 10):
+				case <-time.After(time.Second * 30):
+					atomic.AddUint64(&t.status.Reconnect, 1)
 				case <-ctx.Done():
-					t.lg.Info("unsubscribed", zap.String("host", device.Host),
+					t.logger.Info("unsubscribed", zap.String("host", device.Host),
 						zap.String("service", sName))
 					return
 				}
@@ -104,6 +119,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 func (t *Telemetry) unsubscribe(device config.Device) {
 	t.register[device.Host]()
 	delete(t.register, device.Host)
+	atomic.AddUint64(&t.status.TotalDevices, ^uint64(0))
 }
 
 // Start subscribe configured devices
@@ -148,6 +164,10 @@ func (t *Telemetry) Update(devices map[string]config.Device) {
 		t.unsubscribe(device)
 		t.subscribe(device)
 	}
+}
+
+func (t *Telemetry) GetStatus() *Status {
+	return t.status
 }
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
