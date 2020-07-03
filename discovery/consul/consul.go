@@ -33,7 +33,7 @@ func (c *Consul) Register() {
 	}
 
 	reg.Check = &api.AgentServiceCheck{
-		HTTP:     "localhost:8055/healthcheck",
+		HTTP:     "http://localhost:8081/healthcheck",
 		Interval: "10s",
 		Timeout:  "2s",
 	}
