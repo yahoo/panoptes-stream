@@ -92,7 +92,7 @@ func (j *JTI) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			ds := j.decoder(d)
+			ds := j.datastore(d)
 			path := regxPath.FindStringSubmatch(d.Path)
 			if len(path) > 1 {
 				output, ok := j.pathOutput[path[1]]
@@ -119,17 +119,16 @@ func (j *JTI) worker(ctx context.Context) {
 	}
 }
 
-func (j *JTI) decoder(d *jpb.OpenConfigData) telemetry.DataStore {
-	jHeader := make(telemetry.DataStore)
-	jHeader["system_id"] = d.SystemId
-	jHeader["component_id"] = d.ComponentId
-	jHeader["sub_component_id"] = d.SubComponentId
-	jHeader["path"] = d.Path
-
-	jHeader["timestamp"] = d.Timestamp
-	jHeader["sequence_number"] = d.SequenceNumber
-
-	jHeader["__service__"] = fmt.Sprintf("jti_v%s", jtiVersion)
+func (j *JTI) datastore(d *jpb.OpenConfigData) telemetry.DataStore {
+	jHeader := telemetry.DataStore{
+		"system_id":        d.SystemId,
+		"component_id":     d.SystemId,
+		"sub_component_id": d.SubComponentId,
+		"path":             d.Path,
+		"timestamp":        d.Timestamp,
+		"sequence_number":  d.SequenceNumber,
+		"__service__":      fmt.Sprintf("jti_v%s", jtiVersion),
+	}
 
 	dsSlice := []telemetry.DataStore{}
 	var ds = make(telemetry.DataStore)

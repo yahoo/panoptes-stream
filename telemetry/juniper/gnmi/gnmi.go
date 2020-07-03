@@ -125,7 +125,7 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
-				ds := g.decoder(resp)
+				ds := g.dataStore(resp)
 				jHPath := ds["__path__"].(string)
 				delete(ds, "__path__")
 				path := regxPath.FindStringSubmatch(jHPath)
@@ -160,12 +160,12 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
+func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	ds := make(telemetry.DataStore)
 	ds["__service__"] = fmt.Sprintf("gnmi_v%s", gnmiVersion)
 
 	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
-	ds["__prefix__"] = path.ToStrings(resp.Update.GetPrefix(), true)
+	ds["__prefix__"] = strings.Join(path.ToStrings(resp.Update.GetPrefix(), true), "/")
 
 	for _, update := range resp.Update.Update {
 		var value interface{}
