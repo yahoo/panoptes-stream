@@ -1,6 +1,8 @@
 package register
 
 import (
+	"git.vzbuilders.com/marshadrad/panoptes/database"
+	"git.vzbuilders.com/marshadrad/panoptes/database/tsdb"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/producer/console"
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
@@ -15,4 +17,8 @@ func Telemetry(telemetryRegistrar *telemetry.Registrar) {
 func Producer(producerRegistrar *producer.Registrar) {
 	mqueue.Register(producerRegistrar)
 	console.Register(producerRegistrar)
+}
+
+func Database(databaseRegistrar *database.Registrar) {
+	tsdb.Register(databaseRegistrar)
 }
