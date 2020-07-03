@@ -16,7 +16,7 @@ import (
 
 var jtiVersion = "1.0"
 
-// JTI ...
+// JTI represents Junos Telemetry Interface.
 type JTI struct {
 	conn   *grpc.ClientConn
 	client jpb.OpenConfigTelemetryClient
@@ -24,13 +24,13 @@ type JTI struct {
 
 	dataChan chan *jpb.OpenConfigData
 	outChan  telemetry.ExtDSChan
-	lg       *zap.Logger
+	logger   *zap.Logger
 
 	pathOutput map[string]string
 }
 
-// New ...
-func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
+// New creates a JTI.
+func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	paths := []*jpb.Path{}
 	pathOutput := make(map[string]string)
 
@@ -49,6 +49,7 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 	}
 
 	return &JTI{
+		logger:     logger,
 		conn:       conn,
 		paths:      paths,
 		dataChan:   make(chan *jpb.OpenConfigData, 100),
@@ -57,7 +58,7 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 	}
 }
 
-// Start ...
+// Start starts to get stream and fan-out to workers.
 func (j *JTI) Start(ctx context.Context) error {
 	j.client = jpb.NewOpenConfigTelemetryClient(j.conn)
 	stream, err := j.client.TelemetrySubscribe(ctx,
@@ -96,7 +97,7 @@ func (j *JTI) worker(ctx context.Context) {
 			if len(path) > 1 {
 				output, ok := j.pathOutput[path[1]]
 				if !ok {
-					j.lg.Warn("path to output not found", zap.String("path", d.Path))
+					j.logger.Warn("path to output not found", zap.String("path", d.Path))
 					continue
 				}
 
@@ -109,7 +110,7 @@ func (j *JTI) worker(ctx context.Context) {
 				}
 
 			} else {
-				j.lg.Warn("path not found", zap.String("path", d.Path))
+				j.logger.Warn("path not found", zap.String("path", d.Path))
 			}
 
 		case <-ctx.Done():

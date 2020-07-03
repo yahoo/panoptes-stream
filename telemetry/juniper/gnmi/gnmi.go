@@ -27,20 +27,20 @@ import (
 
 var gnmiVersion = "0.7.0"
 
-// GNMI ...
+// GNMI represents a GNMI Juniper.
 type GNMI struct {
 	conn          *grpc.ClientConn
 	subscriptions []*gpb.Subscription
 
 	dataChan chan *gpb.SubscribeResponse
 	outChan  telemetry.ExtDSChan
-	lg       *zap.Logger
+	logger   *zap.Logger
 
 	pathOutput map[string]string
 }
 
-// New ...
-func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
+// New creates a GNMI.
+func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	subscriptions := []*gpb.Subscription{}
 	pathOutput := make(map[string]string)
 
@@ -64,6 +64,7 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 	}
 
 	return &GNMI{
+		logger:        logger,
 		conn:          conn,
 		subscriptions: subscriptions,
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
@@ -72,7 +73,7 @@ func New(lg *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outCha
 	}
 }
 
-// Start ...
+// Start starts to get stream and fan-out to workers
 func (g *GNMI) Start(ctx context.Context) error {
 	client := gpb.NewGNMIClient(g.conn)
 	subReq := &gpb.SubscribeRequest{
@@ -131,7 +132,7 @@ func (g *GNMI) worker(ctx context.Context) {
 				if len(path) > 1 {
 					output, ok := g.pathOutput[path[1]]
 					if !ok {
-						g.lg.Warn("path to output not found", zap.String("path", jHPath))
+						g.logger.Warn("path to output not found", zap.String("path", jHPath))
 						continue
 					}
 
@@ -144,14 +145,14 @@ func (g *GNMI) worker(ctx context.Context) {
 					}
 
 				} else {
-					g.lg.Warn("path not found", zap.String("path", jHPath))
+					g.logger.Warn("path not found", zap.String("path", jHPath))
 				}
 
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
 				err := fmt.Errorf("%s", resp)
-				g.lg.Error("error in sub response", zap.Error(err))
+				g.logger.Error("error in sub response", zap.Error(err))
 			}
 		case <-ctx.Done():
 			return
@@ -195,7 +196,7 @@ func (g *GNMI) decoder(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 			anyMsg := value.(*apb.Any)
 			anyMsgName, err := ptypes.AnyMessageName(anyMsg)
 			if err != nil {
-				g.lg.Error("proto any message invalid", zap.Error(err))
+				g.logger.Error("proto any message invalid", zap.Error(err))
 			}
 			if anyMsgName == "GnmiJuniperTelemetryHeader" {
 				hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
