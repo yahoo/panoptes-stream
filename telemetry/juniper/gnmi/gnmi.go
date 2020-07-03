@@ -96,7 +96,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < 1; i++ {
+	for i := 0; i < 4; i++ {
 		go g.worker(ctx)
 	}
 
