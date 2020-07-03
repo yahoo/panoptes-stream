@@ -17,6 +17,7 @@ type consul struct {
 	filename  string
 	devices   []config.Device
 	producers []config.Producer
+	databases []config.Database
 	global    *config.Global
 
 	informer chan struct{}
@@ -54,6 +55,11 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
+	consul.databases, err = configDatabases(kv, "config/databases/")
+	if err != nil {
+		return nil, err
+	}
+
 	sensors, err := configSensors(kv, "config/sensors/")
 	if err != nil {
 		return nil, err
@@ -80,6 +86,10 @@ func (c *consul) Devices() []config.Device {
 
 func (c *consul) Producers() []config.Producer {
 	return c.producers
+}
+
+func (c *consul) Databases() []config.Database {
+	return c.databases
 }
 
 func (c *consul) Global() *config.Global {
@@ -120,6 +130,32 @@ func configProducers(kv *api.KV, prefix string) ([]config.Producer, error) {
 	}
 
 	return producers, nil
+}
+
+func configDatabases(kv *api.KV, prefix string) ([]config.Database, error) {
+	var databases []config.Database
+
+	pairs, _, err := kv.List(prefix, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, p := range pairs {
+		// skip folder
+		if len(p.Value) < 1 {
+			continue
+		}
+
+		database := config.Database{}
+		if err := json.Unmarshal(p.Value, &database); err != nil {
+			return nil, err
+		}
+
+		_, database.Name = path.Split(p.Key)
+		databases = append(databases, database)
+	}
+
+	return databases, nil
 }
 
 func configSensors(kv *api.KV, prefix string) (map[string]*config.Sensor, error) {

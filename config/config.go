@@ -3,6 +3,7 @@ package config
 type Config interface {
 	Devices() []Device
 	Producers() []Producer
+	Databases() []Database
 	Global() *Global
 	Informer() chan struct{}
 	Update() error
@@ -33,6 +34,12 @@ type Device struct {
 }
 
 type Producer struct {
+	Name    string
+	Service string
+	Config  map[string]interface{}
+}
+
+type Database struct {
 	Name    string
 	Service string
 	Config  map[string]interface{}

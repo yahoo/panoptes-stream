@@ -13,6 +13,7 @@ type yaml struct {
 	filename  string
 	devices   []config.Device
 	producers []config.Producer
+	databases []config.Database
 	global    *config.Global
 
 	informer chan struct{}
@@ -23,10 +24,16 @@ type producer struct {
 	ConfigFile string `yaml:"configFile"`
 }
 
+type database struct {
+	Service    string `yaml:"service"`
+	ConfigFile string `yaml:"configFile"`
+}
+
 type yamlConfig struct {
 	Devices   []config.DeviceTemplate
 	Sensors   map[string]config.Sensor
 	Producers map[string]producer
+	Databases map[string]database
 
 	config.Global `yaml:",inline"`
 }
@@ -43,6 +50,7 @@ func New(filename string) (config.Config, error) {
 
 		devices:   configDevices(yamlCfg),
 		producers: configProducers(yamlCfg.Producers),
+		databases: configDatabases(yamlCfg.Databases),
 		global:    &yamlCfg.Global,
 
 		informer: make(chan struct{}, 1),
@@ -62,6 +70,7 @@ func (y *yaml) Update() error {
 
 	y.devices = configDevices(yamlCfg)
 	y.producers = configProducers(yamlCfg.Producers)
+	y.databases = configDatabases(yamlCfg.Databases)
 	y.global = &yamlCfg.Global
 
 	return nil
@@ -77,6 +86,10 @@ func (y *yaml) Global() *config.Global {
 
 func (y *yaml) Producers() []config.Producer {
 	return y.producers
+}
+
+func (y *yaml) Databases() []config.Database {
+	return y.databases
 }
 
 func configDevices(y *yamlConfig) []config.Device {
@@ -140,4 +153,25 @@ func configProducers(p map[string]producer) []config.Producer {
 	}
 
 	return producers
+}
+
+func configDatabases(p map[string]database) []config.Database {
+	var databases []config.Database
+	for name, pConfig := range p {
+		cfg := make(map[string]interface{})
+
+		if name != "console" {
+			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
+				log.Fatal(err)
+			}
+		}
+
+		databases = append(databases, config.Database{
+			Name:    name,
+			Service: pConfig.Service,
+			Config:  cfg,
+		})
+	}
+
+	return databases
 }
