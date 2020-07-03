@@ -1,8 +1,5 @@
 devices:
   - host: core1.nca:50051
-    tlsCertFile: /etc/cert/file.crt
-    tlsKeyFile: /etc/cert/file.key
-    caFile: /etc/cert/ca.crt
     sensors:
       - sensor2
 
@@ -23,7 +20,7 @@ sensors:
     mode: sample
     interval: 10
     service: juniper.jti
-    output: kafka1::bgp
+    output: influxdb1::bucket1
 
 producers:
   kafka1:
@@ -31,6 +28,11 @@ producers:
     configFile: etc/kafka.yaml
   console:
     service: console
+
+databases:
+  influxdb1:
+    service: influxdb
+    configFile: etc/influxdb.yaml
 
 logger:
   level: "debug"
