@@ -5,6 +5,7 @@ import (
 	"log"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"go.uber.org/zap"
 
 	yml "gopkg.in/yaml.v2"
 )
@@ -17,6 +18,8 @@ type yaml struct {
 	global    *config.Global
 
 	informer chan struct{}
+
+	logger *zap.Logger
 }
 
 type producer struct {
@@ -52,6 +55,8 @@ func New(filename string) (config.Config, error) {
 		producers: configProducers(yamlCfg.Producers),
 		databases: configDatabases(yamlCfg.Databases),
 		global:    &yamlCfg.Global,
+
+		logger: config.GetLogger(yamlCfg.Global.Logger),
 
 		informer: make(chan struct{}, 1),
 	}
@@ -90,6 +95,10 @@ func (y *yaml) Producers() []config.Producer {
 
 func (y *yaml) Databases() []config.Database {
 	return y.databases
+}
+
+func (y *yaml) Logger() *zap.Logger {
+	return y.logger
 }
 
 func configDevices(y *yamlConfig) []config.Device {

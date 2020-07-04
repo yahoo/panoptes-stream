@@ -1,11 +1,14 @@
 package config
 
+import "go.uber.org/zap"
+
 type Config interface {
 	Devices() []Device
 	Producers() []Producer
 	Databases() []Database
 	Global() *Global
 	Informer() chan struct{}
+	Logger() *zap.Logger
 	Update() error
 }
 

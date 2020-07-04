@@ -6,6 +6,7 @@ import (
 	"path"
 
 	"github.com/hashicorp/consul/api"
+	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
@@ -21,6 +22,8 @@ type consul struct {
 	global    *config.Global
 
 	informer chan struct{}
+
+	logger *zap.Logger
 }
 
 type consulConfig struct {
@@ -99,6 +102,10 @@ func (c *consul) Global() *config.Global {
 func (c *consul) Informer() chan struct{} {
 
 	return c.informer
+}
+
+func (c *consul) Logger() *zap.Logger {
+	return c.logger
 }
 
 func (c *consul) Update() error {
