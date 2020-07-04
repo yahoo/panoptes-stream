@@ -43,11 +43,11 @@ type delta struct {
 }
 
 // New creates a new telemetry
-func New(ctx context.Context, cfg config.Config, logger *zap.Logger, tr *Registrar, outChan ExtDSChan) *Telemetry {
+func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSChan) *Telemetry {
 	return &Telemetry{
 		ctx:                ctx,
 		cfg:                cfg,
-		logger:             logger,
+		logger:             cfg.Logger(),
 		register:           make(map[string]context.CancelFunc),
 		informer:           make(chan struct{}, 1),
 		outChan:            outChan,

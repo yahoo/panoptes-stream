@@ -16,7 +16,7 @@ import (
 type Demux struct {
 	ctx      context.Context
 	cfg      config.Config
-	lg       *zap.Logger
+	logger   *zap.Logger
 	inChan   telemetry.ExtDSChan
 	chMap    map[string]telemetry.ExtDSChan
 	pr       *producer.Registrar
@@ -30,12 +30,11 @@ type delta struct {
 	mod []config.Producer
 }
 
-func New(ctx context.Context, cfg config.Config, lg *zap.Logger, pr *producer.Registrar,
-	db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
+func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		ctx:      ctx,
 		cfg:      cfg,
-		lg:       lg,
+		logger:   cfg.Logger(),
 		pr:       pr,
 		db:       db,
 		inChan:   inChan,
@@ -75,7 +74,7 @@ func (d *Demux) Start() {
 		if _, ok := d.chMap[output[0]]; ok {
 			d.chMap[output[0]] <- extDS
 		} else {
-			d.lg.Error("channel not found", zap.String("name", output[0]))
+			d.logger.Error("channel not found", zap.String("name", output[0]))
 		}
 	}
 }
@@ -93,7 +92,7 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := New(ctx, producer, d.lg, d.chMap[producer.Name])
+	m := New(ctx, producer, d.logger, d.chMap[producer.Name])
 	// start the producer
 	go m.Start()
 
@@ -105,7 +104,7 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 
 	New, ok := d.db.GetDatabaseFactory(database.Service)
 	if !ok {
-		d.lg.Info(database.Service)
+		d.logger.Info(database.Service)
 		return errors.New("database not exist")
 	}
 
@@ -114,7 +113,7 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 	// register cancelFunnc
 	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
 	// construct
-	db := New(ctx, database, d.lg, d.chMap[database.Name])
+	db := New(ctx, database, d.logger, d.chMap[database.Name])
 	// start the database agent
 	go db.Start()
 
