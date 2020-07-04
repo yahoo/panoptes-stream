@@ -50,6 +50,7 @@ type Database struct {
 
 type Global struct {
 	TLSConfig
+	Status
 
 	Redial int
 	Logger map[string]interface{}
@@ -60,4 +61,9 @@ type TLSConfig struct {
 	TLSCertFile        string `yaml:"tlsCertFile"`
 	TLSKeyFile         string `yaml:"tlsKeyFile"`
 	CAFile             string `yaml:"caFile"`
+}
+
+type Status struct {
+	Addr     string
+	Disabled bool
 }
