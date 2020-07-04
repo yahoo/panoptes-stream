@@ -11,6 +11,7 @@ import (
 )
 
 type InfluxDB struct {
+	ctx context.Context
 	ch  telemetry.ExtDSChan
 	lg  *zap.Logger
 	cfg config.Database
@@ -18,9 +19,10 @@ type InfluxDB struct {
 
 func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan telemetry.ExtDSChan) database.Database {
 	return &InfluxDB{
+		ctx: ctx,
+		cfg: cfg,
 		lg:  lg,
 		ch:  inChan,
-		cfg: cfg,
 	}
 }
 
@@ -30,18 +32,23 @@ func (i *InfluxDB) Start() {
 		zap.String("server url", i.cfg.Config["server"].(string)))
 
 	for {
-		v, ok := <-i.ch
-		if !ok {
-			break
-		}
+		select {
+		case v, ok := <-i.ch:
+			if !ok {
+				break
+			}
 
-		out := strings.Split(v.Output, "::")
-		if len(out) < 2 {
-			i.lg.Error("wrong output", zap.String("output", v.Output))
-			continue
-		}
+			out := strings.Split(v.Output, "::")
+			if len(out) < 2 {
+				i.lg.Error("wrong output", zap.String("output", v.Output))
+				continue
+			}
 
-		v.DS.PrettyPrint(out[1])
+			v.DS.PrettyPrint(out[1])
+		case <-i.ctx.Done():
+			i.lg.Info("database has been terminated", zap.String("name", i.cfg.Name))
+			return
+		}
 	}
 
 }
