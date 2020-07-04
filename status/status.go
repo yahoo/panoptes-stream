@@ -4,13 +4,17 @@ import (
 	"fmt"
 	"net/http"
 
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"go.uber.org/zap"
 )
 
 type Status struct {
+	cfg             config.Config
+	logger          *zap.Logger
 	telemetryStatus *telemetry.Status
 }
 
@@ -20,8 +24,10 @@ func (h *healthcheck) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "panoptes alive and reachable")
 }
 
-func New(t *telemetry.Telemetry) *Status {
+func New(cfg config.Config, t *telemetry.Telemetry) *Status {
 	return &Status{
+		cfg:             cfg,
+		logger:          cfg.Logger(),
 		telemetryStatus: t.GetStatus(),
 	}
 }
@@ -54,9 +60,12 @@ func (t *Status) prometheus() {
 
 func (s *Status) Start() {
 	go func() {
+		addr := s.cfg.Global().Status.Addr
+		s.logger.Info("starting status server", zap.String("address", addr))
+
 		s.prometheus()
 		http.Handle("/metrics", promhttp.Handler())
 		http.Handle("/healthcheck", new(healthcheck))
-		http.ListenAndServe("localhost:8081", nil)
+		http.ListenAndServe(addr, nil)
 	}()
 }
