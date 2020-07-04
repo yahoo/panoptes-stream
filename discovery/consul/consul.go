@@ -6,12 +6,14 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
 	"github.com/hashicorp/consul/api"
+	"go.uber.org/zap"
 )
 
 // Consul represents the consul
 type Consul struct {
 	client *api.Client
-	config *api.Config
+	cfg    config.Config
+	logger *zap.Logger
 }
 
 func New(cfg config.Config) (discovery.Discovery, error) {
@@ -21,7 +23,11 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	return &Consul{client, config}, nil
+	return &Consul{
+		client: client,
+		cfg:    cfg,
+		logger: cfg.Logger(),
+	}, nil
 }
 
 // Register registers the panoptes at consul
@@ -38,12 +44,16 @@ func (c *Consul) Register() {
 		Timeout:  "2s",
 	}
 
-	c.client.Agent().ServiceRegister(reg)
+	if err := c.client.Agent().ServiceRegister(reg); err != nil {
+		c.logger.Error("register failed", zap.Error(err))
+	}
 }
 
 // Deregister deregisters the panoptes at consul
 func (c *Consul) Deregister() {
-	c.client.Agent().ServiceDeregister("panoptes")
+	if err := c.client.Agent().ServiceDeregister("panoptes"); err != nil {
+		c.logger.Error("deregister failed", zap.Error(err))
+	}
 }
 
 func hostname() string {
