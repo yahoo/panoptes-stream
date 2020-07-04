@@ -7,20 +7,20 @@ import (
 )
 
 type Registrar struct {
-	p  map[string]ProducerFactory
-	lg *zap.Logger
+	p      map[string]ProducerFactory
+	logger *zap.Logger
 	sync.RWMutex
 }
 
-func NewRegistrar(lg *zap.Logger) *Registrar {
+func NewRegistrar(logger *zap.Logger) *Registrar {
 	return &Registrar{
-		p:  make(map[string]ProducerFactory),
-		lg: lg,
+		p:      make(map[string]ProducerFactory),
+		logger: logger,
 	}
 }
 
 func (pr *Registrar) Register(name, vendor string, pf ProducerFactory) {
-	pr.lg.Info("producer/register", zap.String("name", name), zap.String("vendor", vendor))
+	pr.logger.Info("producer/register", zap.String("name", name), zap.String("vendor", vendor))
 	pr.set(name, pf)
 }
 
