@@ -24,12 +24,6 @@ type Demux struct {
 	register map[string]context.CancelFunc
 }
 
-type delta struct {
-	add []config.Producer
-	del []config.Producer
-	mod []config.Producer
-}
-
 func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		ctx:      ctx,
@@ -82,7 +76,7 @@ func (d *Demux) Start() {
 func (d *Demux) subscribeProducer(producer config.Producer) error {
 	var ctx context.Context
 
-	New, ok := d.pr.GetProducerFactory(producer.Service)
+	new, ok := d.pr.GetProducerFactory(producer.Service)
 	if !ok {
 		return errors.New("producer not exist")
 	}
@@ -92,7 +86,7 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := New(ctx, producer, d.logger, d.chMap[producer.Name])
+	m := new(ctx, producer, d.logger, d.chMap[producer.Name])
 	// start the producer
 	go m.Start()
 
@@ -102,7 +96,7 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 func (d *Demux) subscribeDatabase(database config.Database) error {
 	var ctx context.Context
 
-	New, ok := d.db.GetDatabaseFactory(database.Service)
+	new, ok := d.db.GetDatabaseFactory(database.Service)
 	if !ok {
 		d.logger.Info(database.Service)
 		return errors.New("database not exist")
@@ -113,7 +107,7 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 	// register cancelFunnc
 	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
 	// construct
-	db := New(ctx, database, d.logger, d.chMap[database.Name])
+	db := new(ctx, database, d.logger, d.chMap[database.Name])
 	// start the database agent
 	go db.Start()
 
@@ -126,9 +120,65 @@ func (d *Demux) unsubscribeProducer(producer config.Producer) {
 	delete(d.chMap, producer.Name)
 }
 
-func (d *Demux) Update(producers map[string]config.Producer) {
+func (d *Demux) unsubscribeDatabase(database config.Database) {
+	d.register[database.Name]()
+	delete(d.register, database.Name)
+	delete(d.chMap, database.Name)
+}
+
+func (d *Demux) Update(producers map[string]config.Producer, databases map[string]config.Database) {
+	d.updateProducer(producers)
+	d.updateDatabase(databases)
+}
+
+func (d *Demux) updateDatabase(databases map[string]config.Database) {
+	newDatabases := make(map[string]config.Database)
+	delta := &struct {
+		add []config.Database
+		del []config.Database
+		mod []config.Database
+	}{}
+
+	for _, database := range d.cfg.Databases() {
+		newDatabases[database.Name] = database
+
+		if _, ok := databases[database.Name]; !ok {
+			delta.add = append(delta.add, database)
+		} else {
+			if ok := reflect.DeepEqual(databases[database.Name], database); !ok {
+				delta.mod = append(delta.mod, database)
+			}
+		}
+
+	}
+
+	for name, database := range databases {
+		if _, ok := newDatabases[name]; !ok {
+			delta.del = append(delta.del, database)
+		}
+	}
+
+	for _, database := range delta.add {
+		d.subscribeDatabase(database)
+	}
+
+	for _, database := range delta.del {
+		d.unsubscribeDatabase(database)
+	}
+
+	for _, database := range delta.mod {
+		d.unsubscribeDatabase(database)
+		d.subscribeDatabase(database)
+	}
+}
+
+func (d *Demux) updateProducer(producers map[string]config.Producer) {
 	newProducers := make(map[string]config.Producer)
-	delta := new(delta)
+	delta := &struct {
+		add []config.Producer
+		del []config.Producer
+		mod []config.Producer
+	}{}
 
 	for _, producer := range d.cfg.Producers() {
 		newProducers[producer.Name] = producer
