@@ -8,7 +8,7 @@ sensors:
     path: /interfaces/interface/state
     mode: on_change
     service: juniper.gnmi
-    output: kafka1::panoptes
+    output: console::stdout
   sensor2:
     path: /interfaces/interface/state/counters/
     mode: sample
@@ -20,7 +20,7 @@ sensors:
     mode: sample
     interval: 10
     service: juniper.jti
-    output: influxdb1::bucket1
+    output: console::stdout
 
 producers:
   kafka1:
@@ -41,3 +41,6 @@ logger:
     - stdout
   errorOutputPaths:
     - stderr
+
+status:
+  addr: "0.0.0.0:8081"
