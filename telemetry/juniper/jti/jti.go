@@ -10,11 +10,19 @@ import (
 	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
 )
 
-var jtiVersion = "1.0"
+var (
+	jtiVersion              = "1.0"
+	metricTotalReceivedData = status.NewCounter("jti_total_received_data", "")
+)
+
+func init() {
+	status.Register(metricTotalReceivedData)
+}
 
 // JTI represents Junos Telemetry Interface.
 type JTI struct {
@@ -78,6 +86,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		}
 
 		j.dataChan <- d
+		metricTotalReceivedData.Inc()
 	}
 
 	return nil
