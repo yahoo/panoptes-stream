@@ -49,17 +49,17 @@ type Database struct {
 }
 
 type Global struct {
-	TLSConfig
-	Status
-
 	Redial int
-	Logger map[string]interface{}
+
+	TLSConfig TLSConfig
+	Status    Status
+	Logger    map[string]interface{}
 }
 
 type TLSConfig struct {
 	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
-	TLSCertFile        string `yaml:"tlsCertFile"`
-	TLSKeyFile         string `yaml:"tlsKeyFile"`
+	CertFile           string `yaml:"certFile"`
+	KeyFile            string `yaml:"keyFile"`
 	CAFile             string `yaml:"caFile"`
 }
 

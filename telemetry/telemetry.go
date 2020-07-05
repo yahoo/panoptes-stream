@@ -202,12 +202,11 @@ func dialOpts(device config.Device, gCfg *config.Global) ([]grpc.DialOption, err
 	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
-
-	if gCfg.TLSCertFile != "" && gCfg.TLSKeyFile != "" {
+	if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
 		creds, err := transportClientCreds(
-			gCfg.TLSCertFile,
-			gCfg.TLSKeyFile,
-			gCfg.CAFile,
+			gCfg.TLSConfig.CertFile,
+			gCfg.TLSConfig.KeyFile,
+			gCfg.TLSConfig.CAFile,
 		)
 
 		if err != nil {
