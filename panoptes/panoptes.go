@@ -54,9 +54,9 @@ func main() {
 
 	outChan := make(telemetry.ExtDSChan, 1)
 
-	dp := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
-	dp.Init()
-	go dp.Start()
+	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
+	d.Init()
+	go d.Start()
 
 	t := telemetry.New(ctx, cfg, telemetryRegistrar, outChan)
 	t.Start()
@@ -84,7 +84,7 @@ func main() {
 		}
 
 		cfg.Update()
-		dp.Update(producers, databases)
+		d.Update(producers, databases)
 		t.Update(devices)
 	}
 
