@@ -3,9 +3,9 @@ package status
 import (
 	"fmt"
 	"net/http"
+	"sync/atomic"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -13,9 +13,23 @@ import (
 )
 
 type Status struct {
-	cfg             config.Config
-	logger          *zap.Logger
-	telemetryStatus *telemetry.Status
+	cfg    config.Config
+	logger *zap.Logger
+}
+
+type Metric struct {
+	Name string
+	Help string
+}
+
+type MetricCounter struct {
+	Metric
+	Value uint64
+}
+
+type MetricGauge struct {
+	Metric
+	Value uint64
 }
 
 type healthcheck struct{}
@@ -24,38 +38,11 @@ func (h *healthcheck) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "panoptes alive and reachable")
 }
 
-func New(cfg config.Config, t *telemetry.Telemetry) *Status {
+func New(cfg config.Config) *Status {
 	return &Status{
-		cfg:             cfg,
-		logger:          cfg.Logger(),
-		telemetryStatus: t.GetStatus(),
+		cfg:    cfg,
+		logger: cfg.Logger(),
 	}
-}
-
-func (t *Status) prometheus() {
-	promauto.NewGaugeFunc(prometheus.GaugeOpts{
-		Name: "panoptes_connected_devices",
-		Help: "",
-	},
-		func() float64 {
-			return float64(t.telemetryStatus.ConnectedDevices)
-		})
-
-	promauto.NewGaugeFunc(prometheus.GaugeOpts{
-		Name: "panoptes_total_devices",
-		Help: "",
-	},
-		func() float64 {
-			return float64(t.telemetryStatus.TotalDevices)
-		})
-
-	promauto.NewCounterFunc(prometheus.CounterOpts{
-		Name: "panoptes_total_reconnect",
-		Help: "",
-	},
-		func() float64 {
-			return float64(t.telemetryStatus.Reconnect)
-		})
 }
 
 func (s *Status) Start() {
@@ -63,9 +50,63 @@ func (s *Status) Start() {
 		addr := s.cfg.Global().Status.Addr
 		s.logger.Info("starting status server", zap.String("address", addr))
 
-		s.prometheus()
 		http.Handle("/metrics", promhttp.Handler())
 		http.Handle("/healthcheck", new(healthcheck))
 		http.ListenAndServe(addr, nil)
 	}()
+}
+
+func Register(metrics ...interface{}) {
+	prefix := "panoptes_"
+
+	for _, metric := range metrics {
+		switch v := metric.(type) {
+		case *MetricCounter:
+			promauto.NewCounterFunc(prometheus.CounterOpts{
+				Name: prefix + v.Name,
+				Help: v.Help,
+			},
+				func() float64 {
+					return float64(v.Value)
+				})
+		case *MetricGauge:
+			promauto.NewGaugeFunc(prometheus.GaugeOpts{
+				Name: prefix + v.Name,
+				Help: v.Help,
+			},
+				func() float64 {
+					return float64(v.Value)
+				})
+		}
+	}
+}
+
+func NewCounter(name, help string) *MetricCounter {
+	return &MetricCounter{
+		Metric: Metric{
+			Name: name,
+			Help: help,
+		},
+	}
+}
+
+func NewGauge(name, help string) *MetricGauge {
+	return &MetricGauge{
+		Metric: Metric{
+			Name: name,
+			Help: help,
+		},
+	}
+}
+
+func (m *MetricCounter) Inc() {
+	atomic.AddUint64(&m.Value, 1)
+}
+
+func (m *MetricGauge) Inc() {
+	atomic.AddUint64(&m.Value, 1)
+}
+
+func (m *MetricGauge) Dec() {
+	atomic.AddUint64(&m.Value, ^uint64(0))
 }
