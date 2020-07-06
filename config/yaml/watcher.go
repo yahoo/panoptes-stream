@@ -4,6 +4,7 @@ import (
 	"log"
 
 	"github.com/fsnotify/fsnotify"
+	"go.uber.org/zap"
 )
 
 func (y *yaml) watcher() {
@@ -30,7 +31,7 @@ func (y *yaml) watcher() {
 					default:
 					}
 
-					log.Println("modified file:", event.Name)
+					y.logger.Info("modified file:", zap.String("name", event.Name))
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
