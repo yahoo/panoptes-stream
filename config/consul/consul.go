@@ -51,29 +51,7 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	kv := consul.client.KV()
-
-	consul.producers, err = configProducers(kv, "config/producers/")
-	if err != nil {
-		return nil, err
-	}
-
-	consul.databases, err = configDatabases(kv, "config/databases/")
-	if err != nil {
-		return nil, err
-	}
-
-	sensors, err := configSensors(kv, "config/sensors/")
-	if err != nil {
-		return nil, err
-	}
-
-	consul.devices, err = configDevices(kv, "config/devices/", sensors)
-	if err != nil {
-		return nil, err
-	}
-
-	consul.global, err = configdGlobal(kv, "config/global")
+	err = consul.getKVConfig()
 	if err != nil {
 		return nil, err
 	}
@@ -83,6 +61,39 @@ func New(filename string) (config.Config, error) {
 	go consul.watch("config/global")
 
 	return consul, nil
+}
+
+func (c *consul) getKVConfig() error {
+	var err error
+
+	kv := c.client.KV()
+
+	c.producers, err = configProducers(kv, "config/producers/")
+	if err != nil {
+		return err
+	}
+
+	c.databases, err = configDatabases(kv, "config/databases/")
+	if err != nil {
+		return err
+	}
+
+	sensors, err := configSensors(kv, "config/sensors/")
+	if err != nil {
+		return err
+	}
+
+	c.devices, err = configDevices(kv, "config/devices/", sensors)
+	if err != nil {
+		return err
+	}
+
+	c.global, err = configdGlobal(kv, "config/global")
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func (c *consul) Devices() []config.Device {
@@ -111,8 +122,7 @@ func (c *consul) Logger() *zap.Logger {
 }
 
 func (c *consul) Update() error {
-	// TODO
-	return nil
+	return c.getKVConfig()
 }
 
 func configProducers(kv *api.KV, prefix string) ([]config.Producer, error) {
