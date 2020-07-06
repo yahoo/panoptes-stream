@@ -103,11 +103,13 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 	for ctx.Err() == nil {
 		resp, err := subClient.Recv()
-		if err != nil {
+		if err != nil && ctx.Err() == nil {
 			return err
 		}
 
-		g.dataChan <- resp
+		if resp != nil {
+			g.dataChan <- resp
+		}
 	}
 
 	return nil
