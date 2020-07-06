@@ -93,7 +93,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 						"username", device.Username, "password", device.Password)
 				}
 
-				conn, err := grpc.Dial(addr, opts...)
+				conn, err := grpc.DialContext(ctx, addr, opts...)
 				if err != nil {
 					t.logger.Error("connect to device", zap.Error(err))
 				} else {
@@ -102,6 +102,8 @@ func (t *Telemetry) subscribe(device config.Device) {
 					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
 					nmi := new(t.logger, conn, sensors, t.outChan)
 					err = nmi.Start(ctx)
+
+					conn.Close()
 
 					if err != nil {
 						metricCurrentGRPConn.Dec()
