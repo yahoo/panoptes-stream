@@ -58,7 +58,7 @@ func New(filename string) (config.Config, error) {
 
 	consul.logger = config.GetLogger(consul.global.Logger)
 
-	go consul.watch("config/global")
+	go consul.watch("config/")
 
 	return consul, nil
 }
