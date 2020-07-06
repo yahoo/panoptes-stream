@@ -5,6 +5,7 @@ import (
 	"errors"
 	"reflect"
 	"strings"
+	"sync"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/database"
@@ -18,10 +19,16 @@ type Demux struct {
 	cfg      config.Config
 	logger   *zap.Logger
 	inChan   telemetry.ExtDSChan
-	chMap    map[string]telemetry.ExtDSChan
+	chMap    *extDSChanMap
 	pr       *producer.Registrar
 	db       *database.Registrar
 	register map[string]context.CancelFunc
+}
+
+type extDSChanMap struct {
+	sync.RWMutex
+	ok      bool
+	eDSChan map[string]telemetry.ExtDSChan
 }
 
 func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
@@ -32,7 +39,7 @@ func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *dat
 		pr:       pr,
 		db:       db,
 		inChan:   inChan,
-		chMap:    make(map[string]telemetry.ExtDSChan),
+		chMap:    &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)},
 		register: make(map[string]context.CancelFunc),
 	}
 }
@@ -65,8 +72,8 @@ func (d *Demux) Start() {
 			continue
 		}
 
-		if _, ok := d.chMap[output[0]]; ok {
-			d.chMap[output[0]] <- extDS
+		if d.chMap.isExist(output[0]) {
+			d.chMap.get(output[0]) <- extDS
 		} else {
 			d.logger.Error("channel not found", zap.String("name", output[0]))
 		}
@@ -82,11 +89,11 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	}
 
 	// register channel
-	d.chMap[producer.Name] = make(telemetry.ExtDSChan, 1)
+	d.chMap.add(producer.Name, make(telemetry.ExtDSChan, 1))
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := new(ctx, producer, d.logger, d.chMap[producer.Name])
+	m := new(ctx, producer, d.logger, d.chMap.get(producer.Name))
 	// start the producer
 	go m.Start()
 
@@ -103,11 +110,11 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 	}
 
 	// register channel
-	d.chMap[database.Name] = make(telemetry.ExtDSChan, 1)
+	d.chMap.add(database.Name, make(telemetry.ExtDSChan, 1))
 	// register cancelFunnc
 	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
 	// construct
-	db := new(ctx, database, d.logger, d.chMap[database.Name])
+	db := new(ctx, database, d.logger, d.chMap.get(database.Name))
 	// start the database agent
 	go db.Start()
 
@@ -117,13 +124,13 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 func (d *Demux) unsubscribeProducer(producer config.Producer) {
 	d.register[producer.Name]()
 	delete(d.register, producer.Name)
-	delete(d.chMap, producer.Name)
+	d.chMap.del(producer.Name)
 }
 
 func (d *Demux) unsubscribeDatabase(database config.Database) {
 	d.register[database.Name]()
 	delete(d.register, database.Name)
-	delete(d.chMap, database.Name)
+	d.chMap.del(database.Name)
 }
 
 func (d *Demux) Update(producers map[string]config.Producer, databases map[string]config.Database) {
@@ -211,4 +218,29 @@ func (d *Demux) updateProducer(producers map[string]config.Producer) {
 		d.unsubscribeProducer(producer)
 		d.subscribeProducer(producer)
 	}
+}
+
+func (e *extDSChanMap) get(key string) telemetry.ExtDSChan {
+	e.RLock()
+	defer e.RUnlock()
+	return e.eDSChan[key]
+}
+
+func (e *extDSChanMap) add(key string, value telemetry.ExtDSChan) {
+	e.Lock()
+	defer e.Unlock()
+	e.eDSChan[key] = value
+}
+
+func (e *extDSChanMap) del(key string) {
+	e.Lock()
+	defer e.Unlock()
+	delete(e.eDSChan, key)
+}
+
+func (e *extDSChanMap) isExist(key string) bool {
+	e.RLock()
+	defer e.RUnlock()
+	_, e.ok = e.eDSChan[key]
+	return e.ok
 }
