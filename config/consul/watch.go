@@ -1,37 +1,20 @@
 package consul
 
 import (
-	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
 	"go.uber.org/zap"
 )
 
-func (c *consul) watchKey(key string) {
-	client := c.client.KV()
-	opts := api.QueryOptions{}
-
-	_, meta, _ := client.Get(key, &opts)
-
-	for {
-		opts.WaitIndex = meta.LastIndex
-		_, meta, _ = client.Get(key, &opts)
-
-		select {
-		case c.informer <- struct{}{}:
-		default:
-		}
-
-		if opts.WaitIndex != meta.LastIndex {
-			c.logger.Info("modified " + key)
-		}
-
-	}
-}
-
-func (c *consul) watch(prefix string) {
+func (c *consul) watch(watchType, value string, ch chan<- struct{}) {
 	params := make(map[string]interface{})
-	params["type"] = "keyprefix"
-	params["prefix"] = prefix
+	params["type"] = watchType
+
+	switch watchType {
+	case "keyprefix":
+		params["prefix"] = value
+	case "key":
+		params["key"] = value
+	}
 
 	wp, err := watch.Parse(params)
 	if err != nil {
@@ -41,7 +24,11 @@ func (c *consul) watch(prefix string) {
 	lastIdx := uint64(0)
 	wp.Handler = func(idx uint64, data interface{}) {
 		if lastIdx != 0 {
-			c.logger.Info("watcher: keyprefix modified", zap.String("name", prefix))
+			c.logger.Info("watcher", zap.String("name", value), zap.String("type", watchType))
+			select {
+			case ch <- struct{}{}:
+			default:
+			}
 		}
 		lastIdx = idx
 	}
