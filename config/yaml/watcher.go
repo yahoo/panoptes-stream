@@ -31,7 +31,7 @@ func (y *yaml) watcher() {
 					default:
 					}
 
-					y.logger.Info("modified file:", zap.String("name", event.Name))
+					y.logger.Info("watcher", zap.String("name", event.Name))
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
