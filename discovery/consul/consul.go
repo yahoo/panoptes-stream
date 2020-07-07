@@ -67,7 +67,7 @@ func (c *Consul) GetInstances() []discovery.Instance {
 			Status:  info.Checks.AggregatedStatus(),
 		})
 	}
-	return []discovery.Instance{}
+	return instances
 }
 
 // Deregister deregisters the panoptes at consul
