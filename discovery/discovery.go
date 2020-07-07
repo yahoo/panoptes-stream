@@ -4,6 +4,7 @@ type Discovery interface {
 	Register()
 	Deregister()
 	GetInstances() []Instance
+	Watch(string, chan<- struct{})
 }
 
 type Instance struct {
