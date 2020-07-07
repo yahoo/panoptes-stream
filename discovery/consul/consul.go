@@ -2,6 +2,8 @@ package consul
 
 import (
 	"os"
+	"sort"
+	"strconv"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
@@ -11,9 +13,10 @@ import (
 
 // Consul represents the consul
 type Consul struct {
-	client *api.Client
-	cfg    config.Config
-	logger *zap.Logger
+	cfg         config.Config
+	logger      *zap.Logger
+	client      *api.Client
+	lockHandler *api.Lock
 }
 
 func New(cfg config.Config) (discovery.Discovery, error) {
@@ -32,9 +35,35 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 
 // Register registers the panoptes at consul
 func (c *Consul) Register() {
-	meta := make(map[string]string)
+	_, err := c.lock("panoptes_global_lock", nil)
+	if err != nil {
+		panic(err)
+	}
+	defer c.ulock()
+
+	ids := []int{}
+	for _, instance := range c.GetInstances() {
+		id, err := strconv.Atoi(instance.ID)
+		if err != nil {
+			panic(err)
+		}
+		ids = append(ids, id)
+		// recover node
+		if instance.Address == hostname() {
+			c.logger.Info("registery recovered")
+			c.register(instance.ID, instance.Meta)
+			return
+		}
+	}
+
+	// new register node
+	id := getID(ids)
+	c.register(id, nil)
+}
+
+func (c *Consul) register(id string, meta map[string]string) {
 	reg := &api.AgentServiceRegistration{
-		ID:      "panoptes",
+		ID:      id,
 		Name:    "panoptes",
 		Meta:    meta,
 		Address: hostname(),
@@ -77,6 +106,24 @@ func (c *Consul) Deregister() {
 	}
 }
 
+func (c *Consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, error) {
+	var err error
+	opts := &api.LockOptions{
+		Key:        key,
+		SessionTTL: "10s",
+	}
+	c.lockHandler, err = c.client.LockOpts(opts)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.lockHandler.Lock(stopChan)
+}
+
+func (c *Consul) ulock() {
+	c.lockHandler.Unlock()
+}
+
 func hostname() string {
 	name, err := os.Hostname()
 	if err != nil {
@@ -84,4 +131,24 @@ func hostname() string {
 	}
 
 	return name
+}
+
+func getID(ids []int) string {
+	idStr := "0"
+
+	if len(ids) < 1 {
+		return idStr
+	}
+
+	sort.Ints(ids)
+	for i, id := range ids {
+		if i != id {
+			idsStr := strconv.Itoa(i)
+			return idsStr
+		}
+	}
+
+	idStr = strconv.Itoa(len(ids))
+
+	return idStr
 }
