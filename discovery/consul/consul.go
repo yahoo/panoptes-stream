@@ -13,6 +13,7 @@ import (
 
 // Consul represents the consul
 type Consul struct {
+	id          string
 	cfg         config.Config
 	logger      *zap.Logger
 	client      *api.Client
@@ -50,15 +51,17 @@ func (c *Consul) Register() {
 		ids = append(ids, id)
 		// recover node
 		if instance.Address == hostname() {
-			c.logger.Info("registery recovered")
+			c.logger.Info("consul service registery recovered", zap.String("id", instance.ID))
 			c.register(instance.ID, instance.Meta)
+			c.id = instance.ID
 			return
 		}
 	}
 
 	// new register node
-	id := getID(ids)
-	c.register(id, nil)
+	c.id = getID(ids)
+	c.register(c.id, nil)
+	c.logger.Info("consul service registered", zap.String("id", c.id))
 }
 
 func (c *Consul) register(id string, meta map[string]string) {
@@ -101,7 +104,7 @@ func (c *Consul) GetInstances() []discovery.Instance {
 
 // Deregister deregisters the panoptes at consul
 func (c *Consul) Deregister() {
-	if err := c.client.Agent().ServiceDeregister("panoptes"); err != nil {
+	if err := c.client.Agent().ServiceDeregister(c.id); err != nil {
 		c.logger.Error("deregister failed", zap.Error(err))
 	}
 }
