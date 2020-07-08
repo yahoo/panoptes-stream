@@ -46,7 +46,8 @@ func (c *Consul) Register() {
 	for _, instance := range c.GetInstances() {
 		id, err := strconv.Atoi(instance.ID)
 		if err != nil {
-			panic(err)
+			c.logger.Warn("consul.register", zap.Error(err))
+			continue
 		}
 		ids = append(ids, id)
 		// recover node
@@ -124,7 +125,9 @@ func (c *Consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, erro
 }
 
 func (c *Consul) ulock() {
-	c.lockHandler.Unlock()
+	if err := c.lockHandler.Unlock(); err != nil {
+		c.logger.Error("consul.unlock", zap.Error(err))
+	}
 }
 
 func hostname() string {
