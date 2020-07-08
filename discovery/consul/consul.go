@@ -52,16 +52,25 @@ func (c *Consul) Register() {
 		ids = append(ids, id)
 		// recover node
 		if instance.Address == hostname() {
+			if c.cfg.Global().Shard.Enabled {
+				instance.Meta["shard_enabled"] = "true"
+			}
+
 			c.logger.Info("consul service registery recovered", zap.String("id", instance.ID))
 			c.register(instance.ID, instance.Meta)
 			c.id = instance.ID
+
 			return
 		}
 	}
 
 	// new register node
+	meta := make(map[string]string)
+	if c.cfg.Global().Shard.Enabled {
+		meta["shard_enabled"] = "true"
+	}
 	c.id = getID(ids)
-	c.register(c.id, nil)
+	c.register(c.id, meta)
 	c.logger.Info("consul service registered", zap.String("id", c.id))
 }
 
