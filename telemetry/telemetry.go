@@ -21,12 +21,14 @@ import (
 // Telemetry represents telemetry
 type Telemetry struct {
 	register           map[string]context.CancelFunc
+	devices            map[string]config.Device
 	cfg                config.Config
 	ctx                context.Context
 	logger             *zap.Logger
 	outChan            ExtDSChan
 	telemetryRegistrar *Registrar
 	informer           chan struct{}
+	filterOpts         map[string]DeviceFilterOpt
 }
 
 type delta struct {
@@ -34,6 +36,8 @@ type delta struct {
 	del []config.Device
 	mod []config.Device
 }
+
+type DeviceFilterOpt func(config.Device) bool
 
 var (
 	metricCurrentDevice  = status.NewGauge("current_device", "")
@@ -56,6 +60,8 @@ func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSCha
 		cfg:                cfg,
 		logger:             cfg.Logger(),
 		register:           make(map[string]context.CancelFunc),
+		filterOpts:         make(map[string]DeviceFilterOpt),
+		devices:            make(map[string]config.Device),
 		informer:           make(chan struct{}, 1),
 		outChan:            outChan,
 		telemetryRegistrar: tr,
@@ -68,6 +74,13 @@ func (t *Telemetry) subscribe(device config.Device) {
 		ctx  context.Context
 		gCfg *config.Global
 	)
+
+	if _, ok := t.devices[device.Host]; ok {
+		t.logger.Error("device already subscribed", zap.String("name", device.Host))
+		return
+	}
+
+	t.devices[device.Host] = device
 
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 	metricCurrentDevice.Inc()
@@ -128,34 +141,43 @@ func (t *Telemetry) subscribe(device config.Device) {
 func (t *Telemetry) unsubscribe(device config.Device) {
 	t.register[device.Host]()
 	delete(t.register, device.Host)
+	delete(t.devices, device.Host)
 	metricCurrentDevice.Dec()
 }
 
 // Start subscribe configured devices
 func (t *Telemetry) Start() {
-	for _, device := range t.cfg.Devices() {
+	if t.cfg.Global().Shard.Enabled {
+		return
+	}
+
+	for _, device := range t.GetDevices() {
 		t.subscribe(device)
 	}
 }
 
-func (t *Telemetry) Update(devices map[string]config.Device) {
+func (t *Telemetry) Update() {
+	if t.cfg.Global().Shard.Enabled && len(t.filterOpts) < 1 {
+		return
+	}
+
 	newDevices := make(map[string]config.Device)
 	delta := new(delta)
 
-	for _, device := range t.cfg.Devices() {
+	for _, device := range t.GetDevices() {
 		newDevices[device.Host] = device
 
-		if _, ok := devices[device.Host]; !ok {
+		if _, ok := t.devices[device.Host]; !ok {
 			delta.add = append(delta.add, device)
 		} else {
-			if ok := reflect.DeepEqual(devices[device.Host], device); !ok {
+			if ok := reflect.DeepEqual(t.devices[device.Host], device); !ok {
 				delta.mod = append(delta.mod, device)
 			}
 		}
 
 	}
 
-	for host, device := range devices {
+	for host, device := range t.devices {
 		if _, ok := newDevices[host]; !ok {
 			delta.del = append(delta.del, device)
 		}
@@ -173,6 +195,31 @@ func (t *Telemetry) Update(devices map[string]config.Device) {
 		t.unsubscribe(device)
 		t.subscribe(device)
 	}
+}
+
+func (t *Telemetry) GetDevices() []config.Device {
+	var filteredDevcies []config.Device
+
+	if len(t.filterOpts) < 1 {
+		return t.cfg.Devices()
+	}
+
+	for _, device := range t.cfg.Devices() {
+		for _, filter := range t.filterOpts {
+			if filter(device) {
+				filteredDevcies = append(filteredDevcies, device)
+			}
+		}
+	}
+
+	return filteredDevcies
+}
+
+func (t *Telemetry) addFilterOpt(index string, filterOpt DeviceFilterOpt) {
+	t.filterOpts[index] = filterOpt
+}
+func (t *Telemetry) removeFilterOpt(index string) {
+	delete(t.filterOpts, index)
 }
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
