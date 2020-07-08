@@ -16,6 +16,8 @@ type DeviceConfig struct {
 	Host string
 	Port int
 
+	GroupID int
+
 	Username string
 	Password string
 }
@@ -53,6 +55,7 @@ type Global struct {
 
 	TLSConfig TLSConfig
 	Status    Status
+	Shard     Shard
 	Logger    map[string]interface{}
 }
 
@@ -66,4 +69,10 @@ type TLSConfig struct {
 type Status struct {
 	Addr     string
 	Disabled bool
+}
+
+type Shard struct {
+	Enabled           bool
+	InitializingShard int
+	NumberOfNodes     int
 }
