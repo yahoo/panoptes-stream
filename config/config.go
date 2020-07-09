@@ -29,8 +29,8 @@ type Sensor struct {
 	Origin            string
 	Path              string
 	Mode              string
-	SampleInterval    uint64
-	HeartbeatInterval uint64
+	SampleInterval    uint64 `yaml:"sampleInterval"`
+	HeartbeatInterval uint64 `yaml:"heartbeatInterval"`
 }
 
 type Device struct {
