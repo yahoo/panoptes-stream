@@ -11,12 +11,13 @@ import (
 	"sync"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 )
 
 // Telemetry represents telemetry
@@ -151,19 +152,15 @@ func (t *Telemetry) unsubscribe(device config.Device) {
 	metricCurrentDevice.Dec()
 }
 
-// Start subscribe configured devices
+// Start subscribes configured devices
 func (t *Telemetry) Start() {
-	if t.cfg.Global().Shard.Enabled {
-		return
-	}
-
 	for _, device := range t.GetDevices() {
 		t.subscribe(device)
 	}
 }
 
 // Update updates device subscriptions
-// it unsubscribes/subscribes and resubscribes devices
+// subscribe/unsubscribe/resubscribe devices
 func (t *Telemetry) Update() {
 	if t.cfg.Global().Shard.Enabled && len(t.deviceFilterOpts.getOpts()) < 1 {
 		return

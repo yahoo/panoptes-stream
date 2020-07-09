@@ -31,10 +31,10 @@ func main() {
 		panic(err)
 	}
 
-	lg := cfg.Logger()
-	defer lg.Sync()
+	logger := cfg.Logger()
+	defer logger.Sync()
 
-	lg.Info("starting ...")
+	logger.Info("starting ...")
 
 	discovery, err := consul.New(cfg)
 	if err != nil {
@@ -46,26 +46,31 @@ func main() {
 	ctx := context.Background()
 
 	// producer
-	producerRegistrar = producer.NewRegistrar(lg)
+	producerRegistrar = producer.NewRegistrar(logger)
 	register.Producer(producerRegistrar)
 
 	// database
-	databaseRegistrar = database.NewRegistrar(lg)
+	databaseRegistrar = database.NewRegistrar(logger)
 	register.Database(databaseRegistrar)
 
 	// telemetry
-	telemetryRegistrar = telemetry.NewRegistrar(lg)
+	telemetryRegistrar = telemetry.NewRegistrar(logger)
 	register.Telemetry(telemetryRegistrar)
 
 	outChan := make(telemetry.ExtDSChan, 1)
 
+	// start demux
 	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
 	d.Init()
 	go d.Start()
 
+	// start telemetry
 	t := telemetry.New(ctx, cfg, telemetryRegistrar, outChan)
-	t.Start()
+	if !cfg.Global().Shard.Enabled {
+		t.Start()
+	}
 
+	// start status
 	s := status.New(cfg)
 	s.Start()
 
