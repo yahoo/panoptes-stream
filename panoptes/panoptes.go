@@ -2,9 +2,10 @@ package main
 
 import (
 	"context"
-	"time"
+	"os"
+	"os/signal"
+	"syscall"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery/consul"
@@ -21,6 +22,9 @@ var (
 )
 
 func main() {
+	signalCh := make(chan os.Signal, 1)
+	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
+
 	cfg, err := getConfig()
 	if err != nil {
 		panic(err)
@@ -64,28 +68,25 @@ func main() {
 	s := status.New(cfg)
 	s.Start()
 
-	ticker := time.NewTicker(time.Second * 60)
-	for {
-		<-ticker.C
-		devices := make(map[string]config.Device)
-		producers := make(map[string]config.Producer)
-		databases := make(map[string]config.Database)
+	updateRequest := make(chan struct{}, 1)
 
-		for _, device := range cfg.Devices() {
-			devices[device.Host] = device
+	go func() {
+		for {
+			select {
+			case <-cfg.Informer():
+			case <-updateRequest:
+			}
+
+			cfg.Update()
+			d.Update()
+			t.Update()
 		}
+	}()
 
-		for _, producer := range cfg.Producers() {
-			producers[producer.Name] = producer
-		}
-
-		for _, database := range cfg.Databases() {
-			databases[database.Name] = database
-		}
-
-		cfg.Update()
-		d.Update(producers, databases)
-		t.Update(devices)
+	if cfg.Global().Shard.Enabled {
+		shard := NewShard(cfg, t, discovery, updateRequest)
+		go shard.Start()
 	}
 
+	<-signalCh
 }
