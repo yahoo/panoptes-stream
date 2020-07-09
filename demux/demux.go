@@ -15,14 +15,16 @@ import (
 )
 
 type Demux struct {
-	ctx      context.Context
-	cfg      config.Config
-	logger   *zap.Logger
-	inChan   telemetry.ExtDSChan
-	chMap    *extDSChanMap
-	pr       *producer.Registrar
-	db       *database.Registrar
-	register map[string]context.CancelFunc
+	ctx       context.Context
+	cfg       config.Config
+	logger    *zap.Logger
+	inChan    telemetry.ExtDSChan
+	chMap     *extDSChanMap
+	pr        *producer.Registrar
+	db        *database.Registrar
+	register  map[string]context.CancelFunc
+	producers map[string]config.Producer
+	databases map[string]config.Database
 }
 
 type extDSChanMap struct {
@@ -33,14 +35,16 @@ type extDSChanMap struct {
 
 func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
-		ctx:      ctx,
-		cfg:      cfg,
-		logger:   cfg.Logger(),
-		pr:       pr,
-		db:       db,
-		inChan:   inChan,
-		chMap:    &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)},
-		register: make(map[string]context.CancelFunc),
+		ctx:       ctx,
+		cfg:       cfg,
+		logger:    cfg.Logger(),
+		pr:        pr,
+		db:        db,
+		inChan:    inChan,
+		chMap:     &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)},
+		register:  make(map[string]context.CancelFunc),
+		producers: make(map[string]config.Producer),
+		databases: make(map[string]config.Database),
 	}
 }
 
@@ -88,6 +92,8 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 		return errors.New("producer not exist")
 	}
 
+	// register producer
+	d.producers[producer.Name] = producer
 	// register channel
 	d.chMap.add(producer.Name, make(telemetry.ExtDSChan, 1))
 	// register cancelFunnc
@@ -109,6 +115,8 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 		return errors.New("database not exist")
 	}
 
+	// register database
+	d.databases[database.Name] = database
 	// register channel
 	d.chMap.add(database.Name, make(telemetry.ExtDSChan, 1))
 	// register cancelFunnc
@@ -123,22 +131,24 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 
 func (d *Demux) unsubscribeProducer(producer config.Producer) {
 	d.register[producer.Name]()
+	delete(d.producers, producer.Name)
 	delete(d.register, producer.Name)
 	d.chMap.del(producer.Name)
 }
 
 func (d *Demux) unsubscribeDatabase(database config.Database) {
 	d.register[database.Name]()
+	delete(d.databases, database.Name)
 	delete(d.register, database.Name)
 	d.chMap.del(database.Name)
 }
 
-func (d *Demux) Update(producers map[string]config.Producer, databases map[string]config.Database) {
-	d.updateProducer(producers)
-	d.updateDatabase(databases)
+func (d *Demux) Update() {
+	d.updateProducer()
+	d.updateDatabase()
 }
 
-func (d *Demux) updateDatabase(databases map[string]config.Database) {
+func (d *Demux) updateDatabase() {
 	newDatabases := make(map[string]config.Database)
 	delta := &struct {
 		add []config.Database
@@ -149,17 +159,17 @@ func (d *Demux) updateDatabase(databases map[string]config.Database) {
 	for _, database := range d.cfg.Databases() {
 		newDatabases[database.Name] = database
 
-		if _, ok := databases[database.Name]; !ok {
+		if _, ok := d.databases[database.Name]; !ok {
 			delta.add = append(delta.add, database)
 		} else {
-			if ok := reflect.DeepEqual(databases[database.Name], database); !ok {
+			if ok := reflect.DeepEqual(d.databases[database.Name], database); !ok {
 				delta.mod = append(delta.mod, database)
 			}
 		}
 
 	}
 
-	for name, database := range databases {
+	for name, database := range d.databases {
 		if _, ok := newDatabases[name]; !ok {
 			delta.del = append(delta.del, database)
 		}
@@ -179,7 +189,7 @@ func (d *Demux) updateDatabase(databases map[string]config.Database) {
 	}
 }
 
-func (d *Demux) updateProducer(producers map[string]config.Producer) {
+func (d *Demux) updateProducer() {
 	newProducers := make(map[string]config.Producer)
 	delta := &struct {
 		add []config.Producer
@@ -190,17 +200,17 @@ func (d *Demux) updateProducer(producers map[string]config.Producer) {
 	for _, producer := range d.cfg.Producers() {
 		newProducers[producer.Name] = producer
 
-		if _, ok := producers[producer.Name]; !ok {
+		if _, ok := d.producers[producer.Name]; !ok {
 			delta.add = append(delta.add, producer)
 		} else {
-			if ok := reflect.DeepEqual(producers[producer.Name], producer); !ok {
+			if ok := reflect.DeepEqual(d.producers[producer.Name], producer); !ok {
 				delta.mod = append(delta.mod, producer)
 			}
 		}
 
 	}
 
-	for name, producer := range producers {
+	for name, producer := range d.producers {
 		if _, ok := newProducers[name]; !ok {
 			delta.del = append(delta.del, producer)
 		}
