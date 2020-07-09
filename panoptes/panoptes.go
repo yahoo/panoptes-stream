@@ -5,6 +5,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
@@ -71,10 +72,18 @@ func main() {
 	updateRequest := make(chan struct{}, 1)
 
 	go func() {
+		var informed bool
 		for {
 			select {
 			case <-cfg.Informer():
+				informed = true
+				continue
 			case <-updateRequest:
+			case <-time.After(time.Second * 10):
+				if !informed {
+					continue
+				}
+				informed = false
 			}
 
 			cfg.Update()
