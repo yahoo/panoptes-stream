@@ -8,6 +8,7 @@ import (
 	"net"
 	"reflect"
 	"strconv"
+	"sync"
 	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -28,13 +29,18 @@ type Telemetry struct {
 	outChan            ExtDSChan
 	telemetryRegistrar *Registrar
 	informer           chan struct{}
-	filterOpts         map[string]DeviceFilterOpt
+	deviceFilterOpts   DeviceFilterOpts
 }
 
 type delta struct {
 	add []config.Device
 	del []config.Device
 	mod []config.Device
+}
+
+type DeviceFilterOpts struct {
+	sync.RWMutex
+	filterOpts map[string]DeviceFilterOpt
 }
 
 type DeviceFilterOpt func(config.Device) bool
@@ -60,7 +66,7 @@ func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSCha
 		cfg:                cfg,
 		logger:             cfg.Logger(),
 		register:           make(map[string]context.CancelFunc),
-		filterOpts:         make(map[string]DeviceFilterOpt),
+		deviceFilterOpts:   DeviceFilterOpts{filterOpts: make(map[string]DeviceFilterOpt)},
 		devices:            make(map[string]config.Device),
 		informer:           make(chan struct{}, 1),
 		outChan:            outChan,
@@ -156,8 +162,10 @@ func (t *Telemetry) Start() {
 	}
 }
 
+// Update updates device subscriptions
+// it unsubscribes/subscribes and resubscribes devices
 func (t *Telemetry) Update() {
-	if t.cfg.Global().Shard.Enabled && len(t.filterOpts) < 1 {
+	if t.cfg.Global().Shard.Enabled && len(t.deviceFilterOpts.getOpts()) < 1 {
 		return
 	}
 
@@ -197,15 +205,16 @@ func (t *Telemetry) Update() {
 	}
 }
 
+// GetDevices returns devices based on the filters (if exist)
 func (t *Telemetry) GetDevices() []config.Device {
 	var filteredDevcies []config.Device
 
-	if len(t.filterOpts) < 1 {
+	if len(t.deviceFilterOpts.getOpts()) < 1 {
 		return t.cfg.Devices()
 	}
 
 	for _, device := range t.cfg.Devices() {
-		for _, filter := range t.filterOpts {
+		for _, filter := range t.deviceFilterOpts.getOpts() {
 			if filter(device) {
 				filteredDevcies = append(filteredDevcies, device)
 			}
@@ -215,11 +224,37 @@ func (t *Telemetry) GetDevices() []config.Device {
 	return filteredDevcies
 }
 
-func (t *Telemetry) addFilterOpt(index string, filterOpt DeviceFilterOpt) {
-	t.filterOpts[index] = filterOpt
+// AddFilterOpt adds filter option
+func (t *Telemetry) AddFilterOpt(index string, filterOpt DeviceFilterOpt) {
+	t.deviceFilterOpts.set(index, filterOpt)
 }
-func (t *Telemetry) removeFilterOpt(index string) {
-	delete(t.filterOpts, index)
+
+// DelFilterOpt deletes filter option
+func (t *Telemetry) DelFilterOpt(index string) {
+	t.deviceFilterOpts.del(index)
+}
+
+func (d *DeviceFilterOpts) set(key string, value DeviceFilterOpt) {
+	d.Lock()
+	defer d.Unlock()
+	d.filterOpts[key] = value
+}
+
+func (d *DeviceFilterOpts) del(key string) {
+	d.Lock()
+	defer d.Unlock()
+	delete(d.filterOpts, key)
+}
+
+func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
+	var opts []DeviceFilterOpt
+	d.Lock()
+	for _, opt := range d.filterOpts {
+		opts = append(opts, opt)
+	}
+	d.Unlock()
+
+	return opts
 }
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
