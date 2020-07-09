@@ -48,7 +48,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
 
 		mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
-		sampleInterval := time.Duration(sensor.Interval) * time.Second
+		sampleInterval := time.Duration(sensor.SampleInterval) * time.Second
 		subscriptions = append(subscriptions, &gpb.Subscription{
 			Path:              path,
 			Mode:              gpb.SubscriptionMode(mode),

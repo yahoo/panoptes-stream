@@ -26,10 +26,11 @@ type Sensor struct {
 	Service string
 	Output  string
 
-	Origin   string
-	Path     string
-	Mode     string
-	Interval uint64
+	Origin            string
+	Path              string
+	Mode              string
+	SampleInterval    uint64
+	HeartbeatInterval uint64
 }
 
 type Device struct {

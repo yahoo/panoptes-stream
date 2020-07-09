@@ -45,7 +45,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	for _, sensor := range sensors {
 		path := &jpb.Path{
 			Path:            sensor.Path,
-			SampleFrequency: uint32(sensor.Interval) * 1000,
+			SampleFrequency: uint32(sensor.SampleInterval) * 1000,
 		}
 		paths = append(paths, path)
 
