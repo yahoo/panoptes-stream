@@ -1,10 +1,17 @@
 package etcd
 
 import (
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
+	"context"
+	"encoding/json"
+	"path"
+	"strings"
+	"time"
+
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 )
 
 type etcd struct {
@@ -28,6 +35,7 @@ type etcdConfig struct {
 // New creates an etcd configuration
 func New(filename string) (config.Config, error) {
 	var (
+		err  error
 		cfg  = &etcdConfig{}
 		etcd = &etcd{
 			informer: make(chan struct{}, 1),
@@ -37,7 +45,96 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
+	etcd.client, err = clientv3.New(clientv3.Config{
+		Endpoints: cfg.Endpoints,
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	if err = etcd.getRemoteConfig(); err != nil {
+		return nil, err
+	}
+
+	etcd.logger = config.GetLogger(etcd.global.Logger)
+
 	return etcd, nil
+}
+
+func (e *etcd) getRemoteConfig() error {
+	var (
+		devicesTpl = make(map[string]config.DeviceTemplate)
+		sensors    = make(map[string]*config.Sensor)
+	)
+
+	requestTimeout, _ := time.ParseDuration("5s")
+	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	resp, err := e.client.Get(ctx, "config/", clientv3.WithPrefix())
+	cancel()
+	if err != nil {
+		return err
+	}
+
+	e.devices = e.devices[:0]
+	e.producers = e.producers[:0]
+	e.databases = e.databases[:0]
+
+	for _, ev := range resp.Kvs {
+		key := strings.TrimPrefix(string(ev.Key), "config/")
+		folder, k := path.Split(key)
+
+		switch folder {
+		case "producers/":
+			producer := config.Producer{}
+			if err := json.Unmarshal(ev.Value, &producer); err != nil {
+				return err
+			}
+			e.producers = append(e.producers, producer)
+		case "databases/":
+			database := config.Database{}
+			if err := json.Unmarshal(ev.Value, &database); err != nil {
+				return err
+			}
+			e.databases = append(e.databases, database)
+		case "devices/":
+			device := config.DeviceTemplate{}
+			if err := json.Unmarshal(ev.Value, &device); err != nil {
+				return err
+			}
+			devicesTpl[k] = device
+		case "sensors/":
+			sensor := config.Sensor{}
+			if err := json.Unmarshal(ev.Value, &sensor); err != nil {
+				return err
+			}
+			sensors[k] = &sensor
+		default:
+			if k == "global" {
+				err = json.Unmarshal(ev.Value, &e.global)
+				if err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	for _, d := range devicesTpl {
+		device := config.ConvDeviceTemplate(d)
+		device.Sensors = make(map[string][]*config.Sensor)
+
+		for _, s := range d.Sensors {
+			sensor, ok := sensors[s]
+			if !ok {
+				e.logger.Error("sensor not exist", zap.String("sensor", s))
+				continue
+			}
+			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+		}
+
+		e.devices = append(e.devices, device)
+	}
+
+	return nil
 }
 
 func (e *etcd) Devices() []config.Device {
