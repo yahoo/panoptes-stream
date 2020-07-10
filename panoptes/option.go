@@ -6,13 +6,15 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/consul"
+	"git.vzbuilders.com/marshadrad/panoptes/config/etcd"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
 	cli "github.com/urfave/cli/v2"
 )
 
 type cmd struct {
 	configFile string
-	consul     bool
+	consul     string
+	etcd       string
 }
 
 func getConfig() (config.Config, error) {
@@ -23,13 +25,18 @@ func getConfig() (config.Config, error) {
 		return nil, err
 	}
 
-	if cli.consul {
-		cfg, err = consul.New("etc/consul.yaml")
+	if len(cli.consul) > 0 {
+		cfg, err = consul.New(cli.consul)
+		if err != nil {
+			return nil, err
+		}
+	} else if len(cli.etcd) > 0 {
+		cfg, err = etcd.New(cli.etcd)
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		cfg, err = yaml.New("etc/config.yaml")
+		cfg, err = yaml.New(cli.configFile)
 		if err != nil {
 			return nil, err
 		}
@@ -46,9 +53,13 @@ func getCli() (*cmd, error) {
 			Name:  "config",
 			Usage: "path to a file in yaml format to read configuration",
 		},
-		&cli.BoolFlag{
+		&cli.StringFlag{
 			Name:  "consul",
 			Usage: "enable consul configuration management",
+		},
+		&cli.StringFlag{
+			Name:  "etcd",
+			Usage: "enable etcd configuration management",
 		},
 	}
 
@@ -57,7 +68,8 @@ func getCli() (*cmd, error) {
 		Action: func(c *cli.Context) error {
 			cm = cmd{
 				configFile: c.String("config"),
-				consul:     c.Bool("consul"),
+				consul:     c.String("consul"),
+				etcd:       c.String("etcd"),
 			}
 
 			if c.NumFlags() < 1 {
