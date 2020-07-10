@@ -11,8 +11,16 @@ require (
 	github.com/prometheus/client_golang v1.7.1
 	github.com/segmentio/kafka-go v0.3.7
 	github.com/urfave/cli/v2 v2.2.0
+	go.etcd.io/etcd v0.5.0-alpha.5.0.20200520232829-54ba9589114f
 	go.uber.org/zap v1.15.0
-	golang.org/x/net v0.0.0-20200625001655-4c5254603344
-	google.golang.org/grpc v1.30.0
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	google.golang.org/grpc v1.29.1
 	gopkg.in/yaml.v2 v2.3.0
+)
+
+replace (
+	github.com/coreos/bbolt => github.com/coreos/bbolt v1.3.2
+	github.com/coreos/etcd => github.com/coreos/etcd v3.3.10+incompatible
+	go.etcd.io/bbolt => go.etcd.io/bbolt v1.3.5
+	go.etcd.io/etcd => go.etcd.io/etcd v0.5.0-alpha.5.0.20200520232829-54ba9589114f // 54ba9589114f is the SHA for git tag v3.4.9
 )
