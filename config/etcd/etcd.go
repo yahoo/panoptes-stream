@@ -3,6 +3,7 @@ package etcd
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"path"
 	"strings"
 	"time"
@@ -17,7 +18,7 @@ import (
 type etcd struct {
 	client *clientv3.Client
 
-	filename  string
+	prefix    string
 	devices   []config.Device
 	producers []config.Producer
 	databases []config.Database
@@ -30,6 +31,7 @@ type etcd struct {
 
 type etcdConfig struct {
 	Endpoints []string
+	Prefix    string
 }
 
 // New creates an etcd configuration
@@ -37,12 +39,17 @@ func New(filename string) (config.Config, error) {
 	var (
 		err  error
 		cfg  = &etcdConfig{}
-		etcd = &etcd{
-			informer: make(chan struct{}, 1),
-		}
+		etcd = &etcd{informer: make(chan struct{}, 1)}
 	)
+
 	if err := yaml.Read(filename, cfg); err != nil {
 		return nil, err
+	}
+
+	if len(cfg.Prefix) > 0 {
+		etcd.prefix = cfg.Prefix
+	} else {
+		etcd.prefix = "config/"
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
@@ -69,7 +76,7 @@ func (e *etcd) getRemoteConfig() error {
 
 	requestTimeout, _ := time.ParseDuration("5s")
 	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	resp, err := e.client.Get(ctx, "config/", clientv3.WithPrefix())
+	resp, err := e.client.Get(ctx, e.prefix, clientv3.WithPrefix())
 	cancel()
 	if err != nil {
 		return err
@@ -79,8 +86,12 @@ func (e *etcd) getRemoteConfig() error {
 	e.producers = e.producers[:0]
 	e.databases = e.databases[:0]
 
+	if len(resp.Kvs) < 1 {
+		return errors.New("etcd is empty")
+	}
+
 	for _, ev := range resp.Kvs {
-		key := strings.TrimPrefix(string(ev.Key), "config/")
+		key := strings.TrimPrefix(string(ev.Key), e.prefix)
 		folder, k := path.Split(key)
 
 		switch folder {
@@ -163,6 +174,5 @@ func (e *etcd) Logger() *zap.Logger {
 }
 
 func (e *etcd) Update() error {
-
-	return nil
+	return e.getRemoteConfig()
 }
