@@ -2,8 +2,9 @@ package consul
 
 import (
 	"encoding/json"
-	"fmt"
+	"errors"
 	"path"
+	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"go.uber.org/zap"
@@ -15,7 +16,7 @@ import (
 type consul struct {
 	client *api.Client
 
-	filename  string
+	prefix    string
 	devices   []config.Device
 	producers []config.Producer
 	databases []config.Database
@@ -28,15 +29,14 @@ type consul struct {
 
 type consulConfig struct {
 	Address string
+	Prefix  string
 }
 
 func New(filename string) (config.Config, error) {
 	var (
 		err    error
 		cfg    = &consulConfig{}
-		consul = &consul{
-			informer: make(chan struct{}, 1),
-		}
+		consul = &consul{informer: make(chan struct{}, 1)}
 	)
 
 	if err := yaml.Read(filename, cfg); err != nil {
@@ -46,51 +46,106 @@ func New(filename string) (config.Config, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = cfg.Address
 
+	if len(cfg.Prefix) > 0 {
+		consul.prefix = cfg.Prefix
+	} else {
+		consul.prefix = "config/"
+	}
+
 	consul.client, err = api.NewClient(apiConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	err = consul.getKVConfig()
-	if err != nil {
+	if err = consul.getRemoteConfig(); err != nil {
 		return nil, err
 	}
 
 	consul.logger = config.GetLogger(consul.global.Logger)
 
-	go consul.watch("keyprefix", "config/", consul.informer)
+	go consul.watch("keyprefix", consul.prefix, consul.informer)
 
 	return consul, nil
 }
 
-func (c *consul) getKVConfig() error {
-	var err error
+func (c *consul) getRemoteConfig() error {
+	var (
+		err        error
+		devicesTpl = make(map[string]config.DeviceTemplate)
+		sensors    = make(map[string]*config.Sensor)
+	)
 
 	kv := c.client.KV()
-
-	c.producers, err = configProducers(kv, "config/producers/")
+	pairs, _, err := kv.List(c.prefix, nil)
 	if err != nil {
 		return err
 	}
 
-	c.databases, err = configDatabases(kv, "config/databases/")
-	if err != nil {
-		return err
+	if len(pairs) < 1 {
+		return errors.New("consul is empty")
 	}
 
-	sensors, err := configSensors(kv, "config/sensors/")
-	if err != nil {
-		return err
+	c.devices = c.devices[:0]
+	c.producers = c.producers[:0]
+	c.databases = c.databases[:0]
+
+	for _, p := range pairs {
+		// skip folder
+		if len(p.Value) < 1 {
+			continue
+		}
+		key := strings.TrimPrefix(string(p.Key), c.prefix)
+		folder, k := path.Split(key)
+
+		switch folder {
+		case "producers/":
+			producer := config.Producer{}
+			if err := json.Unmarshal(p.Value, &producer); err != nil {
+				return err
+			}
+			c.producers = append(c.producers, producer)
+		case "databases/":
+			database := config.Database{}
+			if err := json.Unmarshal(p.Value, &database); err != nil {
+				return err
+			}
+			c.databases = append(c.databases, database)
+		case "devices/":
+			device := config.DeviceTemplate{}
+			if err := json.Unmarshal(p.Value, &device); err != nil {
+				return err
+			}
+			devicesTpl[k] = device
+		case "sensors/":
+			sensor := config.Sensor{}
+			if err := json.Unmarshal(p.Value, &sensor); err != nil {
+				return err
+			}
+			sensors[k] = &sensor
+		default:
+			if k == "global" {
+				err = json.Unmarshal(p.Value, &c.global)
+				if err != nil {
+					return err
+				}
+			}
+		}
 	}
 
-	c.devices, err = configDevices(kv, "config/devices/", sensors)
-	if err != nil {
-		return err
-	}
+	for _, d := range devicesTpl {
+		device := config.ConvDeviceTemplate(d)
+		device.Sensors = make(map[string][]*config.Sensor)
 
-	c.global, err = configdGlobal(kv, "config/global")
-	if err != nil {
-		return err
+		for _, s := range d.Sensors {
+			sensor, ok := sensors[s]
+			if !ok {
+				c.logger.Error("sensor not exist", zap.String("sensor", s))
+				continue
+			}
+			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+		}
+
+		c.devices = append(c.devices, device)
 	}
 
 	return nil
@@ -122,136 +177,5 @@ func (c *consul) Logger() *zap.Logger {
 }
 
 func (c *consul) Update() error {
-	return c.getKVConfig()
-}
-
-func configProducers(kv *api.KV, prefix string) ([]config.Producer, error) {
-	var producers []config.Producer
-
-	pairs, _, err := kv.List(prefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range pairs {
-		// skip folder
-		if len(p.Value) < 1 {
-			continue
-		}
-
-		producer := config.Producer{}
-		if err := json.Unmarshal(p.Value, &producer); err != nil {
-			return nil, err
-		}
-
-		_, producer.Name = path.Split(p.Key)
-		producers = append(producers, producer)
-	}
-
-	return producers, nil
-}
-
-func configDatabases(kv *api.KV, prefix string) ([]config.Database, error) {
-	var databases []config.Database
-
-	pairs, _, err := kv.List(prefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range pairs {
-		// skip folder
-		if len(p.Value) < 1 {
-			continue
-		}
-
-		database := config.Database{}
-		if err := json.Unmarshal(p.Value, &database); err != nil {
-			return nil, err
-		}
-
-		_, database.Name = path.Split(p.Key)
-		databases = append(databases, database)
-	}
-
-	return databases, nil
-}
-
-func configSensors(kv *api.KV, prefix string) (map[string]*config.Sensor, error) {
-	var sensors = make(map[string]*config.Sensor)
-
-	pairs, _, err := kv.List(prefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range pairs {
-		// skip folder
-		if len(p.Value) < 1 {
-			continue
-		}
-
-		sensor := config.Sensor{}
-		if err := json.Unmarshal(p.Value, &sensor); err != nil {
-			return nil, err
-		}
-
-		_, name := path.Split(p.Key)
-		sensors[name] = &sensor
-	}
-
-	return sensors, nil
-}
-
-func configDevices(kv *api.KV, prefix string, sensors map[string]*config.Sensor) ([]config.Device, error) {
-	devices := []config.Device{}
-
-	pairs, _, err := kv.List(prefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	for _, p := range pairs {
-		// skip folder
-		if len(p.Value) < 1 {
-			continue
-		}
-
-		d := config.DeviceTemplate{}
-		if err := json.Unmarshal(p.Value, &d); err != nil {
-			panic(err)
-		}
-
-		device := config.ConvDeviceTemplate(d)
-		device.Sensors = make(map[string][]*config.Sensor)
-
-		for _, s := range d.Sensors {
-			sensor, ok := sensors[s]
-			if !ok {
-				return nil, fmt.Errorf("%s sensor not exist", s)
-			}
-
-			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
-		}
-
-		devices = append(devices, device)
-	}
-
-	return devices, nil
-}
-
-func configdGlobal(kv *api.KV, prefix string) (*config.Global, error) {
-	global := &config.Global{}
-
-	pair, _, err := kv.Get(prefix, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	err = json.Unmarshal(pair.Value, global)
-	if err != nil {
-		return nil, err
-	}
-
-	return global, nil
+	return c.getRemoteConfig()
 }
