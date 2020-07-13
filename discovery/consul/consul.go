@@ -5,10 +5,12 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/hashicorp/consul/api"
+	"github.com/hashicorp/consul/api/watch"
+	"go.uber.org/zap"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
-	"github.com/hashicorp/consul/api"
-	"go.uber.org/zap"
 )
 
 // Consul represents the consul
@@ -75,7 +77,7 @@ func (c *Consul) Register() error {
 	}
 
 	// new register node
-	// TODO: if id > numbber_of_nodes then needs clean up!
+	// TODO: if id > numbber_of_nodes then it needs clean up!
 	c.id = getID(ids)
 	if err := c.register(c.id, meta); err != nil {
 		return err
@@ -174,4 +176,31 @@ func getID(ids []int) string {
 	idStr = strconv.Itoa(len(ids))
 
 	return idStr
+}
+
+func (c *Consul) Watch(ch chan<- struct{}) {
+	params := make(map[string]interface{})
+	params["type"] = "service"
+	params["service"] = "panoptes"
+
+	wp, err := watch.Parse(params)
+	if err != nil {
+		panic(err)
+	}
+
+	lastIdx := uint64(0)
+	wp.Handler = func(idx uint64, data interface{}) {
+		if lastIdx != 0 {
+			c.logger.Info("consul watcher triggered")
+			select {
+			case ch <- struct{}{}:
+			default:
+			}
+		}
+		lastIdx = idx
+	}
+
+	if err := wp.Run("localhost:8500"); err != nil {
+		panic(err)
+	}
 }
