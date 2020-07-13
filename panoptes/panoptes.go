@@ -9,7 +9,9 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
+	"git.vzbuilders.com/marshadrad/panoptes/discovery"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery/consul"
+	"git.vzbuilders.com/marshadrad/panoptes/discovery/etcd"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/register"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
@@ -23,6 +25,7 @@ var (
 )
 
 func main() {
+	var discovery discovery.Discovery
 	signalCh := make(chan os.Signal, 1)
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
@@ -36,11 +39,26 @@ func main() {
 
 	logger.Info("starting ...")
 
-	discovery, err := consul.New(cfg)
-	if err != nil {
+	// discovery
+	switch cfg.Global().Discovery.Service {
+
+	case "consul":
+		discovery, err = consul.New(cfg)
+		if err != nil {
+			panic(err)
+		}
+	case "etcd":
+		discovery, err = etcd.New(cfg)
+		if err != nil {
+			panic(err)
+		}
+	default:
+		logger.Info("discovery disabled")
+	}
+
+	if err := discovery.Register(); err != nil {
 		panic(err)
 	}
-	discovery.Register()
 	defer discovery.Deregister()
 
 	ctx := context.Background()
@@ -97,7 +115,7 @@ func main() {
 		}
 	}()
 
-	if cfg.Global().Shard.Enabled {
+	if cfg.Global().Shard.Enabled && discovery != nil {
 		shard := NewShard(cfg, t, discovery, updateRequest)
 		go shard.Start()
 	}

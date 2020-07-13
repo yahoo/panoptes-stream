@@ -42,7 +42,7 @@ func (s *Shard) Start() {
 	// discovery
 	notifyChan := make(chan struct{}, 1)
 	s.waitForDiscoveryRegister()
-	go s.discovery.Watch("panoptes", notifyChan)
+	go s.discovery.Watch(notifyChan)
 
 	s.waitForInitialShards()
 
@@ -52,8 +52,14 @@ func (s *Shard) Start() {
 	// takeover if all nodes are not available
 	go func() {
 		<-time.After(time.Second * 35)
-		if !isAllNodesRunning(s.numberOfNodes, s.discovery.GetInstances()) {
-			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, s.discovery.GetInstances()))
+		instances, err := s.discovery.GetInstances()
+		if err != nil {
+			s.logger.Error("discovery shard failed", zap.Error(err))
+			return
+		}
+
+		if !isAllNodesRunning(s.numberOfNodes, instances) {
+			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, instances))
 			s.updateRequest <- struct{}{}
 		}
 	}()
@@ -69,7 +75,12 @@ func (s *Shard) Start() {
 			}
 
 			serviceChanged = false
-			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, s.discovery.GetInstances()))
+			instances, err := s.discovery.GetInstances()
+			if err != nil {
+				s.logger.Error("discovery shard failed", zap.Error(err))
+				continue
+			}
+			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, instances))
 			s.updateRequest <- struct{}{}
 		}
 
@@ -168,7 +179,13 @@ func getHash(key string) int {
 func (s *Shard) waitForDiscoveryRegister() {
 	hostname, _ := os.Hostname()
 	for i := 0; i < 15; i++ {
-		for _, instance := range s.discovery.GetInstances() {
+		instances, err := s.discovery.GetInstances()
+		if err != nil {
+			s.logger.Error("discovery shard failed", zap.Error(err))
+			continue
+		}
+
+		for _, instance := range instances {
 			if instance.Address == hostname && instance.Status == "passing" {
 				s.id = instance.ID
 				return
@@ -184,8 +201,17 @@ func (s *Shard) waitForDiscoveryRegister() {
 // waits for the initial shards to appear
 func (s *Shard) waitForInitialShards() {
 	for {
+		time.Sleep(time.Second * 10)
+
 		currentAvailableNodes := 0
-		for _, instance := range s.discovery.GetInstances() {
+
+		instances, err := s.discovery.GetInstances()
+		if err != nil {
+			s.logger.Error("discovery shard failed", zap.Error(err))
+			continue
+		}
+
+		for _, instance := range instances {
 			if _, ok := instance.Meta["shard_enabled"]; !ok {
 				continue
 			}
@@ -198,7 +224,5 @@ func (s *Shard) waitForInitialShards() {
 			s.logger.Info("initializing shards", zap.Int("available.nodes", currentAvailableNodes))
 			break
 		}
-
-		time.Sleep(time.Second * 10)
 	}
 }
