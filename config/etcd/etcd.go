@@ -165,7 +165,6 @@ func (e *etcd) Global() *config.Global {
 }
 
 func (e *etcd) Informer() chan struct{} {
-
 	return e.informer
 }
 

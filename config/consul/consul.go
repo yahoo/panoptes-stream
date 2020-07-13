@@ -168,7 +168,6 @@ func (c *consul) Global() *config.Global {
 }
 
 func (c *consul) Informer() chan struct{} {
-
 	return c.informer
 }
 
