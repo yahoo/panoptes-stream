@@ -1,10 +1,10 @@
 package discovery
 
 type Discovery interface {
-	Register()
-	Deregister()
-	GetInstances() []Instance
-	Watch(string, chan<- struct{})
+	Register() error
+	Deregister() error
+	GetInstances() ([]Instance, error)
+	Watch(chan<- struct{})
 }
 
 type Instance struct {
