@@ -52,8 +52,10 @@ type Database struct {
 }
 
 type Global struct {
-	Redial int
+	Version string
+	Redial  int
 
+	Discovery Discovery
 	TLSConfig TLSConfig
 	Status    Status
 	Shard     Shard
@@ -76,4 +78,10 @@ type Shard struct {
 	Enabled           bool
 	InitializingShard int
 	NumberOfNodes     int
+}
+
+type Discovery struct {
+	Service    string `yaml:"service"`
+	Prefix     string `yaml:"prefix"`
+	ConfigFile string `yaml:"configFile"`
 }
