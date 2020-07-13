@@ -103,12 +103,14 @@ func (c *consul) getRemoteConfig() error {
 			if err := json.Unmarshal(p.Value, &producer); err != nil {
 				return err
 			}
+			producer.Name = k
 			c.producers = append(c.producers, producer)
 		case "databases/":
 			database := config.Database{}
 			if err := json.Unmarshal(p.Value, &database); err != nil {
 				return err
 			}
+			database.Name = k
 			c.databases = append(c.databases, database)
 		case "devices/":
 			device := config.DeviceTemplate{}

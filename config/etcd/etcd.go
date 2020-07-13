@@ -100,12 +100,14 @@ func (e *etcd) getRemoteConfig() error {
 			if err := json.Unmarshal(ev.Value, &producer); err != nil {
 				return err
 			}
+			producer.Name = k
 			e.producers = append(e.producers, producer)
 		case "databases/":
 			database := config.Database{}
 			if err := json.Unmarshal(ev.Value, &database); err != nil {
 				return err
 			}
+			database.Name = k
 			e.databases = append(e.databases, database)
 		case "devices/":
 			device := config.DeviceTemplate{}
