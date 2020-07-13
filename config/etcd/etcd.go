@@ -65,6 +65,8 @@ func New(filename string) (config.Config, error) {
 
 	etcd.logger = config.GetLogger(etcd.global.Logger)
 
+	go etcd.watch(etcd.informer)
+
 	return etcd, nil
 }
 
@@ -176,4 +178,18 @@ func (e *etcd) Logger() *zap.Logger {
 
 func (e *etcd) Update() error {
 	return e.getRemoteConfig()
+}
+
+func (e *etcd) watch(ch chan<- struct{}) {
+	rch := e.client.Watch(context.Background(), e.prefix, clientv3.WithPrefix())
+	for wresp := range rch {
+		for _, ev := range wresp.Events {
+			e.logger.Info("config.etcd watcher triggered", zap.ByteString("key", ev.Kv.Key))
+			select {
+			case ch <- struct{}{}:
+			default:
+				e.logger.Info("config.etcd watcher response dropped")
+			}
+		}
+	}
 }
