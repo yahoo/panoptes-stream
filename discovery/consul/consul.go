@@ -35,15 +35,25 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 }
 
 // Register registers the panoptes at consul
-func (c *Consul) Register() {
+func (c *Consul) Register() error {
 	_, err := c.lock("panoptes_global_lock", nil)
 	if err != nil {
-		panic(err)
+		return err
 	}
 	defer c.ulock()
 
+	meta := make(map[string]string)
+	meta["shard_enabled"] = strconv.FormatBool(c.cfg.Global().Shard.Enabled)
+	meta["shard_nodes"] = strconv.Itoa(c.cfg.Global().Shard.NumberOfNodes)
+	meta["version"] = c.cfg.Global().Version
+
 	ids := []int{}
-	for _, instance := range c.GetInstances() {
+	instances, err := c.GetInstances()
+	if err != nil {
+		return err
+	}
+
+	for _, instance := range instances {
 		id, err := strconv.Atoi(instance.ID)
 		if err != nil {
 			c.logger.Warn("consul.register", zap.Error(err))
@@ -52,29 +62,31 @@ func (c *Consul) Register() {
 		ids = append(ids, id)
 		// recover node
 		if instance.Address == hostname() {
-			if c.cfg.Global().Shard.Enabled {
-				instance.Meta["shard_enabled"] = "true"
+			if err := c.register(instance.ID, meta); err != nil {
+				return err
 			}
 
 			c.logger.Info("consul service registery recovered", zap.String("id", instance.ID))
-			c.register(instance.ID, instance.Meta)
+
 			c.id = instance.ID
 
-			return
+			return nil
 		}
 	}
 
 	// new register node
-	meta := make(map[string]string)
-	if c.cfg.Global().Shard.Enabled {
-		meta["shard_enabled"] = "true"
-	}
+	// TODO: if id > numbber_of_nodes then needs clean up!
 	c.id = getID(ids)
-	c.register(c.id, meta)
+	if err := c.register(c.id, meta); err != nil {
+		return err
+	}
+
 	c.logger.Info("consul service registered", zap.String("id", c.id))
+
+	return nil
 }
 
-func (c *Consul) register(id string, meta map[string]string) {
+func (c *Consul) register(id string, meta map[string]string) error {
 	reg := &api.AgentServiceRegistration{
 		ID:      id,
 		Name:    "panoptes",
@@ -88,17 +100,15 @@ func (c *Consul) register(id string, meta map[string]string) {
 		Timeout:  "2s",
 	}
 
-	if err := c.client.Agent().ServiceRegister(reg); err != nil {
-		c.logger.Error("register failed", zap.Error(err))
-	}
+	return c.client.Agent().ServiceRegister(reg)
 }
 
 // GetInstances returns all registered instances
-func (c *Consul) GetInstances() []discovery.Instance {
+func (c *Consul) GetInstances() ([]discovery.Instance, error) {
 	var instances []discovery.Instance
 	_, checksInfo, err := c.client.Agent().AgentHealthServiceByName("panoptes")
 	if err != nil {
-		c.logger.Error("get health service failed", zap.Error(err))
+		return nil, err
 	}
 
 	for _, info := range checksInfo {
@@ -109,14 +119,12 @@ func (c *Consul) GetInstances() []discovery.Instance {
 			Status:  info.Checks.AggregatedStatus(),
 		})
 	}
-	return instances
+	return instances, nil
 }
 
 // Deregister deregisters the panoptes at consul
-func (c *Consul) Deregister() {
-	if err := c.client.Agent().ServiceDeregister(c.id); err != nil {
-		c.logger.Error("deregister failed", zap.Error(err))
-	}
+func (c *Consul) Deregister() error {
+	return c.client.Agent().ServiceDeregister(c.id)
 }
 
 func (c *Consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, error) {
