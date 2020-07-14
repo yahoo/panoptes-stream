@@ -162,6 +162,12 @@ func configProducers(p map[string]producer) []config.Producer {
 		})
 	}
 
+	// add built-in producer
+	producers = append(producers, config.Producer{
+		Name:    "console",
+		Service: "console",
+	})
+
 	return producers
 }
 

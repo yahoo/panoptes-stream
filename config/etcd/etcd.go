@@ -149,6 +149,12 @@ func (e *etcd) getRemoteConfig() error {
 		e.devices = append(e.devices, device)
 	}
 
+	// add built-in producer
+	e.producers = append(e.producers, config.Producer{
+		Name:    "console",
+		Service: "console",
+	})
+
 	return nil
 }
 
