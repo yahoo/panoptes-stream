@@ -1,15 +1,15 @@
 package gnmi
 
 import (
+	"bytes"
 	"context"
+	"errors"
 	"fmt"
-	"log"
 	"math"
-	"regexp"
+	"net"
 	"strings"
 	"time"
 
-	"github.com/openconfig/gnmi/path"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/ygot/ygot"
 	"go.uber.org/zap"
@@ -19,7 +19,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-var gnmiVersion = "0.0.0"
+var gnmiVersion = "0.0.1"
 
 // GNMI represents a GNMI Juniper.
 type GNMI struct {
@@ -111,8 +111,8 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
-	regxPath := regexp.MustCompile("/:(/.*/):")
-	_ = regxPath
+	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -122,8 +122,28 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
-				ds := g.dataStore(resp)
-				log.Printf("DS: %#v", ds)
+				ds, err := g.dataStore(resp)
+				if err != nil {
+					continue
+				}
+
+				ds["__timestamp__"] = resp.Update.Timestamp
+				ds["__system_id__"] = systemID
+				ds["__service__"] = "arista.gnmi"
+
+				output, err := g.findOutput(resp)
+				if err != nil {
+					g.logger.Error("arista.gnmi", zap.Error(err))
+				}
+
+				select {
+				case g.outChan <- telemetry.ExtDataStore{
+					DS:     ds,
+					Output: output,
+				}:
+				default:
+				}
+
 			case *gpb.SubscribeResponse_SyncResponse:
 				// TODO
 			case *gpb.SubscribeResponse_Error:
@@ -136,15 +156,17 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
+func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) (telemetry.DataStore, error) {
 	ds := make(telemetry.DataStore)
 
 	for _, update := range resp.Update.Update {
 		var value interface{}
 		var jsondata []byte
 
-		pathSlice := path.ToStrings(update.Path, false)
-		key := strings.Join(pathSlice, "/")
+		key, err := ygot.PathToString(update.Path)
+		if err != nil {
+			return nil, err
+		}
 
 		switch val := update.Val.Value.(type) {
 		case *gpb.TypedValue_AsciiVal:
@@ -178,9 +200,31 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore
 
 	}
 
-	return ds
+	return ds, nil
 }
 
 func Version() string {
 	return gnmiVersion
+}
+
+func (g *GNMI) findOutput(resp *gpb.SubscribeResponse_Update) (string, error) {
+	if len(resp.Update.Update) < 1 {
+		return "", errors.New("update is empty")
+	}
+
+	path := resp.Update.Update[0].Path
+	buf := bytes.NewBufferString("")
+
+	for _, elem := range path.Elem {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
+		p, ok := g.pathOutput[buf.String()+"/"]
+		if ok {
+			return p, nil
+		}
+	}
+
+	return "", errors.New("path to output not found")
 }
