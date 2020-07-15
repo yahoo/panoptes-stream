@@ -18,6 +18,7 @@ import (
 var (
 	jtiVersion              = "1.0"
 	metricTotalReceivedData = status.NewCounter("jti_total_received_data", "")
+	labelsRegex             = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
 )
 
 func init() {
@@ -75,7 +76,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1; i++ {
 		go j.worker(ctx)
 	}
 
@@ -101,25 +102,21 @@ func (j *JTI) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
-			ds := j.datastore(d)
 			path := regxPath.FindStringSubmatch(d.Path)
-			if len(path) > 1 {
-				output, ok := j.pathOutput[path[1]]
-				if !ok {
-					j.logger.Warn("path to output not found", zap.String("path", d.Path))
-					continue
-				}
-
-				select {
-				case j.outChan <- telemetry.ExtDataStore{
-					DS:     ds,
-					Output: output,
-				}:
-				default:
-				}
-
-			} else {
+			if len(path) < 1 {
 				j.logger.Warn("path not found", zap.String("path", d.Path))
+				continue
+			}
+			output, ok := j.pathOutput[path[1]]
+			if !ok {
+				j.logger.Warn("path to output not found", zap.String("path", d.Path))
+				continue
+			}
+
+			if isRawRequested(output) {
+				j.rawDatastore(d, output)
+			} else {
+				j.datastore(d, output)
 			}
 
 		case <-ctx.Done():
@@ -128,7 +125,46 @@ func (j *JTI) worker(ctx context.Context) {
 	}
 }
 
-func (j *JTI) datastore(d *jpb.OpenConfigData) telemetry.DataStore {
+func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
+	var (
+		ds     = make(telemetry.DataStore)
+		prefix string
+		labels = make(map[string]string)
+	)
+
+	for _, v := range d.Kv {
+
+		if v.Key == "__prefix__" {
+			labels, prefix = getLabels(v.GetStrValue())
+			continue
+		}
+
+		if prefix == "" {
+			continue
+		}
+
+		ds = telemetry.DataStore{
+			"__prefix__":    prefix,
+			"__labels__":    labels,
+			"__timestamp__": d.Timestamp * 1000000,
+			"__system_id__": d.SystemId,
+
+			v.Key: getValue(v),
+		}
+
+		select {
+		case j.outChan <- telemetry.ExtDataStore{
+			DS:     ds,
+			Output: output,
+		}:
+		default:
+			j.logger.Warn("dropped")
+		}
+
+	}
+}
+
+func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
 	jHeader := telemetry.DataStore{
 		"system_id":        d.SystemId,
 		"component_id":     d.SystemId,
@@ -169,8 +205,15 @@ func (j *JTI) datastore(d *jpb.OpenConfigData) telemetry.DataStore {
 	ds["__juniper_telemetry_header__"] = jHeader
 	ds["dataset"] = dsSlice
 
-	return ds
+	select {
+	case j.outChan <- telemetry.ExtDataStore{
+		DS:     ds,
+		Output: output,
+	}:
+	default:
+	}
 }
+
 func getValue(v *jpb.KeyValue) interface{} {
 	switch v.Value.(type) {
 	case *jpb.KeyValue_StrValue:
@@ -212,4 +255,23 @@ func getJTIPathKValues(p string, valuesOnly bool) []string {
 
 func Version() string {
 	return jtiVersion
+}
+
+func isRawRequested(output string) bool {
+	return strings.HasSuffix(output, "::raw")
+}
+
+func getLabels(prefix string) (map[string]string, string) {
+	labels := make(map[string]string)
+	subs := labelsRegex.FindAllStringSubmatch(prefix, -1)
+	for _, sub := range subs {
+		if len(sub) != 3 {
+			continue
+		}
+		kv := strings.Split(sub[2], "=")
+		labels[kv[0]] = strings.ReplaceAll(kv[1], "'", "")
+		prefix = strings.Replace(prefix, sub[0], sub[1], 1)
+	}
+
+	return labels, prefix
 }
