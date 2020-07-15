@@ -21,7 +21,7 @@ import (
 
 var gnmiVersion = "0.0.1"
 
-// GNMI represents a GNMI Juniper.
+// GNMI represents a GNMI.
 type GNMI struct {
 	conn          *grpc.ClientConn
 	subscriptions []*gpb.Subscription
@@ -52,11 +52,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 			SuppressRedundant: false,
 		})
 
-		if strings.HasSuffix(sensor.Path, "/") {
-			pathOutput[sensor.Path] = sensor.Output
-		} else {
-			pathOutput[fmt.Sprintf("%s/", sensor.Path)] = sensor.Output
-		}
+		pathOutput[pathToString(path)] = sensor.Output
 	}
 
 	return &GNMI{
@@ -111,8 +107,6 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
-	systemID, _, _ := net.SplitHostPort(g.conn.Target())
-
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -122,26 +116,16 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
-				ds, err := g.dataStore(resp)
-				if err != nil {
-					continue
-				}
-
-				ds["__timestamp__"] = resp.Update.Timestamp
-				ds["__system_id__"] = systemID
-				ds["__service__"] = "arista.gnmi"
-
 				output, err := g.findOutput(resp)
 				if err != nil {
 					g.logger.Error("arista.gnmi", zap.Error(err))
+					continue
 				}
 
-				select {
-				case g.outChan <- telemetry.ExtDataStore{
-					DS:     ds,
-					Output: output,
-				}:
-				default:
+				if isRawRequested(output) {
+					g.rawDataStore(resp, output)
+				} else {
+					g.dataStore(resp, output)
 				}
 
 			case *gpb.SubscribeResponse_SyncResponse:
@@ -156,51 +140,100 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) (telemetry.DataStore, error) {
+func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
+	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+
+	for _, update := range resp.Update.Update {
+		labels, prefix, key := g.parsePath(update)
+
+		value := getValue(update)
+		key = strings.Replace(key, prefix, "", -1)
+
+		ds := telemetry.DataStore{
+			"__prefix__":    prefix,
+			"__labels__":    labels,
+			"__timestamp__": resp.Update.Timestamp,
+			"__system_id__": systemID,
+
+			key: value,
+		}
+
+		select {
+		case g.outChan <- telemetry.ExtDataStore{
+			DS:     ds,
+			Output: output,
+		}:
+		default:
+			g.logger.Warn("drop!")
+		}
+	}
+}
+
+func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 	ds := make(telemetry.DataStore)
 
 	for _, update := range resp.Update.Update {
-		var value interface{}
-		var jsondata []byte
-
 		key, err := ygot.PathToString(update.Path)
 		if err != nil {
-			return nil, err
+			g.logger.Error("arista.gnmi", zap.Error(err))
+			return
 		}
 
-		switch val := update.Val.Value.(type) {
-		case *gpb.TypedValue_AsciiVal:
-			value = val.AsciiVal
-		case *gpb.TypedValue_BoolVal:
-			value = val.BoolVal
-		case *gpb.TypedValue_BytesVal:
-			value = val.BytesVal
-		case *gpb.TypedValue_DecimalVal:
-			value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
-		case *gpb.TypedValue_FloatVal:
-			value = val.FloatVal
-		case *gpb.TypedValue_IntVal:
-			value = val.IntVal
-		case *gpb.TypedValue_StringVal:
-			value = val.StringVal
-		case *gpb.TypedValue_UintVal:
-			value = val.UintVal
-		case *gpb.TypedValue_JsonIetfVal:
-			jsondata = val.JsonIetfVal
-		case *gpb.TypedValue_JsonVal:
-			jsondata = val.JsonVal
-		}
-
-		if value != nil {
-			ds[key] = value
-		} else if jsondata != nil {
-			// TODO
-			g.logger.Warn("JSON")
-		}
-
+		value := getValue(update)
+		ds[key] = value
 	}
 
-	return ds, nil
+	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+
+	ds["__timestamp__"] = resp.Update.Timestamp
+	ds["__system_id__"] = systemID
+	ds["__service__"] = "arista.gnmi"
+
+	select {
+	case g.outChan <- telemetry.ExtDataStore{
+		DS:     ds,
+		Output: output,
+	}:
+	default:
+		g.logger.Warn("drop!")
+	}
+}
+
+func getValue(update *gpb.Update) interface{} {
+	var jsondata []byte
+	var value interface{}
+
+	switch val := update.Val.Value.(type) {
+	case *gpb.TypedValue_AsciiVal:
+		value = val.AsciiVal
+	case *gpb.TypedValue_BoolVal:
+		value = val.BoolVal
+	case *gpb.TypedValue_BytesVal:
+		value = val.BytesVal
+	case *gpb.TypedValue_DecimalVal:
+		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
+	case *gpb.TypedValue_FloatVal:
+		value = val.FloatVal
+	case *gpb.TypedValue_IntVal:
+		value = val.IntVal
+	case *gpb.TypedValue_StringVal:
+		value = val.StringVal
+	case *gpb.TypedValue_UintVal:
+		value = val.UintVal
+	case *gpb.TypedValue_JsonIetfVal:
+		jsondata = val.JsonIetfVal
+	case *gpb.TypedValue_JsonVal:
+		jsondata = val.JsonVal
+	}
+
+	if value != nil {
+		return value
+	} else if jsondata != nil {
+		// TODO
+		panic("JSON")
+	}
+
+	return nil
 }
 
 func Version() string {
@@ -227,4 +260,52 @@ func (g *GNMI) findOutput(resp *gpb.SubscribeResponse_Update) (string, error) {
 	}
 
 	return "", errors.New("path to output not found")
+}
+
+func (g *GNMI) parsePath(update *gpb.Update) (map[string]string, string, string) {
+	Labels := make(map[string]string)
+	buf := bytes.NewBufferString("")
+	prefix := ""
+
+	for _, elem := range update.Path.Elem {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
+
+		_, ok := g.pathOutput[buf.String()+"/"]
+		if ok {
+			prefix = buf.String() + "/"
+		}
+
+		for key, value := range elem.Key {
+			if _, ok := Labels[key]; ok {
+				Labels[buf.String()+"/"+key] = value
+			} else {
+				Labels[key] = value
+			}
+
+		}
+	}
+
+	return Labels, prefix, buf.String()
+}
+
+// pathToString converts path to string w/o keys and values
+func pathToString(path *gpb.Path) string {
+	buf := bytes.NewBufferString("")
+	for _, elem := range path.Elem {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
+	}
+
+	buf.WriteRune('/')
+
+	return buf.String()
+}
+
+func isRawRequested(output string) bool {
+	return strings.HasSuffix(output, "::raw")
 }
