@@ -105,7 +105,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 				opts, err := dialOpts(device, gCfg)
 				if err != nil {
-					t.logger.Error("diap options", zap.Error(err))
+					t.logger.Error("dial options", zap.Error(err))
 				}
 
 				if len(device.Username) > 0 && len(device.Password) > 0 {
