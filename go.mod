@@ -6,6 +6,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.2
 	github.com/hashicorp/consul/api v1.5.0
+	github.com/influxdata/influxdb-client-go v1.3.0
 	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/openconfig/ygot v0.8.1
 	github.com/prometheus/client_golang v1.7.1
