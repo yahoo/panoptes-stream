@@ -75,7 +75,7 @@ func main() {
 	telemetryRegistrar = telemetry.NewRegistrar(logger)
 	register.Telemetry(telemetryRegistrar)
 
-	outChan := make(telemetry.ExtDSChan, 1)
+	outChan := make(telemetry.ExtDSChan, 10000)
 
 	// start demux
 	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
