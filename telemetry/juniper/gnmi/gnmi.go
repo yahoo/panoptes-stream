@@ -2,8 +2,10 @@ package gnmi
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math"
+	"net"
 	"regexp"
 	"strings"
 	"time"
@@ -25,7 +27,10 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-var gnmiVersion = "0.7.0"
+var (
+	gnmiVersion = "0.7.0"
+	labelsRegex = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+)
 
 // GNMI represents a GNMI Juniper.
 type GNMI struct {
@@ -115,7 +120,6 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
-	regxPath := regexp.MustCompile("/:(/.*/):")
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -127,27 +131,31 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			switch resp := d.Response.(type) {
 			case *gpb.SubscribeResponse_Update:
-				ds := g.dataStore(resp)
-				jHPath := ds["__path__"].(string)
-				delete(ds, "__path__")
-				path := regxPath.FindStringSubmatch(jHPath)
-				if len(path) > 1 {
-					output, ok := g.pathOutput[path[1]]
-					if !ok {
-						g.logger.Warn("path to output not found", zap.String("path", jHPath))
-						continue
-					}
+				ds := g.rawDataStore(resp)
 
+				path, err := getPath(ds)
+				if err != nil {
+					g.logger.Warn("path not found")
+					continue
+				}
+
+				output, ok := g.pathOutput[path]
+				if !ok {
+					g.logger.Warn("path to output not found", zap.String("path", path))
+					continue
+				}
+
+				if isRawRequested(output) {
 					select {
 					case g.outChan <- telemetry.ExtDataStore{
 						DS:     ds,
 						Output: output,
 					}:
 					default:
+						g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
 					}
-
 				} else {
-					g.logger.Warn("path not found", zap.String("path", jHPath))
+					g.splitRawDataStore(ds, output)
 				}
 
 			case *gpb.SubscribeResponse_SyncResponse:
@@ -162,71 +170,139 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
+func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
 	ds := make(telemetry.DataStore)
 	ds["__service__"] = fmt.Sprintf("gnmi_v%s", gnmiVersion)
 
 	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
-	ds["__prefix__"] = strings.Join(path.ToStrings(resp.Update.GetPrefix(), true), "/")
+	ds["__prefix__"], _ = ygot.PathToString(resp.Update.GetPrefix())
 
 	for _, update := range resp.Update.Update {
-		var value interface{}
-		var jsondata []byte
 
 		pathSlice := path.ToStrings(update.Path, false)
 		key := strings.Join(pathSlice, "/")
 
-		switch val := update.Val.Value.(type) {
-		case *gpb.TypedValue_AsciiVal:
-			value = val.AsciiVal
-		case *gpb.TypedValue_BoolVal:
-			value = val.BoolVal
-		case *gpb.TypedValue_BytesVal:
-			value = val.BytesVal
-		case *gpb.TypedValue_DecimalVal:
-			value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
-		case *gpb.TypedValue_FloatVal:
-			value = val.FloatVal
-		case *gpb.TypedValue_IntVal:
-			value = val.IntVal
-		case *gpb.TypedValue_StringVal:
-			value = val.StringVal
-		case *gpb.TypedValue_UintVal:
-			value = val.UintVal
-		case *gpb.TypedValue_AnyVal:
-			value = val.AnyVal
-			anyMsg := value.(*apb.Any)
-			anyMsgName, err := ptypes.AnyMessageName(anyMsg)
-			if err != nil {
-				g.logger.Error("proto any message invalid", zap.Error(err))
-			}
-			if anyMsgName == "GnmiJuniperTelemetryHeader" {
-				hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
-				ptypes.UnmarshalAny(anyMsg, &hdr)
-				value = hdr
-				ds["__path__"] = hdr.Path
-			}
-		case *gpb.TypedValue_LeaflistVal:
-			// TODO
-		case *gpb.TypedValue_JsonIetfVal:
-			jsondata = val.JsonIetfVal
-		case *gpb.TypedValue_JsonVal:
-			jsondata = val.JsonVal
-		}
-
-		if value != nil {
-			ds[key] = value
-		} else if jsondata != nil {
-			// TODO
-		}
+		value := g.getValue(update)
+		ds[key] = value
 
 	}
-
-	//TODO ADD OUTPUT Info
 
 	return ds
 }
 
+func (g *GNMI) splitRawDataStore(ds telemetry.DataStore, output string) {
+	labels, prefix := getLabels(ds["__prefix__"].(string))
+	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+
+	for key, value := range ds {
+		if !strings.HasPrefix(key, "__") {
+			dataStore := telemetry.DataStore{
+				"__prefix":    prefix,
+				"__labels":    labels,
+				"__timestamp": ds["__update_timestamp__"],
+				"__system_id": systemID,
+
+				key: value,
+			}
+
+			select {
+			case g.outChan <- telemetry.ExtDataStore{
+				DS:     dataStore,
+				Output: output,
+			}:
+			default:
+				g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
+			}
+		}
+	}
+
+}
+
+func getPath(ds telemetry.DataStore) (string, error) {
+	regxPath := regexp.MustCompile("/:(/.*/):")
+
+	if _, ok := ds["__juniper_telemetry_header__"]; ok {
+		h := ds["__juniper_telemetry_header__"].(GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader)
+		path := regxPath.FindStringSubmatch(h.Path)
+		if len(path) > 1 {
+			return path[1], nil
+		}
+	}
+
+	return "", errors.New("path not found")
+}
+
+func (g *GNMI) getValue(update *gpb.Update) interface{} {
+	var (
+		jsondata []byte
+		value    interface{}
+	)
+
+	switch val := update.Val.Value.(type) {
+	case *gpb.TypedValue_AsciiVal:
+		value = val.AsciiVal
+	case *gpb.TypedValue_BoolVal:
+		value = val.BoolVal
+	case *gpb.TypedValue_BytesVal:
+		value = val.BytesVal
+	case *gpb.TypedValue_DecimalVal:
+		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
+	case *gpb.TypedValue_FloatVal:
+		value = val.FloatVal
+	case *gpb.TypedValue_IntVal:
+		value = val.IntVal
+	case *gpb.TypedValue_StringVal:
+		value = val.StringVal
+	case *gpb.TypedValue_UintVal:
+		value = val.UintVal
+	case *gpb.TypedValue_AnyVal:
+		value = val.AnyVal
+		anyMsg := value.(*apb.Any)
+		anyMsgName, err := ptypes.AnyMessageName(anyMsg)
+		if err != nil {
+			g.logger.Error("proto any message invalid", zap.Error(err))
+		}
+		if anyMsgName == "GnmiJuniperTelemetryHeader" {
+			hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
+			ptypes.UnmarshalAny(anyMsg, &hdr)
+			value = hdr
+		}
+	case *gpb.TypedValue_LeaflistVal:
+		// TODO
+	case *gpb.TypedValue_JsonIetfVal:
+		jsondata = val.JsonIetfVal
+	case *gpb.TypedValue_JsonVal:
+		jsondata = val.JsonVal
+	}
+
+	if value != nil {
+		return value
+	} else if jsondata != nil {
+		// TODO
+	}
+
+	return nil
+}
+
 func Version() string {
 	return gnmiVersion
+}
+
+func isRawRequested(output string) bool {
+	return strings.HasSuffix(output, "::raw")
+}
+
+func getLabels(prefix string) (map[string]string, string) {
+	labels := make(map[string]string)
+	subs := labelsRegex.FindAllStringSubmatch(prefix, -1)
+	for _, sub := range subs {
+		if len(sub) != 3 {
+			continue
+		}
+		kv := strings.Split(sub[2], "=")
+		labels[kv[0]] = strings.ReplaceAll(kv[1], "'", "")
+		prefix = strings.Replace(prefix, sub[0], sub[1], 1)
+	}
+
+	return labels, prefix
 }
