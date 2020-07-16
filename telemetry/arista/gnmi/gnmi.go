@@ -200,8 +200,10 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 }
 
 func getValue(update *gpb.Update) interface{} {
-	var jsondata []byte
-	var value interface{}
+	var (
+		jsondata []byte
+		value    interface{}
+	)
 
 	switch val := update.Val.Value.(type) {
 	case *gpb.TypedValue_AsciiVal:
