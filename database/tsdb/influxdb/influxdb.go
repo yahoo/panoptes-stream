@@ -71,7 +71,7 @@ func (i *InfluxDB) Start() {
 			for k, v := range v.DS {
 				switch k {
 				case "__prefix":
-					tagSet = append(tagSet, fmt.Sprintf("path=%s", v.(string)))
+					tagSet = append(tagSet, fmt.Sprintf("prefix=%s", v.(string)))
 				case "__labels":
 					labels := v.(map[string]string)
 					for k, v := range labels {
