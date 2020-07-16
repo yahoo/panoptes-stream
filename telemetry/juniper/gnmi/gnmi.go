@@ -54,10 +54,12 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 
 		mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
 		sampleInterval := time.Duration(sensor.SampleInterval) * time.Second
+		heartbeatInterval := time.Duration(sensor.HeartbeatInterval) * time.Second
 		subscriptions = append(subscriptions, &gpb.Subscription{
 			Path:              path,
 			Mode:              gpb.SubscriptionMode(mode),
 			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
+			HeartbeatInterval: uint64(heartbeatInterval.Nanoseconds()),
 			SuppressRedundant: sensor.SuppressRedundant,
 		})
 
