@@ -139,15 +139,16 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			continue
 		}
 
+		// skip header
 		if prefix == "" {
 			continue
 		}
 
 		ds = telemetry.DataStore{
-			"__prefix__":    prefix,
-			"__labels__":    labels,
-			"__timestamp__": d.Timestamp * 1000000,
-			"__system_id__": d.SystemId,
+			"__prefix":    prefix,
+			"__labels":    labels,
+			"__timestamp": d.Timestamp * 1000000,
+			"__system_id": d.SystemId,
 
 			v.Key: getValue(v),
 		}
@@ -158,7 +159,7 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			Output: output,
 		}:
 		default:
-			j.logger.Warn("dropped")
+			j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 		}
 
 	}

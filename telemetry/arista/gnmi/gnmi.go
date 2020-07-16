@@ -150,10 +150,10 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
 		key = strings.Replace(key, prefix, "", -1)
 
 		ds := telemetry.DataStore{
-			"__prefix__":    prefix,
-			"__labels__":    labels,
-			"__timestamp__": resp.Update.Timestamp,
-			"__system_id__": systemID,
+			"__prefix":    prefix,
+			"__labels":    labels,
+			"__timestamp": resp.Update.Timestamp,
+			"__system_id": systemID,
 
 			key: value,
 		}
@@ -164,7 +164,7 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
 			Output: output,
 		}:
 		default:
-			g.logger.Warn("drop!")
+			g.logger.Warn("arista.gnmi", zap.String("error", "dataset drop"))
 		}
 	}
 }
