@@ -127,7 +127,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 					if err != nil {
 						metricCurrentGRPConn.Dec()
-						t.logger.Warn("nmi start error", zap.Error(err))
+						t.logger.Error("nmi start error", zap.Error(err), zap.String("host", device.Host))
 					}
 				}
 
