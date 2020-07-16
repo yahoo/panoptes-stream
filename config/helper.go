@@ -36,6 +36,7 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.EncoderConfig.EncodeCaller = nil
+	cfg.DisableStacktrace = true
 
 	logger, err := cfg.Build()
 	if err != nil {

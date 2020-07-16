@@ -53,7 +53,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 			Path:              path,
 			Mode:              gpb.SubscriptionMode(mode),
 			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
-			SuppressRedundant: false,
+			SuppressRedundant: sensor.SuppressRedundant,
 		})
 
 		if strings.HasSuffix(sensor.Path, "/") {

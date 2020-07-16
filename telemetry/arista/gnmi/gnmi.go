@@ -49,7 +49,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 			Mode:              gpb.SubscriptionMode(mode),
 			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
 			HeartbeatInterval: uint64(heartbeatInterval.Nanoseconds()),
-			SuppressRedundant: false,
+			SuppressRedundant: sensor.SuppressRedundant,
 		})
 
 		pathOutput[pathToString(path)] = sensor.Output
