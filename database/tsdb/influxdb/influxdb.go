@@ -6,12 +6,13 @@ import (
 	"fmt"
 	"strings"
 
+	influxdb2 "github.com/influxdata/influxdb-client-go"
+	"github.com/influxdata/influxdb/pkg/escape"
+	"go.uber.org/zap"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"go.uber.org/zap"
-
-	influxdb2 "github.com/influxdata/influxdb-client-go"
 )
 
 type InfluxDB struct {
@@ -74,14 +75,14 @@ func (i *InfluxDB) Start() {
 				case "__labels":
 					labels := v.(map[string]string)
 					for k, v := range labels {
-						tagSet = append(tagSet, fmt.Sprintf("%s=%s", k, v))
+						tagSet = append(tagSet, fmt.Sprintf("%s=%s", escape.String(k), v))
 					}
 				case "__system_id":
 					tagSet = append(tagSet, fmt.Sprintf("system_id=%s", v.(string)))
 				case "__timestamp":
 					timestamp = getValueString(v)
 				default:
-					fieldSet = append(fieldSet, fmt.Sprintf(" %s=%s", k, getValueString(v)))
+					fieldSet = append(fieldSet, fmt.Sprintf(" %s=%s", escape.String(k), getValueString(v)))
 				}
 			}
 
@@ -107,7 +108,10 @@ func getValueString(value interface{}) string {
 	case float64, float32:
 		return fmt.Sprintf("%f", v)
 	case string:
-		return v
+		if len(v) < 1 {
+			return "\"\""
+		}
+		return escape.String(v)
 	}
 
 	return ""
