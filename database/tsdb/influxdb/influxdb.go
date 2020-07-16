@@ -107,11 +107,10 @@ func getValueString(value interface{}) string {
 		return fmt.Sprintf("%d", v)
 	case float64, float32:
 		return fmt.Sprintf("%f", v)
+	case bool:
+		return fmt.Sprintf("%t", v)
 	case string:
-		if len(v) < 1 {
-			return "\"\""
-		}
-		return escape.String(v)
+		return fmt.Sprintf("\"%s\"", escape.String(v))
 	}
 
 	return ""
