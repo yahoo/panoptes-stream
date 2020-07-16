@@ -63,8 +63,6 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	etcd.logger = config.GetLogger(etcd.global.Logger)
-
 	go etcd.watch(etcd.informer)
 
 	return etcd, nil
@@ -129,6 +127,7 @@ func (e *etcd) getRemoteConfig() error {
 				if err != nil {
 					return err
 				}
+				e.logger = config.GetLogger(e.global.Logger)
 			}
 		}
 	}

@@ -62,8 +62,6 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	consul.logger = config.GetLogger(consul.global.Logger)
-
 	go consul.watch("keyprefix", consul.prefix, consul.informer)
 
 	return consul, nil
@@ -131,6 +129,7 @@ func (c *consul) getRemoteConfig() error {
 				if err != nil {
 					return err
 				}
+				c.logger = config.GetLogger(c.global.Logger)
 			}
 		}
 	}
