@@ -144,7 +144,10 @@ func (c *consul) getRemoteConfig() error {
 				c.logger.Error("sensor not exist", zap.String("sensor", s))
 				continue
 			}
-			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+
+			if !sensor.Disabled {
+				device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+			}
 		}
 
 		c.devices = append(c.devices, device)

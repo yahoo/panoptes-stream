@@ -23,8 +23,9 @@ type DeviceConfig struct {
 }
 
 type Sensor struct {
-	Service string
-	Output  string
+	Service  string
+	Output   string
+	Disabled bool
 
 	Origin            string
 	Path              string

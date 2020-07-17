@@ -121,7 +121,9 @@ func configDevices(y *yamlConfig) []config.Device {
 				log.Fatal("sensor not exist ", s)
 			}
 
-			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+			if !sensor.Disabled {
+				device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+			}
 		}
 
 		devices = append(devices, device)

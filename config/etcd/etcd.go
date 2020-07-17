@@ -142,7 +142,10 @@ func (e *etcd) getRemoteConfig() error {
 				e.logger.Error("sensor not exist", zap.String("sensor", s))
 				continue
 			}
-			device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+
+			if !sensor.Disabled {
+				device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
+			}
 		}
 
 		e.devices = append(e.devices, device)
