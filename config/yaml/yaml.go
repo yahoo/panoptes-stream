@@ -151,10 +151,8 @@ func configProducers(p map[string]producer) []config.Producer {
 	for name, pConfig := range p {
 		cfg := make(map[string]interface{})
 
-		if name != "console" {
-			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-				log.Fatal(err)
-			}
+		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
+			log.Fatal(err)
 		}
 
 		producers = append(producers, config.Producer{
@@ -164,7 +162,7 @@ func configProducers(p map[string]producer) []config.Producer {
 		})
 	}
 
-	// add built-in producer
+	// built-in producer
 	producers = append(producers, config.Producer{
 		Name:    "console",
 		Service: "console",

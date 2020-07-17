@@ -153,7 +153,7 @@ func (c *consul) getRemoteConfig() error {
 		c.devices = append(c.devices, device)
 	}
 
-	// add built-in producer
+	// built-in producer
 	c.producers = append(c.producers, config.Producer{
 		Name:    "console",
 		Service: "console",
