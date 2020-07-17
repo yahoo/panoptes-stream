@@ -12,13 +12,13 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	apb "github.com/golang/protobuf/ptypes/any"
 	"github.com/openconfig/gnmi/path"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	_ "github.com/openconfig/gnmi/proto/gnmi_ext"
 	"github.com/openconfig/ygot/ygot"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
@@ -240,6 +240,7 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
 		value    interface{}
+		err      error
 	)
 
 	switch tv.Value.(type) {
@@ -264,28 +265,10 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	case *gpb.TypedValue_JsonVal:
 		jsondata = tv.GetJsonVal()
 	case *gpb.TypedValue_AnyVal:
-		value = tv.GetAnyVal()
-		anyMsg := value.(*apb.Any)
-		anyMsgName, err := ptypes.AnyMessageName(anyMsg)
-		if err != nil {
-			return nil, fmt.Errorf("proto any message: %v", err)
-		}
-		if anyMsgName == "GnmiJuniperTelemetryHeader" {
-			hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
-			ptypes.UnmarshalAny(anyMsg, &hdr)
-			value = hdr
-		}
+		value, err = getAnyVal(tv.GetAnyVal())
 	case *gpb.TypedValue_LeaflistVal:
 		elems := tv.GetLeaflistVal().GetElement()
-		list := []interface{}{}
-		for _, v := range elems {
-			ev, err := getValue(v)
-			if err != nil {
-				return nil, fmt.Errorf("leaflist error: %v", err)
-			}
-			list = append(list, ev)
-		}
-		value = list
+		value, err = getLeafList(elems)
 	default:
 		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
 
@@ -297,7 +280,36 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 		}
 	}
 
-	return value, nil
+	return value, err
+}
+
+func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
+	list := []interface{}{}
+	for _, v := range elems {
+		ev, err := getValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("leaflist error: %v", err)
+		}
+		list = append(list, ev)
+	}
+
+	return list, nil
+}
+
+func getAnyVal(anyMsg *anypb.Any) (interface{}, error) {
+	anyMsgName, err := ptypes.AnyMessageName(anyMsg)
+	if err != nil {
+		return nil, fmt.Errorf("proto any message: %v", err)
+	}
+	if anyMsgName == "GnmiJuniperTelemetryHeader" {
+		hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
+		if err := ptypes.UnmarshalAny(anyMsg, &hdr); err != nil {
+			return nil, err
+		}
+		return hdr, nil
+	}
+
+	return nil, fmt.Errorf("proto any unknown msg type")
 }
 
 func isRawRequested(output string) bool {
