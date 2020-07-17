@@ -3,6 +3,7 @@ package gnmi
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -146,7 +147,11 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
 	for _, update := range resp.Update.Update {
 		labels, prefix, key := g.parsePath(update)
 
-		value := getValue(update)
+		value, err := getValue(update.Val)
+		if err != nil {
+			g.logger.Error("arista.gnmi", zap.Error(err))
+			continue
+		}
 		key = strings.Replace(key, prefix, "", -1)
 
 		ds := telemetry.DataStore{
@@ -176,10 +181,14 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 		key, err := ygot.PathToString(update.Path)
 		if err != nil {
 			g.logger.Error("arista.gnmi", zap.Error(err))
-			return
+			continue
 		}
 
-		value := getValue(update)
+		value, err := getValue(update.Val)
+		if err != nil {
+			g.logger.Error("arista.gnmi", zap.Error(err))
+			continue
+		}
 		ds[key] = value
 	}
 
@@ -195,51 +204,59 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 		Output: output,
 	}:
 	default:
-		g.logger.Warn("drop!")
+		g.logger.Warn("arista.gnmi", zap.String("error", "dataset drop"))
 	}
 }
 
-func getValue(update *gpb.Update) interface{} {
+func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
 		value    interface{}
 	)
 
-	switch val := update.Val.Value.(type) {
+	switch tv.Value.(type) {
 	case *gpb.TypedValue_AsciiVal:
-		value = val.AsciiVal
+		value = tv.GetAsciiVal()
 	case *gpb.TypedValue_BoolVal:
-		value = val.BoolVal
+		value = tv.GetBoolVal()
 	case *gpb.TypedValue_BytesVal:
-		value = val.BytesVal
+		value = tv.GetBytesVal()
 	case *gpb.TypedValue_DecimalVal:
-		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
+		value = float64(tv.GetDecimalVal().Digits) / math.Pow(10, float64(tv.GetDecimalVal().Precision))
 	case *gpb.TypedValue_FloatVal:
-		value = val.FloatVal
+		value = tv.GetFloatVal()
 	case *gpb.TypedValue_IntVal:
-		value = val.IntVal
+		value = tv.GetIntVal()
 	case *gpb.TypedValue_StringVal:
-		value = val.StringVal
+		value = tv.GetStringVal()
 	case *gpb.TypedValue_UintVal:
-		value = val.UintVal
+		value = tv.GetUintVal()
 	case *gpb.TypedValue_JsonIetfVal:
-		jsondata = val.JsonIetfVal
+		jsondata = tv.GetJsonIetfVal()
+		err := json.Unmarshal(jsondata, value)
+		if err != nil {
+			return nil, err
+		}
 	case *gpb.TypedValue_JsonVal:
-		jsondata = val.JsonVal
+		jsondata = tv.GetJsonVal()
+		err := json.Unmarshal(jsondata, value)
+		if err != nil {
+			return nil, err
+		}
+	case *gpb.TypedValue_LeaflistVal:
+		elems := tv.GetLeaflistVal().GetElement()
+		list := []interface{}{}
+		for _, v := range elems {
+			if ev, err := getValue(v); err == nil {
+				list = append(list, ev)
+			}
+		}
+		value = list
+	default:
+		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
 	}
 
-	if value != nil {
-		return value
-	} else if jsondata != nil {
-		// TODO
-		panic("JSON")
-	}
-
-	return nil
-}
-
-func Version() string {
-	return gnmiVersion
+	return value, nil
 }
 
 func (g *GNMI) findOutput(resp *gpb.SubscribeResponse_Update) (string, error) {
@@ -310,4 +327,8 @@ func pathToString(path *gpb.Path) string {
 
 func isRawRequested(output string) bool {
 	return strings.HasSuffix(output, "::raw")
+}
+
+func Version() string {
+	return gnmiVersion
 }
