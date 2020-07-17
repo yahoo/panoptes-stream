@@ -76,11 +76,11 @@ func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSCha
 }
 
 func (t *Telemetry) subscribe(device config.Device) {
-	var (
-		addr string
-		ctx  context.Context
-		gCfg *config.Global
-	)
+	var ctx context.Context
+
+	if len(device.Sensors) < 1 {
+		return
+	}
 
 	if _, ok := t.devices[device.Host]; ok {
 		t.logger.Error("device already subscribed", zap.String("name", device.Host))
@@ -92,27 +92,21 @@ func (t *Telemetry) subscribe(device config.Device) {
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 	metricCurrentDevice.Inc()
 
-	gCfg = t.cfg.Global()
-
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
+
+			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
+			if len(device.Username) > 0 && len(device.Password) > 0 {
+				ctx = metadata.AppendToOutgoingContext(ctx,
+					"username", device.Username, "password", device.Password)
+			}
+
+			opts, err := dialOpts(device, t.cfg.Global())
+			if err != nil {
+				t.logger.Error("dial options", zap.Error(err))
+			}
+
 			for {
-				if device.Port > 0 {
-					addr = net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
-				} else {
-					addr = device.Host
-				}
-
-				opts, err := dialOpts(device, gCfg)
-				if err != nil {
-					t.logger.Error("dial options", zap.Error(err))
-				}
-
-				if len(device.Username) > 0 && len(device.Password) > 0 {
-					ctx = metadata.AppendToOutgoingContext(ctx,
-						"username", device.Username, "password", device.Password)
-				}
-
 				conn, err := grpc.DialContext(ctx, addr, opts...)
 				if err != nil {
 					t.logger.Error("connect to device", zap.Error(err))
@@ -127,7 +121,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 					if err != nil {
 						metricCurrentGRPConn.Dec()
-						t.logger.Error("nmi start error", zap.Error(err), zap.String("host", device.Host))
+						t.logger.Error("nmi start", zap.Error(err), zap.String("host", device.Host))
 					}
 				}
 
