@@ -270,14 +270,12 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 		elems := tv.GetLeaflistVal().GetElement()
 		value, err = getLeafList(elems)
 	default:
-		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
+		err = fmt.Errorf("unknown value type %+v", tv.Value)
 
 	}
 
 	if jsondata != nil {
-		if err := json.Unmarshal(jsondata, &value); err != nil {
-			return nil, err
-		}
+		err = json.Unmarshal(jsondata, &value)
 	}
 
 	return value, err

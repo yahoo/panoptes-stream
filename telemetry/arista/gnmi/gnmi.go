@@ -212,6 +212,7 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
 		value    interface{}
+		err      error
 	)
 
 	switch tv.Value.(type) {
@@ -237,26 +238,16 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 		jsondata = tv.GetJsonVal()
 	case *gpb.TypedValue_LeaflistVal:
 		elems := tv.GetLeaflistVal().GetElement()
-		list := []interface{}{}
-		for _, v := range elems {
-			ev, err := getValue(v)
-			if err != nil {
-				return nil, fmt.Errorf("leaflist error: %v", err)
-			}
-			list = append(list, ev)
-		}
-		value = list
+		value, err = getLeafList(elems)
 	default:
-		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
+		err = fmt.Errorf("unknown value type %+v", tv.Value)
 	}
 
 	if jsondata != nil {
-		if err := json.Unmarshal(jsondata, &value); err != nil {
-			return nil, err
-		}
+		err = json.Unmarshal(jsondata, &value)
 	}
 
-	return value, nil
+	return value, err
 }
 
 func (g *GNMI) findOutput(resp *gpb.SubscribeResponse_Update) (string, error) {
@@ -308,6 +299,19 @@ func (g *GNMI) parsePath(update *gpb.Update) (map[string]string, string, string)
 	}
 
 	return Labels, prefix, buf.String()
+}
+
+func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
+	list := []interface{}{}
+	for _, v := range elems {
+		ev, err := getValue(v)
+		if err != nil {
+			return nil, fmt.Errorf("leaflist error: %v", err)
+		}
+		list = append(list, ev)
+	}
+
+	return list, nil
 }
 
 // pathToString converts path to string w/o keys and values
