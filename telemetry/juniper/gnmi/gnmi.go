@@ -2,6 +2,7 @@ package gnmi
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
@@ -10,21 +11,18 @@ import (
 	"strings"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
-	"go.uber.org/zap"
-
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-
 	"github.com/golang/protobuf/ptypes"
-	"github.com/openconfig/gnmi/path"
-	"github.com/openconfig/ygot/ygot"
-	"google.golang.org/grpc"
-
 	apb "github.com/golang/protobuf/ptypes/any"
+	"github.com/openconfig/gnmi/path"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	_ "github.com/openconfig/gnmi/proto/gnmi_ext"
+	"github.com/openconfig/ygot/ygot"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
 )
 
 var (
@@ -184,7 +182,11 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataSt
 		pathSlice := path.ToStrings(update.Path, false)
 		key := strings.Join(pathSlice, "/")
 
-		value := g.getValue(update)
+		value, err := getValue(update.Val)
+		if err != nil {
+			g.logger.Error("juniper.gnmi", zap.Error(err))
+			continue
+		}
 		ds[key] = value
 
 	}
@@ -234,35 +236,39 @@ func getPath(ds telemetry.DataStore) (string, error) {
 	return "", errors.New("path not found")
 }
 
-func (g *GNMI) getValue(update *gpb.Update) interface{} {
+func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
 		value    interface{}
 	)
 
-	switch val := update.Val.Value.(type) {
+	switch tv.Value.(type) {
 	case *gpb.TypedValue_AsciiVal:
-		value = val.AsciiVal
+		value = tv.GetAsciiVal()
 	case *gpb.TypedValue_BoolVal:
-		value = val.BoolVal
+		value = tv.GetBoolVal()
 	case *gpb.TypedValue_BytesVal:
-		value = val.BytesVal
+		value = tv.GetBytesVal()
 	case *gpb.TypedValue_DecimalVal:
-		value = float64(val.DecimalVal.Digits) / math.Pow(10, float64(val.DecimalVal.Precision))
+		value = float64(tv.GetDecimalVal().Digits) / math.Pow(10, float64(tv.GetDecimalVal().Precision))
 	case *gpb.TypedValue_FloatVal:
-		value = val.FloatVal
+		value = tv.GetFloatVal()
 	case *gpb.TypedValue_IntVal:
-		value = val.IntVal
+		value = tv.GetIntVal()
 	case *gpb.TypedValue_StringVal:
-		value = val.StringVal
+		value = tv.GetStringVal()
 	case *gpb.TypedValue_UintVal:
-		value = val.UintVal
+		value = tv.GetUintVal()
+	case *gpb.TypedValue_JsonIetfVal:
+		jsondata = tv.GetJsonIetfVal()
+	case *gpb.TypedValue_JsonVal:
+		jsondata = tv.GetJsonVal()
 	case *gpb.TypedValue_AnyVal:
-		value = val.AnyVal
+		value = tv.GetAnyVal()
 		anyMsg := value.(*apb.Any)
 		anyMsgName, err := ptypes.AnyMessageName(anyMsg)
 		if err != nil {
-			g.logger.Error("proto any message invalid", zap.Error(err))
+			return nil, fmt.Errorf("proto any message: %v", err)
 		}
 		if anyMsgName == "GnmiJuniperTelemetryHeader" {
 			hdr := GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader{}
@@ -270,24 +276,28 @@ func (g *GNMI) getValue(update *gpb.Update) interface{} {
 			value = hdr
 		}
 	case *gpb.TypedValue_LeaflistVal:
-		// TODO
-	case *gpb.TypedValue_JsonIetfVal:
-		jsondata = val.JsonIetfVal
-	case *gpb.TypedValue_JsonVal:
-		jsondata = val.JsonVal
+		elems := tv.GetLeaflistVal().GetElement()
+		list := []interface{}{}
+		for _, v := range elems {
+			ev, err := getValue(v)
+			if err != nil {
+				return nil, fmt.Errorf("leaflist error: %v", err)
+			}
+			list = append(list, ev)
+		}
+		value = list
+	default:
+		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
+
 	}
 
-	if value != nil {
-		return value
-	} else if jsondata != nil {
-		// TODO
+	if jsondata != nil {
+		if err := json.Unmarshal(jsondata, &value); err != nil {
+			return nil, err
+		}
 	}
 
-	return nil
-}
-
-func Version() string {
-	return gnmiVersion
+	return value, nil
 }
 
 func isRawRequested(output string) bool {
@@ -307,4 +317,8 @@ func getLabels(prefix string) (map[string]string, string) {
 	}
 
 	return labels, prefix
+}
+
+func Version() string {
+	return gnmiVersion
 }
