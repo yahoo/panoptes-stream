@@ -18,7 +18,7 @@ import (
 var (
 	jtiVersion              = "1.0"
 	metricTotalReceivedData = status.NewCounter("jti_total_received_data", "")
-	labelsRegex             = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+	labelsRegex             = regexp.MustCompile(`(\/[^\/]*)\[([A-Za-z0-9\-\/]*\=[^\[]*)\]`)
 )
 
 func init() {
@@ -40,8 +40,10 @@ type JTI struct {
 
 // New creates a JTI.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
-	paths := []*jpb.Path{}
-	pathOutput := make(map[string]string)
+	var (
+		paths      = []*jpb.Path{}
+		pathOutput = make(map[string]string)
+	)
 
 	for _, sensor := range sensors {
 		path := &jpb.Path{
@@ -94,7 +96,7 @@ func (j *JTI) Start(ctx context.Context) error {
 }
 
 func (j *JTI) worker(ctx context.Context) {
-	regxPath := regexp.MustCompile("/:(/.*/):")
+	var regxPath = regexp.MustCompile(`/:(/.*/):`)
 
 	for {
 		select {
@@ -128,8 +130,8 @@ func (j *JTI) worker(ctx context.Context) {
 func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 	var (
 		ds     = make(telemetry.DataStore)
-		prefix string
 		labels = make(map[string]string)
+		prefix string
 	)
 
 	for _, v := range d.Kv {
@@ -166,18 +168,19 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 }
 
 func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
-	jHeader := telemetry.DataStore{
-		"system_id":        d.SystemId,
-		"component_id":     d.SystemId,
-		"sub_component_id": d.SubComponentId,
-		"path":             d.Path,
-		"timestamp":        d.Timestamp,
-		"sequence_number":  d.SequenceNumber,
-		"__service__":      fmt.Sprintf("jti_v%s", jtiVersion),
-	}
-
-	dsSlice := []telemetry.DataStore{}
-	var ds = make(telemetry.DataStore)
+	var (
+		ds      = make(telemetry.DataStore)
+		dsSlice = []telemetry.DataStore{}
+		jHeader = telemetry.DataStore{
+			"system_id":        d.SystemId,
+			"component_id":     d.SystemId,
+			"sub_component_id": d.SubComponentId,
+			"path":             d.Path,
+			"timestamp":        d.Timestamp,
+			"sequence_number":  d.SequenceNumber,
+			"__service__":      fmt.Sprintf("jti_v%s", jtiVersion),
+		}
+	)
 
 	for _, v := range d.Kv {
 
@@ -212,46 +215,31 @@ func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
 		Output: output,
 	}:
 	default:
+		j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 	}
 }
 
 func getValue(v *jpb.KeyValue) interface{} {
+	var value interface{}
+
 	switch v.Value.(type) {
 	case *jpb.KeyValue_StrValue:
-		return v.GetStrValue()
+		value = v.GetStrValue()
 	case *jpb.KeyValue_DoubleValue:
-		return v.GetDoubleValue()
+		value = v.GetDoubleValue()
 	case *jpb.KeyValue_IntValue:
-		return v.GetIntValue()
+		value = v.GetIntValue()
 	case *jpb.KeyValue_SintValue:
-		return v.GetSintValue()
+		value = v.GetSintValue()
 	case *jpb.KeyValue_UintValue:
-		return v.GetUintValue()
+		value = v.GetUintValue()
 	case *jpb.KeyValue_BytesValue:
-		return v.GetBytesValue()
+		value = v.GetBytesValue()
 	case *jpb.KeyValue_BoolValue:
-		return v.GetBoolValue()
+		value = v.GetBoolValue()
 	}
 
-	return "na"
-}
-
-func getJTIPathKValues(p string, valuesOnly bool) []string {
-	rgx := regexp.MustCompile("\\/([^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
-	subs := rgx.FindAllStringSubmatch(p, -1)
-	var kv []string
-
-	if len(subs) > 0 {
-		for _, sub := range subs {
-			if !valuesOnly {
-				kv = append(kv, strings.Split(sub[2], "=")[0])
-			}
-
-			v := strings.Replace(strings.Split(sub[2], "=")[1], "'", "", -1)
-			kv = append(kv, v)
-		}
-	}
-	return kv
+	return value
 }
 
 func Version() string {

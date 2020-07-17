@@ -70,7 +70,7 @@ func (d *Demux) Init() error {
 
 func (d *Demux) Start() {
 	for {
-		extDS, _ := <-d.inChan
+		extDS := <-d.inChan
 		output := strings.Split(extDS.Output, "::")
 		if len(output) < 2 {
 			continue
