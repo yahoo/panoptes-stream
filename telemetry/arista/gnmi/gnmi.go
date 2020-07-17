@@ -233,27 +233,27 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 		value = tv.GetUintVal()
 	case *gpb.TypedValue_JsonIetfVal:
 		jsondata = tv.GetJsonIetfVal()
-		err := json.Unmarshal(jsondata, value)
-		if err != nil {
-			return nil, err
-		}
 	case *gpb.TypedValue_JsonVal:
 		jsondata = tv.GetJsonVal()
-		err := json.Unmarshal(jsondata, value)
-		if err != nil {
-			return nil, err
-		}
 	case *gpb.TypedValue_LeaflistVal:
 		elems := tv.GetLeaflistVal().GetElement()
 		list := []interface{}{}
 		for _, v := range elems {
-			if ev, err := getValue(v); err == nil {
-				list = append(list, ev)
+			ev, err := getValue(v)
+			if err != nil {
+				return nil, fmt.Errorf("leaflist error: %v", err)
 			}
+			list = append(list, ev)
 		}
 		value = list
 	default:
 		return nil, fmt.Errorf("unknown value type %+v", tv.Value)
+	}
+
+	if jsondata != nil {
+		if err := json.Unmarshal(jsondata, &value); err != nil {
+			return nil, err
+		}
 	}
 
 	return value, nil
