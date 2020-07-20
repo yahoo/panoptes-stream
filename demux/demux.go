@@ -71,15 +71,27 @@ func (d *Demux) Init() error {
 func (d *Demux) Start() {
 	for {
 		extDS := <-d.inChan
+
 		output := strings.Split(extDS.Output, "::")
 		if len(output) < 2 {
+			d.logger.Error("demux", zap.String("error", "output not found"))
 			continue
 		}
 
-		if d.chMap.isExist(output[0]) {
-			d.chMap.get(output[0]) <- extDS
-		} else {
-			d.logger.Error("channel not found", zap.String("name", output[0]))
+		if !d.chMap.isExist(output[0]) {
+			d.logger.Error("demux", zap.String("error", "channel not found"), zap.String("name", output[0]))
+			continue
+		}
+
+		select {
+		case d.chMap.get(output[0]) <- extDS:
+
+		case <-d.ctx.Done():
+			d.logger.Info("demux has been terminated")
+			return
+
+		default:
+			d.logger.Warn("demux", zap.String("error", "dataset drop"), zap.String("name", output[0]))
 		}
 	}
 }
@@ -95,7 +107,7 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	// register producer
 	d.producers[producer.Name] = producer
 	// register channel
-	d.chMap.add(producer.Name, make(telemetry.ExtDSChan, 1))
+	d.chMap.add(producer.Name, make(telemetry.ExtDSChan, 1000))
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
@@ -118,7 +130,7 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 	// register database
 	d.databases[database.Name] = database
 	// register channel
-	d.chMap.add(database.Name, make(telemetry.ExtDSChan, 1))
+	d.chMap.add(database.Name, make(telemetry.ExtDSChan, 1000))
 	// register cancelFunnc
 	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
 	// construct
@@ -161,12 +173,12 @@ func (d *Demux) updateDatabase() {
 
 		if _, ok := d.databases[database.Name]; !ok {
 			delta.add = append(delta.add, database)
-		} else {
-			if ok := reflect.DeepEqual(d.databases[database.Name], database); !ok {
-				delta.mod = append(delta.mod, database)
-			}
+			continue
 		}
 
+		if ok := reflect.DeepEqual(d.databases[database.Name], database); !ok {
+			delta.mod = append(delta.mod, database)
+		}
 	}
 
 	for name, database := range d.databases {
@@ -202,12 +214,12 @@ func (d *Demux) updateProducer() {
 
 		if _, ok := d.producers[producer.Name]; !ok {
 			delta.add = append(delta.add, producer)
-		} else {
-			if ok := reflect.DeepEqual(d.producers[producer.Name], producer); !ok {
-				delta.mod = append(delta.mod, producer)
-			}
+			continue
 		}
 
+		if ok := reflect.DeepEqual(d.producers[producer.Name], producer); !ok {
+			delta.mod = append(delta.mod, producer)
+		}
 	}
 
 	for name, producer := range d.producers {
