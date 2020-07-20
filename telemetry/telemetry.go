@@ -7,16 +7,19 @@ import (
 	"io/ioutil"
 	"net"
 	"reflect"
+	"regexp"
 	"strconv"
 	"sync"
 	"time"
 
 	"go.uber.org/zap"
+	"golang.org/x/sync/singleflight"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 )
 
@@ -26,6 +29,7 @@ type Telemetry struct {
 	devices            map[string]config.Device
 	cfg                config.Config
 	ctx                context.Context
+	group              singleflight.Group
 	logger             *zap.Logger
 	outChan            ExtDSChan
 	telemetryRegistrar *Registrar
@@ -96,16 +100,20 @@ func (t *Telemetry) subscribe(device config.Device) {
 		go func(sName string, sensors []*config.Sensor) {
 
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
-			ctx = setCredentials(ctx, &device)
+			ctx, err := t.setCredentials(ctx, &device)
+			if err != nil {
+				t.logger.Error("subscribe.creds", zap.Error(err))
+			}
+
 			opts, err := dialOpts(&device, t.cfg.Global())
 			if err != nil {
-				t.logger.Error("dial options", zap.Error(err))
+				t.logger.Error("subscribe.dialOpts", zap.Error(err))
 			}
 
 			for {
 				conn, err := grpc.DialContext(ctx, addr, opts...)
 				if err != nil {
-					t.logger.Error("connect to device", zap.Error(err))
+					t.logger.Error("subscribe.grpc", zap.Error(err))
 				} else {
 					metricCurrentGRPConn.Inc()
 
@@ -303,11 +311,40 @@ func dialOpts(device *config.Device, gCfg *config.Global) ([]grpc.DialOption, er
 	return opts, nil
 }
 
-func setCredentials(ctx context.Context, device *config.Device) context.Context {
-	if len(device.Username) > 0 && len(device.Password) > 0 {
-		ctx = metadata.AppendToOutgoingContext(ctx,
-			"username", device.Username, "password", device.Password)
+func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (context.Context, error) {
+	// no username and password
+	if len(device.Username) < 1 {
+		return ctx, nil
 	}
 
-	return ctx
+	// secret management
+	re := regexp.MustCompile(`__([a-zA-Z0-9|]*)::(.*)`)
+	match := re.FindStringSubmatch(device.Username)
+	if len(match) > 1 {
+		sType, path := match[1], match[2]
+
+		sec, err := secret.GetSecretEngine(sType)
+		if err != nil {
+			return ctx, err
+		}
+
+		res, err, _ := t.group.Do(device.Username, func() (interface{}, error) {
+			return sec.GetCredentials(ctx, path)
+		})
+		if err != nil {
+			return ctx, err
+		}
+
+		username, password := res.([]string)[0], res.([]string)[1]
+
+		ctx = metadata.AppendToOutgoingContext(ctx,
+			"username", username, "password", password)
+		return ctx, nil
+	}
+
+	// clear username and password
+	ctx = metadata.AppendToOutgoingContext(ctx,
+		"username", device.Username, "password", device.Password)
+
+	return ctx, nil
 }
