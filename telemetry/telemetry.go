@@ -164,12 +164,12 @@ func (t *Telemetry) Update() {
 
 		if _, ok := t.devices[device.Host]; !ok {
 			delta.add = append(delta.add, device)
-		} else {
-			if ok := reflect.DeepEqual(t.devices[device.Host], device); !ok {
-				delta.mod = append(delta.mod, device)
-			}
+			continue
 		}
 
+		if ok := reflect.DeepEqual(t.devices[device.Host], device); !ok {
+			delta.mod = append(delta.mod, device)
+		}
 	}
 
 	for host, device := range t.devices {
