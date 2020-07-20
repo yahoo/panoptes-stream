@@ -18,8 +18,9 @@ type DeviceConfig struct {
 
 	GroupID int
 
-	Username string
-	Password string
+	TLSConfig TLSConfig
+	Username  string
+	Password  string
 }
 
 type Sensor struct {
@@ -65,6 +66,8 @@ type Global struct {
 }
 
 type TLSConfig struct {
+	Disabled bool
+
 	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
 	CertFile           string `yaml:"certFile"`
 	KeyFile            string `yaml:"keyFile"`
