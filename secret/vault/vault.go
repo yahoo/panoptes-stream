@@ -6,8 +6,6 @@ import (
 	"errors"
 
 	"github.com/hashicorp/vault/api"
-
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 type Vault struct {
@@ -17,7 +15,7 @@ func New() *Vault {
 	return &Vault{}
 }
 
-func (v *Vault) GetCredentials(ctx context.Context, path string) (*secret.Credentials, error) {
+func (v *Vault) GetCredentials(ctx context.Context, path string) ([]string, error) {
 	cfg := api.DefaultConfig()
 	client, err := api.NewClient(cfg)
 	if err != nil {
@@ -30,10 +28,7 @@ func (v *Vault) GetCredentials(ctx context.Context, path string) (*secret.Creden
 	}
 
 	for k, v := range secrets.Data {
-		return &secret.Credentials{
-			Username: k,
-			Password: v.(string),
-		}, nil
+		return []string{k, v.(string)}, nil
 	}
 
 	return nil, errors.New("credentials not found")

@@ -3,14 +3,21 @@ package secret
 import (
 	"context"
 	"crypto/tls"
+	"fmt"
+
+	"git.vzbuilders.com/marshadrad/panoptes/secret/vault"
 )
 
-type Credentials struct {
-	Username string
-	Password string
+type Secret interface {
+	GetCredentials(context.Context, string) ([]string, error)
+	GetCertificate(context.Context, string) (*tls.Certificate, error)
 }
 
-type Secret interface {
-	GetCredentials(context.Context, string) (*Credentials, error)
-	GetCertificate(context.Context, string) (*tls.Certificate, error)
+func GetSecretEngine(sType string) (Secret, error) {
+	switch sType {
+	case "vault":
+		return vault.New(), nil
+	}
+
+	return nil, fmt.Errorf("%s secret engine doesn't support", sType)
 }
