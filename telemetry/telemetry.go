@@ -96,12 +96,8 @@ func (t *Telemetry) subscribe(device config.Device) {
 		go func(sName string, sensors []*config.Sensor) {
 
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
-			if len(device.Username) > 0 && len(device.Password) > 0 {
-				ctx = metadata.AppendToOutgoingContext(ctx,
-					"username", device.Username, "password", device.Password)
-			}
-
-			opts, err := dialOpts(device, t.cfg.Global())
+			ctx = setCredentials(ctx, &device)
+			opts, err := dialOpts(&device, t.cfg.Global())
 			if err != nil {
 				t.logger.Error("dial options", zap.Error(err))
 			}
@@ -121,17 +117,17 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 					if err != nil {
 						metricCurrentGRPConn.Dec()
-						t.logger.Error("nmi start", zap.Error(err), zap.String("host", device.Host))
+						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host))
 					}
 				}
 
 				select {
 				case <-time.After(time.Second * 30):
 					metricTotalReconnect.Inc()
+
 				case <-ctx.Done():
 					metricCurrentGRPConn.Dec()
-					t.logger.Info("unsubscribed", zap.String("host", device.Host),
-						zap.String("service", sName))
+					t.logger.Info("unsubscribed", zap.String("host", device.Host), zap.String("service", sName))
 					return
 				}
 			}
@@ -273,15 +269,25 @@ func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.Tra
 	return tc, nil
 }
 
-func dialOpts(device config.Device, gCfg *config.Global) ([]grpc.DialOption, error) {
-	var opts []grpc.DialOption
+func dialOpts(device *config.Device, gCfg *config.Global) ([]grpc.DialOption, error) {
+	var (
+		opts      []grpc.DialOption
+		tlsConfig *config.TLSConfig
+	)
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
-	if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
+
+	if device.TLSConfig.CertFile != "" && device.TLSConfig.KeyFile != "" {
+		tlsConfig = &device.TLSConfig
+	} else if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
+		tlsConfig = &gCfg.TLSConfig
+	}
+
+	if tlsConfig != nil {
 		creds, err := transportClientCreds(
-			gCfg.TLSConfig.CertFile,
-			gCfg.TLSConfig.KeyFile,
-			gCfg.TLSConfig.CAFile,
+			tlsConfig.CertFile,
+			tlsConfig.KeyFile,
+			tlsConfig.CAFile,
 		)
 
 		if err != nil {
@@ -295,4 +301,13 @@ func dialOpts(device config.Device, gCfg *config.Global) ([]grpc.DialOption, err
 	}
 
 	return opts, nil
+}
+
+func setCredentials(ctx context.Context, device *config.Device) context.Context {
+	if len(device.Username) > 0 && len(device.Password) > 0 {
+		ctx = metadata.AppendToOutgoingContext(ctx,
+			"username", device.Username, "password", device.Password)
+	}
+
+	return ctx
 }
