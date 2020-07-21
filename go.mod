@@ -17,6 +17,7 @@ require (
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200520232829-54ba9589114f
 	go.uber.org/zap v1.15.0
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.23.0
 	gopkg.in/yaml.v2 v2.3.0
