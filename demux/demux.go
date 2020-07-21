@@ -29,7 +29,6 @@ type Demux struct {
 
 type extDSChanMap struct {
 	sync.RWMutex
-	ok      bool
 	eDSChan map[string]telemetry.ExtDSChan
 }
 
@@ -69,6 +68,11 @@ func (d *Demux) Init() error {
 }
 
 func (d *Demux) Start() {
+	var (
+		outChan telemetry.ExtDSChan
+		ok      bool
+	)
+
 	for {
 		extDS := <-d.inChan
 
@@ -78,13 +82,13 @@ func (d *Demux) Start() {
 			continue
 		}
 
-		if !d.chMap.isExist(output[0]) {
+		if outChan, ok = d.chMap.get(output[0]); !ok {
 			d.logger.Error("demux", zap.String("error", "channel not found"), zap.String("name", output[0]))
 			continue
 		}
 
 		select {
-		case d.chMap.get(output[0]) <- extDS:
+		case outChan <- extDS:
 
 		case <-d.ctx.Done():
 			d.logger.Info("demux has been terminated")
@@ -106,12 +110,14 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 
 	// register producer
 	d.producers[producer.Name] = producer
+	// make channel
+	ch := make(telemetry.ExtDSChan, 1000)
 	// register channel
-	d.chMap.add(producer.Name, make(telemetry.ExtDSChan, 1000))
+	d.chMap.add(producer.Name, ch)
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := new(ctx, producer, d.logger, d.chMap.get(producer.Name))
+	m := new(ctx, producer, d.logger, ch)
 	// start the producer
 	go m.Start()
 
@@ -129,12 +135,14 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 
 	// register database
 	d.databases[database.Name] = database
+	// make a channel
+	ch := make(telemetry.ExtDSChan, 1000)
 	// register channel
-	d.chMap.add(database.Name, make(telemetry.ExtDSChan, 1000))
+	d.chMap.add(database.Name, ch)
 	// register cancelFunnc
 	ctx, d.register[database.Name] = context.WithCancel(d.ctx)
 	// construct
-	db := new(ctx, database, d.logger, d.chMap.get(database.Name))
+	db := new(ctx, database, d.logger, ch)
 	// start the database agent
 	go db.Start()
 
@@ -242,10 +250,11 @@ func (d *Demux) updateProducer() {
 	}
 }
 
-func (e *extDSChanMap) get(key string) telemetry.ExtDSChan {
+func (e *extDSChanMap) get(key string) (telemetry.ExtDSChan, bool) {
 	e.RLock()
 	defer e.RUnlock()
-	return e.eDSChan[key]
+	v, ok := e.eDSChan[key]
+	return v, ok
 }
 
 func (e *extDSChanMap) add(key string, value telemetry.ExtDSChan) {
@@ -258,11 +267,4 @@ func (e *extDSChanMap) del(key string) {
 	e.Lock()
 	defer e.Unlock()
 	delete(e.eDSChan, key)
-}
-
-func (e *extDSChanMap) isExist(key string) bool {
-	e.RLock()
-	defer e.RUnlock()
-	_, e.ok = e.eDSChan[key]
-	return e.ok
 }
