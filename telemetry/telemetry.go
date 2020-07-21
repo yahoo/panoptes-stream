@@ -105,7 +105,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 				t.logger.Error("subscribe.creds", zap.Error(err))
 			}
 
-			opts, err := dialOpts(&device, t.cfg.Global())
+			opts, err := t.getDialOpts(&device)
 			if err != nil {
 				t.logger.Error("subscribe.dialOpts", zap.Error(err))
 			}
@@ -243,6 +243,7 @@ func (d *DeviceFilterOpts) del(key string) {
 
 func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 	var opts []DeviceFilterOpt
+
 	d.Lock()
 	for _, opt := range d.filterOpts {
 		opts = append(opts, opt)
@@ -254,6 +255,7 @@ func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 
 func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
 	var caCertPool *x509.CertPool
+
 	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
 	if err != nil {
 		return nil, err
@@ -277,7 +279,7 @@ func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.Tra
 	return tc, nil
 }
 
-func dialOpts(device *config.Device, gCfg *config.Global) ([]grpc.DialOption, error) {
+func (t *Telemetry) getDialOpts(device *config.Device) ([]grpc.DialOption, error) {
 	var (
 		opts      []grpc.DialOption
 		tlsConfig *config.TLSConfig
@@ -285,19 +287,8 @@ func dialOpts(device *config.Device, gCfg *config.Global) ([]grpc.DialOption, er
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
 
-	if device.TLSConfig.CertFile != "" && device.TLSConfig.KeyFile != "" {
-		tlsConfig = &device.TLSConfig
-	} else if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
-		tlsConfig = &gCfg.TLSConfig
-	}
-
 	if tlsConfig != nil {
-		creds, err := transportClientCreds(
-			tlsConfig.CertFile,
-			tlsConfig.KeyFile,
-			tlsConfig.CAFile,
-		)
-
+		creds, err := t.getTransportCredentials(device)
 		if err != nil {
 			return opts, err
 		}
@@ -309,6 +300,29 @@ func dialOpts(device *config.Device, gCfg *config.Global) ([]grpc.DialOption, er
 	}
 
 	return opts, nil
+}
+
+func (t *Telemetry) getTransportCredentials(device *config.Device) (credentials.TransportCredentials, error) {
+	var (
+		tlsConfig *config.TLSConfig
+		gCfg      = t.cfg.Global()
+	)
+
+	if device.TLSConfig.CertFile != "" && device.TLSConfig.KeyFile != "" {
+		tlsConfig = &device.TLSConfig
+	} else if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
+		tlsConfig = &gCfg.TLSConfig
+	}
+
+	if tlsConfig != nil {
+		return transportClientCreds(
+			tlsConfig.CertFile,
+			tlsConfig.KeyFile,
+			tlsConfig.CAFile,
+		)
+	}
+
+	return nil, nil
 }
 
 func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (context.Context, error) {
