@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"encoding/json"
 	"net/url"
 
 	"go.uber.org/zap"
@@ -61,3 +62,9 @@ func (m *MockConfig) Logger() *zap.Logger {
 
 func (s *MemSink) Close() error { return nil }
 func (s *MemSink) Sync() error  { return nil }
+func (s *MemSink) Unmarshal() map[string]string {
+	defer s.Reset()
+	v := make(map[string]string)
+	json.Unmarshal(s.Bytes(), &v)
+	return v
+}
