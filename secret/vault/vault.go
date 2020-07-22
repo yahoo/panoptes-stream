@@ -2,7 +2,6 @@ package vault
 
 import (
 	"bytes"
-	"context"
 	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
@@ -25,7 +24,7 @@ func New() *Vault {
 
 // GetCredentials returns username and password from Vault
 // format: username=password at specified path
-func (v *Vault) GetCredentials(ctx context.Context, path string) ([]string, error) {
+func (v *Vault) GetCredentials(path string) ([]string, error) {
 	cfg := api.DefaultConfig()
 	client, err := api.NewClient(cfg)
 	if err != nil {
@@ -45,7 +44,7 @@ func (v *Vault) GetCredentials(ctx context.Context, path string) ([]string, erro
 }
 
 // GetCertificate returns TLS certificate from Vault
-func (v *Vault) GetCertificate(ctx context.Context, path string) (*tls.Certificate, error) {
+func (v *Vault) GetCertificate(path string) (*tls.Certificate, error) {
 	cfg := api.DefaultConfig()
 	client, err := api.NewClient(cfg)
 	if err != nil {
