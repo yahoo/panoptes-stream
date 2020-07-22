@@ -69,6 +69,11 @@ func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
 func getTLSConfigLocal(cfg *config.TLSConfig) (*tls.Config, error) {
 	var caCertPool *x509.CertPool
 
+	// combined cert and private key
+	if len(cfg.KeyFile) < 1 {
+		cfg.KeyFile = cfg.CertFile
+	}
+
 	cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
 	if err != nil {
 		return nil, err
