@@ -122,6 +122,11 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 		opts = opts.SetTlsConfig(tls)
 	}
 
+	token, err := getToken(config.Token)
+	if err != nil {
+		return nil, err
+	}
+
 	if config.BatchSize != 0 {
 		opts.SetBatchSize(config.BatchSize)
 	}
@@ -130,9 +135,28 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 		opts.SetMaxRetries(config.MaxRetries)
 	}
 
-	client := influxdb2.NewClientWithOptions(config.Server, config.Token, opts)
+	client := influxdb2.NewClientWithOptions(config.Server, token, opts)
 
 	return client, nil
+}
+
+func getToken(tokenConfig string) (string, error) {
+	sType, path, ok := secret.ParseRemoteSecretInfo(tokenConfig)
+	if ok {
+		sec, err := secret.GetSecretEngine(sType)
+		if err != nil {
+			return "", err
+		}
+
+		token, err := sec.GetCredentials(path)
+		if err != nil {
+			return "", err
+		}
+
+		return token[1], nil
+	}
+
+	return tokenConfig, nil
 }
 
 func getValueString(value interface{}) string {
