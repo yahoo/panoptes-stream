@@ -64,7 +64,8 @@ func (v *Vault) GetCertificate(path string) (*tls.Certificate, error) {
 	switch {
 	case isExist(secrets.Data, "pkcs12"):
 		return pkcs12pem(secrets.Data)
-
+	case isExist(secrets.Data, "cert"):
+		return certX509(secrets.Data)
 	}
 
 	return nil, errors.New("not exist")
@@ -108,6 +109,26 @@ func pkcs12pem(data map[string]interface{}) (*tls.Certificate, error) {
 	}
 
 	certificate, err := tls.X509KeyPair(certPEM.Bytes(), keyPEM.Bytes())
+	if err != nil {
+		return nil, err
+	}
+
+	return &certificate, nil
+}
+
+// private key and certificate encoded as PEM
+func certX509(data map[string]interface{}) (*tls.Certificate, error) {
+	var key string
+
+	cert := data["cert"].(string)
+
+	if isExist(data, "key") {
+		key = data["key"].(string)
+	} else {
+		key = cert
+	}
+
+	certificate, err := tls.X509KeyPair([]byte(cert), []byte(key))
 	if err != nil {
 		return nil, err
 	}
