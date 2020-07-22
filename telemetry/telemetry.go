@@ -3,11 +3,8 @@ package telemetry
 import (
 	"context"
 	"crypto/tls"
-	"crypto/x509"
-	"io/ioutil"
 	"net"
 	"reflect"
-	"regexp"
 	"strconv"
 	"sync"
 	"time"
@@ -253,32 +250,6 @@ func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 	return opts
 }
 
-func transportClientCreds(certFile, keyFile, caCertFile string) (credentials.TransportCredentials, error) {
-	var caCertPool *x509.CertPool
-
-	cert, err := tls.LoadX509KeyPair(certFile, keyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	if caCertFile != "" {
-		caCert, err := ioutil.ReadFile(caCertFile)
-		if err != nil {
-			return nil, err
-		}
-
-		caCertPool = x509.NewCertPool()
-		caCertPool.AppendCertsFromPEM(caCert)
-	}
-
-	tc := credentials.NewTLS(&tls.Config{
-		Certificates: []tls.Certificate{cert},
-		RootCAs:      caCertPool,
-	})
-
-	return tc, nil
-}
-
 func (t *Telemetry) getDialOpts(device *config.Device) ([]grpc.DialOption, error) {
 	var (
 		opts      []grpc.DialOption
@@ -308,21 +279,21 @@ func (t *Telemetry) getTransportCredentials(device *config.Device) (credentials.
 		gCfg      = t.cfg.Global()
 	)
 
-	if device.TLSConfig.CertFile != "" && device.TLSConfig.KeyFile != "" {
+	if device.TLSConfig.CertFile != "" {
 		tlsConfig = &device.TLSConfig
-	} else if gCfg.TLSConfig.CertFile != "" && gCfg.TLSConfig.KeyFile != "" {
+	} else if gCfg.TLSConfig.CertFile != "" {
 		tlsConfig = &gCfg.TLSConfig
 	}
 
-	if tlsConfig != nil {
-		return transportClientCreds(
-			tlsConfig.CertFile,
-			tlsConfig.KeyFile,
-			tlsConfig.CAFile,
-		)
+	tc, err, _ := t.group.Do(tlsConfig.CertFile, func() (interface{}, error) {
+		return secret.GetTLSConfig(tlsConfig)
+	})
+
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, nil
+	return credentials.NewTLS(tc.(*tls.Config)), nil
 }
 
 func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (context.Context, error) {
@@ -331,19 +302,16 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 		return ctx, nil
 	}
 
-	// secret management
-	re := regexp.MustCompile(`__([a-zA-Z0-9|]*)::(.*)`)
-	match := re.FindStringSubmatch(device.Username)
-	if len(match) > 1 {
-		sType, path := match[1], match[2]
-
+	// remote secret
+	sType, path, ok := secret.ParseRemoteSecretInfo(device.Username)
+	if ok {
 		sec, err := secret.GetSecretEngine(sType)
 		if err != nil {
 			return ctx, err
 		}
 
 		res, err, _ := t.group.Do(device.Username, func() (interface{}, error) {
-			return sec.GetCredentials(ctx, path)
+			return sec.GetCredentials(path)
 		})
 		if err != nil {
 			return ctx, err
@@ -356,7 +324,7 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 		return ctx, nil
 	}
 
-	// clear username and password
+	// configured username and password
 	ctx = metadata.AppendToOutgoingContext(ctx,
 		"username", device.Username, "password", device.Password)
 
