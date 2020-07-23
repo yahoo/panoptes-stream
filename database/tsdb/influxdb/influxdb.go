@@ -160,7 +160,7 @@ func (i *InfluxDB) getConfig() (*influxDBConfig, error) {
 		return nil, err
 	}
 
-	prefix := "panoptes_" + i.cfg.Name
+	prefix := "panoptes_database_" + i.cfg.Name
 	err = envconfig.Process(prefix, config)
 	if err != nil {
 		return nil, err
