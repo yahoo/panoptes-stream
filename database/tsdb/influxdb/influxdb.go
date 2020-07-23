@@ -9,6 +9,7 @@ import (
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb/pkg/escape"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -26,10 +27,12 @@ type InfluxDB struct {
 
 type influxDBConfig struct {
 	Server     string
-	Database   string
+	Bucket     string
+	Org        string
 	Token      string
 	BatchSize  uint
 	MaxRetries uint
+	Timeout    uint
 
 	TLSConfig config.TLSConfig
 }
@@ -47,14 +50,13 @@ func (i *InfluxDB) Start() {
 	var (
 		tagSet, fieldSet       []string
 		measurement, timestamp string
-		config                 = new(influxDBConfig)
 	)
 
-	i.logger.Info("influxdb set up", zap.String("name", i.cfg.Name),
-		zap.String("server url", i.cfg.Config["server"].(string)))
-
-	b, _ := json.Marshal(i.cfg.Config)
-	json.Unmarshal(b, config)
+	config, err := i.getConfig()
+	if err != nil {
+		i.logger.Error("influxdb", zap.Error(err))
+		os.Exit(1)
+	}
 
 	client, err := i.getClient(config)
 	if err != nil {
@@ -62,7 +64,9 @@ func (i *InfluxDB) Start() {
 		os.Exit(1)
 	}
 
-	writeApi := client.WriteApi("", config.Database)
+	writeApi := client.WriteApi(config.Org, config.Bucket)
+
+	i.logger.Info("influxdb", zap.String("name", i.cfg.Name), zap.String("server", config.Server), zap.String("bucket", config.Bucket))
 
 	for {
 		select {
@@ -135,9 +139,34 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 		opts.SetMaxRetries(config.MaxRetries)
 	}
 
+	if config.Timeout != 0 {
+		opts.SetHttpRequestTimeout(config.Timeout)
+	}
+
 	client := influxdb2.NewClientWithOptions(config.Server, token, opts)
 
 	return client, nil
+}
+
+func (i *InfluxDB) getConfig() (*influxDBConfig, error) {
+	config := new(influxDBConfig)
+	b, err := json.Marshal(i.cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, config)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := "panoptes_" + i.cfg.Name
+	err = envconfig.Process(prefix, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
 }
 
 func getToken(tokenConfig string) (string, error) {
