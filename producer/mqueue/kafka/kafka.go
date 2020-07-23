@@ -3,14 +3,20 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"os"
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/segmentio/kafka-go"
+	"github.com/segmentio/kafka-go/gzip"
+	"github.com/segmentio/kafka-go/lz4"
+	"github.com/segmentio/kafka-go/snappy"
 	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
@@ -18,34 +24,53 @@ type kafkaConfig struct {
 	Brokers []string
 	Topics  []string
 
-	BatchSize int
+	BatchSize     int
+	BatchTimeout  int
+	MaxAttempts   int
+	QueueCapacity int
+	KeepAlive     int
+	IOTimeout     int
+	Compression   string
+
+	TLSConfig config.TLSConfig
 }
 
+// Kafka represents Kafka Segment.io
 type Kafka struct {
-	ctx context.Context
-	cfg kafkaConfig
-	ch  telemetry.ExtDSChan
-	lg  *zap.Logger
+	ctx    context.Context
+	cfg    config.Producer
+	ch     telemetry.ExtDSChan
+	logger *zap.Logger
 }
 
+// New constructs kafka producer
 func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
-	kConfig := convConfig(cfg.Config)
+
 	return &Kafka{
-		ctx: ctx,
-		cfg: kConfig,
-		lg:  lg,
-		ch:  inChan,
+		ctx:    ctx,
+		cfg:    cfg,
+		ch:     inChan,
+		logger: lg,
 	}
 }
 
+// Start sends the data to the different topics (fan-out)
 func (k *Kafka) Start() {
 	chMap := make(map[string]chan telemetry.DataStore)
+	config, err := k.getConfig()
+	if err != nil {
+		k.logger.Error("kafka", zap.Error(err))
+		os.Exit(1)
+	}
 
-	for _, topic := range k.cfg.Topics {
+	for _, topic := range config.Topics {
 		chMap[topic] = make(chan telemetry.DataStore, 1)
 
 		go func(topic string) {
-			k.start(chMap[topic], topic)
+			err := k.start(config, chMap[topic], topic)
+			if err != nil {
+				k.logger.Error("kafka", zap.Error(err))
+			}
 		}(topic)
 	}
 
@@ -58,38 +83,45 @@ func (k *Kafka) Start() {
 
 			topic := strings.Split(v.Output, "::")
 			if len(topic) < 2 {
-				k.lg.Error("topic not found", zap.String("output", v.Output))
+				k.logger.Error("kafka", zap.String("msg", "topic not found"), zap.String("output", v.Output))
 				continue
 			}
 
 			if _, ok := chMap[topic[1]]; ok {
 				chMap[topic[1]] <- v.DS
 			} else {
-				k.lg.Error("topic not found", zap.String("name", topic[1]))
+				k.logger.Error("kafka", zap.String("msg", "topic not found"), zap.String("name", topic[1]))
 			}
 
 		case <-k.ctx.Done():
-			k.lg.Info("kafka fanout has been terminated",
-				zap.String("brokers", strings.Join(k.cfg.Brokers, ",")))
+			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("brokers", strings.Join(config.Brokers, ",")))
 			return
 		}
 	}
 
 }
 
-func (k *Kafka) start(ch chan telemetry.DataStore, topic string) {
-	batch := make([]kafka.Message, 0, k.cfg.BatchSize)
-	flushTicker := time.NewTicker(time.Second * 10)
+func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic string) error {
+	var (
+		batch        = make([]kafka.Message, 0, config.BatchSize)
+		batchTimeout = 1
+	)
+
+	if config.BatchTimeout > 0 {
+		batchTimeout = config.BatchTimeout
+	}
+
+	flushTicker := time.NewTicker(time.Second * time.Duration(batchTimeout))
 	flush := false
 
-	w := kafka.NewWriter(kafka.WriterConfig{
-		Brokers:  k.cfg.Brokers,
-		Topic:    topic,
-		Balancer: &kafka.LeastBytes{},
-	})
+	cfg, err := k.getWriterConfig(config, topic)
+	if err != nil {
+		return err
+	}
 
-	k.lg.Info("kafka producer set up", zap.String("brokers",
-		strings.Join(k.cfg.Brokers, ",")), zap.String("topic", topic))
+	w := kafka.NewWriter(cfg)
+
+	k.logger.Info("kafka", zap.String("brokers", strings.Join(config.Brokers, ",")), zap.String("topic", topic))
 
 	for {
 		select {
@@ -100,22 +132,25 @@ func (k *Kafka) start(ch chan telemetry.DataStore, topic string) {
 
 			b, err := json.Marshal(v)
 			if err != nil {
-				k.lg.Error("dataset marshal failed", zap.Error(err))
+				k.logger.Error("kafka", zap.String("msg", "dataset marshal failed"), zap.Error(err))
+				continue
 			}
 
 			batch = append(batch, kafka.Message{Value: b})
+
 		case <-flushTicker.C:
 			flush = true
+
 		case <-k.ctx.Done():
-			k.lg.Info("kafka has been terminated", zap.String("topic", topic))
-			return
+			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("topic", topic), zap.Error(k.ctx.Err()))
+			return k.ctx.Err()
 
 		}
 
-		if len(batch) == k.cfg.BatchSize || flush {
+		if len(batch) == config.BatchSize || flush {
 			err := w.WriteMessages(k.ctx, batch...)
 			if err != nil {
-				k.lg.Error("kafka write message failed", zap.Error(err))
+				k.logger.Error("kafka", zap.Error(err))
 			}
 
 			flush = false
@@ -124,9 +159,65 @@ func (k *Kafka) start(ch chan telemetry.DataStore, topic string) {
 	}
 }
 
-func convConfig(c interface{}) kafkaConfig {
-	kc := kafkaConfig{}
-	b, _ := json.Marshal(c)
-	json.Unmarshal(b, &kc)
-	return kc
+func (k *Kafka) getConfig() (*kafkaConfig, error) {
+	config := new(kafkaConfig)
+	b, err := json.Marshal(k.cfg.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, config)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := "panoptes_producer_" + k.cfg.Name
+	err = envconfig.Process(prefix, config)
+	if err != nil {
+		return nil, err
+	}
+
+	return config, nil
+}
+
+func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.WriterConfig, error) {
+	var err error
+
+	cfg := kafka.WriterConfig{
+		Brokers:  config.Brokers,
+		Topic:    topic,
+		Balancer: &kafka.LeastBytes{},
+
+		MaxAttempts:   config.MaxAttempts,
+		QueueCapacity: config.QueueCapacity,
+		ReadTimeout:   time.Duration(config.IOTimeout) * time.Second,
+		WriteTimeout:  time.Duration(config.IOTimeout) * time.Second,
+		Dialer: &kafka.Dialer{
+			ClientID:  "panoptes",
+			Timeout:   time.Duration(config.IOTimeout) * time.Second,
+			KeepAlive: time.Duration(config.IOTimeout) * time.Second,
+			DualStack: true,
+		},
+	}
+
+	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+		cfg.Dialer.TLS, err = secret.GetTLSConfig(&config.TLSConfig)
+		if err != nil {
+			return cfg, err
+		}
+
+	}
+
+	switch config.Compression {
+	case "gzip":
+		cfg.CompressionCodec = gzip.NewCompressionCodec()
+	case "snappy":
+		cfg.CompressionCodec = snappy.NewCompressionCodec()
+	case "lz4":
+		cfg.CompressionCodec = lz4.NewCompressionCodec()
+	}
+
+	err = cfg.Validate()
+
+	return cfg, err
 }
