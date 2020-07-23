@@ -21,9 +21,8 @@ import (
 )
 
 type kafkaConfig struct {
-	Brokers []string
-	Topics  []string
-
+	Brokers       []string
+	Topics        []string
 	BatchSize     int
 	BatchTimeout  int
 	MaxAttempts   int
@@ -104,15 +103,20 @@ func (k *Kafka) Start() {
 func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic string) error {
 	var (
 		batch        = make([]kafka.Message, 0, config.BatchSize)
+		batchSize    = 100
 		batchTimeout = 1
+		flush        = false
 	)
+
+	if config.BatchSize > 0 {
+		batchSize = config.BatchSize
+	}
 
 	if config.BatchTimeout > 0 {
 		batchTimeout = config.BatchTimeout
 	}
 
 	flushTicker := time.NewTicker(time.Second * time.Duration(batchTimeout))
-	flush := false
 
 	cfg, err := k.getWriterConfig(config, topic)
 	if err != nil {
@@ -132,7 +136,7 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 
 			b, err := json.Marshal(v)
 			if err != nil {
-				k.logger.Error("kafka", zap.String("msg", "dataset marshal failed"), zap.Error(err))
+				k.logger.Error("kafka", zap.Error(err))
 				continue
 			}
 
@@ -143,11 +147,11 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 
 		case <-k.ctx.Done():
 			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("topic", topic), zap.Error(k.ctx.Err()))
-			return k.ctx.Err()
+			return nil
 
 		}
 
-		if len(batch) == config.BatchSize || flush {
+		if len(batch) == batchSize || flush {
 			err := w.WriteMessages(k.ctx, batch...)
 			if err != nil {
 				k.logger.Error("kafka", zap.Error(err))
@@ -184,10 +188,9 @@ func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.Writer
 	var err error
 
 	cfg := kafka.WriterConfig{
-		Brokers:  config.Brokers,
-		Topic:    topic,
-		Balancer: &kafka.LeastBytes{},
-
+		Brokers:       config.Brokers,
+		Topic:         topic,
+		Balancer:      &kafka.LeastBytes{},
 		MaxAttempts:   config.MaxAttempts,
 		QueueCapacity: config.QueueCapacity,
 		ReadTimeout:   time.Duration(config.IOTimeout) * time.Second,
