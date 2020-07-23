@@ -146,7 +146,7 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 			flush = true
 
 		case <-k.ctx.Done():
-			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("topic", topic), zap.Error(k.ctx.Err()))
+			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("topic", topic))
 			return nil
 
 		}
