@@ -1,6 +1,7 @@
 package consul
 
 import (
+	"encoding/json"
 	"os"
 	"sort"
 	"strconv"
@@ -11,6 +12,7 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 // Consul represents the consul
@@ -22,9 +24,27 @@ type Consul struct {
 	lockHandler *api.Lock
 }
 
+type consulConfig struct {
+	Address string
+	Prefix  string
+
+	TLSConfig config.TLSConfig
+}
+
 func New(cfg config.Config) (discovery.Discovery, error) {
-	config := api.DefaultConfig()
-	client, err := api.NewClient(config)
+	consulConfig, err := getConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	apiConfig := api.DefaultConfig()
+	apiConfig.Address = consulConfig.Address
+
+	if consulConfig.TLSConfig.CertFile != "" && !consulConfig.TLSConfig.Disabled {
+		apiConfig.TLSConfig, err = getTLSConfig(consulConfig)
+	}
+
+	client, err := api.NewClient(apiConfig)
 	if err != nil {
 		return nil, err
 	}
@@ -203,4 +223,43 @@ func (c *Consul) Watch(ch chan<- struct{}) {
 	if err := wp.Run("localhost:8500"); err != nil {
 		panic(err)
 	}
+}
+
+func getConfig(cfg config.Config) (*consulConfig, error) {
+	consulConfig := new(consulConfig)
+	b, err := json.Marshal(cfg.Global().Discovery.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, consulConfig)
+
+	return consulConfig, err
+}
+
+func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
+	sType, path, ok := secret.ParseRemoteSecretInfo(cfg.TLSConfig.CertFile)
+	if ok {
+		sec, err := secret.GetSecretEngine(sType)
+		if err != nil {
+			return api.TLSConfig{}, nil
+		}
+
+		secrets, err := sec.GetSecrets(path)
+		if err != nil {
+			return api.TLSConfig{}, nil
+		}
+
+		return api.TLSConfig{
+			CertPEM: secrets["cert"],
+			KeyPEM:  secrets["key"],
+		}, nil
+
+	}
+
+	return api.TLSConfig{
+		CertFile: cfg.TLSConfig.CertFile,
+		KeyFile:  cfg.TLSConfig.KeyFile,
+		CAFile:   cfg.TLSConfig.CAFile,
+	}, nil
 }
