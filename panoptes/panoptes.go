@@ -7,6 +7,7 @@ import (
 	"syscall"
 	"time"
 
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/database"
 	"git.vzbuilders.com/marshadrad/panoptes/demux"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
@@ -25,8 +26,14 @@ var (
 )
 
 func main() {
-	var discovery discovery.Discovery
-	signalCh := make(chan os.Signal, 1)
+	var (
+		discovery     discovery.Discovery
+		signalCh      = make(chan os.Signal, 1)
+		updateRequest = make(chan struct{}, 1)
+		outChan       = make(telemetry.ExtDSChan, 10000)
+		ctx           = context.Background()
+	)
+
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
 	cfg, err := getConfig()
@@ -61,8 +68,6 @@ func main() {
 	}
 	defer discovery.Deregister()
 
-	ctx := context.Background()
-
 	// producer
 	producerRegistrar = producer.NewRegistrar(logger)
 	register.Producer(producerRegistrar)
@@ -74,8 +79,6 @@ func main() {
 	// telemetry
 	telemetryRegistrar = telemetry.NewRegistrar(logger)
 	register.Telemetry(telemetryRegistrar)
-
-	outChan := make(telemetry.ExtDSChan, 10000)
 
 	// start demux
 	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
@@ -92,28 +95,7 @@ func main() {
 	s := status.New(cfg)
 	s.Start()
 
-	updateRequest := make(chan struct{}, 1)
-
-	go func() {
-		var informed bool
-		for {
-			select {
-			case <-cfg.Informer():
-				informed = true
-				continue
-			case <-updateRequest:
-			case <-time.After(time.Second * 10):
-				if !informed {
-					continue
-				}
-				informed = false
-			}
-
-			cfg.Update()
-			d.Update()
-			t.Update()
-		}
-	}()
+	go updateLoop(cfg, t, d, updateRequest)
 
 	if cfg.Global().Shard.Enabled && discovery != nil {
 		shard := NewShard(cfg, t, discovery, updateRequest)
@@ -121,4 +103,28 @@ func main() {
 	}
 
 	<-signalCh
+}
+
+func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, updateRequest chan struct{}) {
+	var informed bool
+
+	for {
+		select {
+		case <-cfg.Informer():
+			informed = true
+			continue
+
+		case <-updateRequest:
+
+		case <-time.After(time.Second * 10):
+			if !informed {
+				continue
+			}
+			informed = false
+		}
+
+		cfg.Update()
+		d.Update()
+		t.Update()
+	}
 }
