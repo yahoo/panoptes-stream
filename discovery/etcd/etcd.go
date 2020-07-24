@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"os"
 	"path"
@@ -11,11 +12,11 @@ import (
 
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/clientv3/concurrency"
-	"go.etcd.io/etcd/clientv3/yaml"
 	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 type Etcd struct {
@@ -27,10 +28,26 @@ type Etcd struct {
 	lockHandler *concurrency.Mutex
 }
 
+type etcdConfig struct {
+	Endpoints []string
+	Prefix    string
+
+	TLSConfig config.TLSConfig
+}
+
 func New(cfg config.Config) (discovery.Discovery, error) {
-	etcdConfig, err := yaml.NewConfig(cfg.Global().Discovery.ConfigFile)
+	var tlsConfig *tls.Config
+
+	etcdConfig, err := getConfig(cfg)
 	if err != nil {
 		return nil, err
+	}
+
+	if etcdConfig.TLSConfig.CertFile != "" && !etcdConfig.TLSConfig.Disabled {
+		tlsConfig, err = secret.GetTLSConfig(&etcdConfig.TLSConfig)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	etcd := &Etcd{
@@ -38,8 +55,10 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		logger: cfg.Logger(),
 	}
 
-	etcdConfig.TLS = nil
-	etcd.client, err = clientv3.New(*etcdConfig)
+	etcd.client, err = clientv3.New(clientv3.Config{
+		Endpoints: etcdConfig.Endpoints,
+		TLS:       tlsConfig,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -238,4 +257,16 @@ func getID(ids []int) string {
 	idStr = strconv.Itoa(len(ids))
 
 	return idStr
+}
+
+func getConfig(cfg config.Config) (*etcdConfig, error) {
+	etcdConfig := new(etcdConfig)
+	b, err := json.Marshal(cfg.Global().Discovery.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	err = json.Unmarshal(b, etcdConfig)
+
+	return etcdConfig, err
 }

@@ -2,6 +2,7 @@ package etcd
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"path"
@@ -13,6 +14,7 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 type etcd struct {
@@ -32,14 +34,17 @@ type etcd struct {
 type etcdConfig struct {
 	Endpoints []string
 	Prefix    string
+
+	TLSConfig config.TLSConfig
 }
 
 // New creates an etcd configuration
 func New(filename string) (config.Config, error) {
 	var (
-		err  error
-		cfg  = &etcdConfig{}
-		etcd = &etcd{informer: make(chan struct{}, 1)}
+		err       error
+		tlsConfig *tls.Config
+		cfg       = &etcdConfig{}
+		etcd      = &etcd{informer: make(chan struct{}, 1)}
 	)
 
 	if err := yaml.Read(filename, cfg); err != nil {
@@ -52,8 +57,16 @@ func New(filename string) (config.Config, error) {
 		etcd.prefix = "config/"
 	}
 
+	if cfg.TLSConfig.CertFile != "" && !cfg.TLSConfig.Disabled {
+		tlsConfig, err = secret.GetTLSConfig(&cfg.TLSConfig)
+		if err != nil {
+			return nil, err
+		}
+	}
+
 	etcd.client, err = clientv3.New(clientv3.Config{
 		Endpoints: cfg.Endpoints,
+		TLS:       tlsConfig,
 	})
 	if err != nil {
 		return nil, err
