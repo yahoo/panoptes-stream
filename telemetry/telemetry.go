@@ -113,16 +113,19 @@ func (t *Telemetry) subscribe(device config.Device) {
 					t.logger.Error("subscribe.grpc", zap.Error(err))
 				} else {
 					metricCurrentGRPConn.Inc()
+					t.logger.Info("subscribe.grpc", zap.String("host", device.Host), zap.String("service", sName))
 
 					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
 					nmi := new(t.logger, conn, sensors, t.outChan)
 					err = nmi.Start(ctx)
 
 					conn.Close()
+					metricCurrentGRPConn.Dec()
 
 					if err != nil {
-						metricCurrentGRPConn.Dec()
-						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host))
+						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
+					} else {
+						t.logger.Warn("subscribe.grpc", zap.String("msg", "terminated"), zap.String("host", device.Host), zap.String("service", sName))
 					}
 				}
 
@@ -131,7 +134,6 @@ func (t *Telemetry) subscribe(device config.Device) {
 					metricTotalReconnect.Inc()
 
 				case <-ctx.Done():
-					metricCurrentGRPConn.Dec()
 					t.logger.Info("unsubscribed", zap.String("host", device.Host), zap.String("service", sName))
 					return
 				}
