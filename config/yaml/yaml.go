@@ -6,7 +6,7 @@ import (
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
-	yml "gopkg.in/yaml.v2"
+	yml "gopkg.in/yaml.v3"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
@@ -55,7 +55,7 @@ func New(filename string) (config.Config, error) {
 		devices:   configDevices(yamlCfg),
 		producers: configProducers(yamlCfg.Producers),
 		databases: configDatabases(yamlCfg.Databases),
-		global:    &yamlCfg.Global,
+		global:    configGlobal(&yamlCfg.Global),
 
 		logger: config.GetLogger(yamlCfg.Global.Logger),
 
@@ -152,7 +152,7 @@ func configProducers(p map[string]producer) []config.Producer {
 		cfg := make(map[string]interface{})
 
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			log.Fatal(err)
+			log.Fatal(pConfig.ConfigFile, err)
 		}
 
 		producers = append(producers, config.Producer{
@@ -177,7 +177,7 @@ func configDatabases(p map[string]database) []config.Database {
 		cfg := make(map[string]interface{})
 
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			log.Fatal(err)
+			log.Fatal(pConfig.ConfigFile, err)
 		}
 
 		databases = append(databases, config.Database{
@@ -188,6 +188,20 @@ func configDatabases(p map[string]database) []config.Database {
 	}
 
 	return databases
+}
+
+func configGlobal(g *config.Global) *config.Global {
+	var config = make(map[string]interface{})
+
+	if g.Discovery.ConfigFile != "" {
+		if err := Read(g.Discovery.ConfigFile, &config); err != nil {
+			log.Fatal(err)
+		}
+
+		g.Discovery.Config = config
+	}
+
+	return g
 }
 
 func (y *yaml) watcher() {

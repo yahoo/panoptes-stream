@@ -86,7 +86,8 @@ type Shard struct {
 }
 
 type Discovery struct {
-	Service    string `yaml:"service"`
-	Prefix     string `yaml:"prefix"`
-	ConfigFile string `yaml:"configFile"`
+	Service    string      `yaml:"service"`
+	Prefix     string      `yaml:"prefix"`
+	ConfigFile string      `yaml:"configFile"`
+	Config     interface{} `yaml:"config"`
 }
