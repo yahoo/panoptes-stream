@@ -1,7 +1,10 @@
 devices:
-  - host: core1.nca:50051
+  - host: 192.168.59.3
+    port: 50051
+    username: admin
+    password: __vault::secret/creds
     sensors:
-      - sensor2
+      - sensor4
 
 sensors:
   sensor1:
@@ -12,22 +15,26 @@ sensors:
   sensor2:
     path: /interfaces/interface/state/counters/
     mode: sample
-    interval: 10
+    sampleInterval: 10
     service: juniper.jti
     output: console::stdout
   sensor3:
     path: /network-instances/network-instance/
     mode: sample
-    interval: 10
+    sampleInterval: 10
     service: juniper.jti
+    output: console::stdout
+  sensor4:
+    path: /interfaces/interface/state/counters/
+    mode: sample
+    sampleInterval: 10
+    service: arista.gnmi
     output: console::stdout
 
 producers:
   kafka1:
     service: kafka
     configFile: etc/kafka.yaml
-  console:
-    service: console
 
 databases:
   influxdb1:
@@ -44,3 +51,7 @@ logger:
 
 status:
   addr: "0.0.0.0:8081"
+
+discovery:
+  service: "consul"
+  configFile: etc/consul.yaml
