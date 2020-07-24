@@ -12,6 +12,7 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 type consul struct {
@@ -31,6 +32,8 @@ type consul struct {
 type consulConfig struct {
 	Address string
 	Prefix  string
+
+	TLSConfig config.TLSConfig
 }
 
 func New(filename string) (config.Config, error) {
@@ -46,6 +49,13 @@ func New(filename string) (config.Config, error) {
 
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = cfg.Address
+
+	if cfg.TLSConfig.CertFile != "" && !cfg.TLSConfig.Disabled {
+		apiConfig.TLSConfig, err = getTLSConfig(cfg)
+		if err != nil {
+			return nil, err
+		}
+	}
 
 	if len(cfg.Prefix) > 0 {
 		consul.prefix = cfg.Prefix
@@ -221,4 +231,31 @@ func (c *consul) watch(watchType, value string, ch chan<- struct{}) {
 	if err := wp.Run("localhost:8500"); err != nil {
 		panic(err)
 	}
+}
+
+func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
+	sType, path, ok := secret.ParseRemoteSecretInfo(cfg.TLSConfig.CertFile)
+	if ok {
+		sec, err := secret.GetSecretEngine(sType)
+		if err != nil {
+			return api.TLSConfig{}, nil
+		}
+
+		secrets, err := sec.GetSecrets(path)
+		if err != nil {
+			return api.TLSConfig{}, nil
+		}
+
+		return api.TLSConfig{
+			CertPEM: secrets["cert"],
+			KeyPEM:  secrets["key"],
+		}, nil
+
+	}
+
+	return api.TLSConfig{
+		CertFile: cfg.TLSConfig.CertFile,
+		KeyFile:  cfg.TLSConfig.KeyFile,
+		CAFile:   cfg.TLSConfig.CAFile,
+	}, nil
 }
