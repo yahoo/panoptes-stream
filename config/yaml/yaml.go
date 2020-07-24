@@ -176,10 +176,8 @@ func configDatabases(p map[string]database) []config.Database {
 	for name, pConfig := range p {
 		cfg := make(map[string]interface{})
 
-		if name != "console" {
-			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-				log.Fatal(err)
-			}
+		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
+			log.Fatal(err)
 		}
 
 		databases = append(databases, config.Database{
