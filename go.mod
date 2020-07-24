@@ -8,7 +8,8 @@ require (
 	github.com/hashicorp/consul/api v1.5.0
 	github.com/hashicorp/vault/api v1.0.4
 	github.com/influxdata/influxdb v1.8.1
-	github.com/influxdata/influxdb-client-go v1.3.0
+	github.com/influxdata/influxdb-client-go v1.4.0
+	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/openconfig/ygot v0.8.1
 	github.com/prometheus/client_golang v1.7.1
