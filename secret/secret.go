@@ -14,6 +14,7 @@ import (
 type Secret interface {
 	GetCredentials(string) ([]string, error)
 	GetCertificate(string) (*tls.Certificate, error)
+	GetKeyPair(string) ([]byte, []byte, error)
 }
 
 func GetSecretEngine(sType string) (Secret, error) {
