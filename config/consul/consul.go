@@ -15,7 +15,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-type consul struct {
+// Consul represents the Consul distributed key-value storage
+type Consul struct {
 	client *api.Client
 
 	prefix    string
@@ -40,7 +41,7 @@ func New(filename string) (config.Config, error) {
 	var (
 		err    error
 		cfg    = &consulConfig{}
-		consul = &consul{informer: make(chan struct{}, 1)}
+		consul = &Consul{informer: make(chan struct{}, 1)}
 	)
 
 	if err := yaml.Read(filename, cfg); err != nil {
@@ -77,7 +78,7 @@ func New(filename string) (config.Config, error) {
 	return consul, nil
 }
 
-func (c *consul) getRemoteConfig() error {
+func (c *Consul) getRemoteConfig() error {
 	var (
 		err        error
 		devicesTpl = make(map[string]config.DeviceTemplate)
@@ -172,35 +173,35 @@ func (c *consul) getRemoteConfig() error {
 	return nil
 }
 
-func (c *consul) Devices() []config.Device {
+func (c *Consul) Devices() []config.Device {
 	return c.devices
 }
 
-func (c *consul) Producers() []config.Producer {
+func (c *Consul) Producers() []config.Producer {
 	return c.producers
 }
 
-func (c *consul) Databases() []config.Database {
+func (c *Consul) Databases() []config.Database {
 	return c.databases
 }
 
-func (c *consul) Global() *config.Global {
+func (c *Consul) Global() *config.Global {
 	return c.global
 }
 
-func (c *consul) Informer() chan struct{} {
+func (c *Consul) Informer() chan struct{} {
 	return c.informer
 }
 
-func (c *consul) Logger() *zap.Logger {
+func (c *Consul) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *consul) Update() error {
+func (c *Consul) Update() error {
 	return c.getRemoteConfig()
 }
 
-func (c *consul) watch(watchType, value string, ch chan<- struct{}) {
+func (c *Consul) watch(watchType, value string, ch chan<- struct{}) {
 	params := make(map[string]interface{})
 	params["type"] = watchType
 
