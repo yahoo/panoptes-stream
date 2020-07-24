@@ -3,6 +3,7 @@ package influxdb
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -170,22 +171,20 @@ func (i *InfluxDB) getConfig() (*influxDBConfig, error) {
 }
 
 func getToken(tokenConfig string) (string, error) {
-	sType, path, ok := secret.ParseRemoteSecretInfo(tokenConfig)
-	if ok {
-		sec, err := secret.GetSecretEngine(sType)
-		if err != nil {
-			return "", err
-		}
-
-		token, err := sec.GetCredentials(path)
-		if err != nil {
-			return "", err
-		}
-
-		return token[1], nil
+	secrets, ok, err := secret.GetCredentials(tokenConfig)
+	if !ok {
+		return tokenConfig, nil
 	}
 
-	return tokenConfig, nil
+	if err != nil {
+		return tokenConfig, err
+	}
+
+	if token, ok := secrets["token"]; ok {
+		return token, nil
+	}
+
+	return tokenConfig, errors.New("token not found")
 }
 
 func getValueString(value interface{}) string {
