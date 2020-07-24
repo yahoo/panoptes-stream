@@ -2,11 +2,10 @@ package vault
 
 import (
 	"bytes"
-	"crypto/tls"
 	"crypto/x509"
 	"encoding/base64"
 	"encoding/pem"
-	"errors"
+	"fmt"
 
 	"github.com/hashicorp/vault/api"
 	"software.sslmate.com/src/go-pkcs12"
@@ -14,80 +13,52 @@ import (
 
 // Vault represents Hashicorp Vault
 type Vault struct {
+	client *api.Client
 }
 
 // New constructs a new Vault
-func New() *Vault {
-	return &Vault{}
-}
-
-// GetCredentials returns username and password from Vault
-// format: username=password at specified path
-func (v *Vault) GetCredentials(path string) ([]string, error) {
+func New() (*Vault, error) {
 	cfg := api.DefaultConfig()
 	client, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	secrets, err := client.Logical().Read(path)
-	if err != nil {
-		return nil, err
-	}
-
-	for k, v := range secrets.Data {
-		return []string{k, v.(string)}, nil
-	}
-
-	return nil, errors.New("credentials not found")
+	return &Vault{client: client}, nil
 }
 
-// GetCertificate returns TLS certificate from Vault
-func (v *Vault) GetCertificate(path string) (*tls.Certificate, error) {
-	cert, key, err := v.GetKeyPair(path)
+// GetSecrets returns all available data as key value for given path
+// it extracts cert and private key from pkcs12 data
+func (v *Vault) GetSecrets(path string) (map[string][]byte, error) {
+	secrets, err := v.client.Logical().Read(path)
 	if err != nil {
 		return nil, err
 	}
 
-	certificate, err := tls.X509KeyPair(cert, key)
-	if err != nil {
-		return nil, err
+	if secrets == nil {
+		return nil, fmt.Errorf("path %s not exist", path)
 	}
 
-	return &certificate, nil
-}
-
-// GetKeyPair returns x509 key pair from Vault
-func (v *Vault) GetKeyPair(path string) ([]byte, []byte, error) {
-	cfg := api.DefaultConfig()
-	client, err := api.NewClient(cfg)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	secrets, err := client.Logical().Read(path)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	if isExist(secrets.Data, "cert") {
-		return getKeyPair(secrets.Data)
-	} else if isExist(secrets.Data, "pkcs12") {
+	if isExist(secrets.Data, "pkcs12") {
 		return getKeyPairPKCS12PEM(secrets.Data)
 	}
 
-	return nil, nil, errors.New("not exist")
+	return getSecrets(secrets.Data), nil
 }
 
 // getKeyPairPKCS12PEM returns certificate from pkcs12 archive
 // private key and X.509 certificate encoded as PEM
 // pkcs12=pkcs12_data password=password
 // password is optional
-func getKeyPairPKCS12PEM(data map[string]interface{}) ([]byte, []byte, error) {
-	password := ""
+func getKeyPairPKCS12PEM(data map[string]interface{}) (map[string][]byte, error) {
+	var (
+		password = ""
+		secrets  = make(map[string][]byte)
+	)
+
 	b, err := base64.StdEncoding.DecodeString(data["pkcs12"].(string))
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	if isExist(data, "password") {
@@ -96,42 +67,41 @@ func getKeyPairPKCS12PEM(data map[string]interface{}) ([]byte, []byte, error) {
 
 	key, cert, err := pkcs12.Decode(b, password)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	privateKey, err := x509.MarshalPKCS8PrivateKey(key)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	keyPEM := &bytes.Buffer{}
 	err = pem.Encode(keyPEM, &pem.Block{Type: "PRIVATE KEY", Bytes: privateKey})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	certPEM := &bytes.Buffer{}
 	err = pem.Encode(certPEM, &pem.Block{Type: "CERTIFICATE", Bytes: cert.Raw})
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
-	return certPEM.Bytes(), keyPEM.Bytes(), nil
+	secrets["cert"] = certPEM.Bytes()
+	secrets["key"] = keyPEM.Bytes()
+
+	return secrets, nil
 }
 
-// getKeyPair returns private key and certificate encoded as PEM
-func getKeyPair(data map[string]interface{}) ([]byte, []byte, error) {
-	var key string
+// getSecrets returns private key and certificate encoded as PEM
+func getSecrets(data map[string]interface{}) map[string][]byte {
+	var result = make(map[string][]byte)
 
-	cert := data["cert"].(string)
-
-	if isExist(data, "key") {
-		key = data["key"].(string)
-	} else {
-		key = cert
+	for key, value := range data {
+		result[key] = []byte(value.(string))
 	}
 
-	return []byte(cert), []byte(key), nil
+	return result
 }
 
 func isExist(m map[string]interface{}, k string) bool {

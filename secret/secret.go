@@ -3,6 +3,7 @@ package secret
 import (
 	"crypto/tls"
 	"crypto/x509"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"regexp"
@@ -12,15 +13,13 @@ import (
 )
 
 type Secret interface {
-	GetCredentials(string) ([]string, error)
-	GetCertificate(string) (*tls.Certificate, error)
-	GetKeyPair(string) ([]byte, []byte, error)
+	GetSecrets(string) (map[string][]byte, error)
 }
 
 func GetSecretEngine(sType string) (Secret, error) {
 	switch sType {
 	case "vault":
-		return vault.New(), nil
+		return vault.New()
 	}
 
 	return nil, fmt.Errorf("%s secret engine doesn't support", sType)
@@ -35,6 +34,30 @@ func GetTLSConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	return getTLSConfigLocal(cfg)
 }
 
+func GetCredentials(key string) (map[string]string, bool, error) {
+	sType, path, ok := ParseRemoteSecretInfo(key)
+	if ok {
+		sec, err := GetSecretEngine(sType)
+		if err != nil {
+			return nil, ok, err
+		}
+
+		secrets, err := sec.GetSecrets(path)
+		if err != nil {
+			return nil, ok, err
+		}
+
+		result := make(map[string]string)
+		for k, v := range secrets {
+			result[k] = string(v)
+		}
+
+		return result, ok, nil
+	}
+
+	return nil, ok, errors.New("uknown remote secret information")
+}
+
 func ParseRemoteSecretInfo(key string) (string, string, bool) {
 	re := regexp.MustCompile(`__([a-zA-Z0-9]*)::(.*)`)
 	match := re.FindStringSubmatch(key)
@@ -46,6 +69,8 @@ func ParseRemoteSecretInfo(key string) (string, string, bool) {
 }
 
 func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
+	var caCertPool *x509.CertPool
+
 	sType, path, ok := ParseRemoteSecretInfo(cfg.CertFile)
 	if ok {
 		sec, err := GetSecretEngine(sType)
@@ -53,13 +78,28 @@ func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
 			return nil, ok, err
 		}
 
-		cert, err := sec.GetCertificate(path)
+		secrets, err := sec.GetSecrets(path)
 		if err != nil {
 			return nil, ok, err
 		}
 
+		if !isExist(secrets, "cert") || !isExist(secrets, "key") {
+			return nil, ok, errors.New("cert and private key is not available")
+		}
+
+		cert, err := tls.X509KeyPair(secrets["cert"], secrets["key"])
+		if err != nil {
+			return nil, ok, err
+		}
+
+		if isExist(secrets, "ca") {
+			caCertPool = x509.NewCertPool()
+			caCertPool.AppendCertsFromPEM(secrets["ca"])
+		}
+
 		return &tls.Config{
-			Certificates:       []tls.Certificate{*cert},
+			Certificates:       []tls.Certificate{cert},
+			RootCAs:            caCertPool,
 			InsecureSkipVerify: cfg.InsecureSkipVerify,
 		}, ok, nil
 	}
@@ -95,4 +135,9 @@ func getTLSConfigLocal(cfg *config.TLSConfig) (*tls.Config, error) {
 		RootCAs:            caCertPool,
 		InsecureSkipVerify: cfg.InsecureSkipVerify,
 	}, nil
+}
+
+func isExist(m map[string][]byte, k string) bool {
+	_, ok := m[k]
+	return ok
 }
