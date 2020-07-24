@@ -302,26 +302,16 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 		return ctx, nil
 	}
 
-	// remote secret
-	sType, path, ok := secret.ParseRemoteSecretInfo(device.Username)
+	secrets, ok, err := secret.GetCredentials(device.Username)
 	if ok {
-		sec, err := secret.GetSecretEngine(sType)
 		if err != nil {
 			return ctx, err
 		}
 
-		res, err, _ := t.group.Do(device.Username, func() (interface{}, error) {
-			return sec.GetCredentials(path)
-		})
-		if err != nil {
-			return ctx, err
+		for u, p := range secrets {
+			ctx = metadata.AppendToOutgoingContext(ctx, "username", u, "password", p)
+			return ctx, nil
 		}
-
-		username, password := res.([]string)[0], res.([]string)[1]
-
-		ctx = metadata.AppendToOutgoingContext(ctx,
-			"username", username, "password", password)
-		return ctx, nil
 	}
 
 	// configured username and password
