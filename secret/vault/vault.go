@@ -32,11 +32,11 @@ func New() (*Vault, error) {
 func (v *Vault) GetSecrets(path string) (map[string][]byte, error) {
 	secrets, err := v.client.Logical().Read(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("vault: %v", err)
 	}
 
 	if secrets == nil {
-		return nil, fmt.Errorf("path %s not exist", path)
+		return nil, fmt.Errorf("vault: path %s not exist", path)
 	}
 
 	if isExist(secrets.Data, "pkcs12") {
