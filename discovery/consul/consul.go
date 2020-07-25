@@ -8,6 +8,7 @@ import (
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -32,16 +33,22 @@ type consulConfig struct {
 }
 
 func New(cfg config.Config) (discovery.Discovery, error) {
-	consulConfig, err := getConfig(cfg)
+	config, err := getConfig(cfg)
+	if err != nil {
+		return nil, err
+	}
+
+	prefix := "panoptes_discovery_consul"
+	err = envconfig.Process(prefix, config)
 	if err != nil {
 		return nil, err
 	}
 
 	apiConfig := api.DefaultConfig()
-	apiConfig.Address = consulConfig.Address
+	apiConfig.Address = config.Address
 
-	if consulConfig.TLSConfig.CertFile != "" && !consulConfig.TLSConfig.Disabled {
-		apiConfig.TLSConfig, err = getTLSConfig(consulConfig)
+	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+		apiConfig.TLSConfig, err = getTLSConfig(config)
 	}
 
 	client, err := api.NewClient(apiConfig)

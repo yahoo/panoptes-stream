@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 
@@ -43,29 +44,35 @@ func New(filename string) (config.Config, error) {
 	var (
 		err       error
 		tlsConfig *tls.Config
-		cfg       = &etcdConfig{}
+		config    = &etcdConfig{}
 		etcd      = &etcd{informer: make(chan struct{}, 1)}
 	)
 
-	if err := yaml.Read(filename, cfg); err != nil {
+	if err := yaml.Read(filename, config); err != nil {
 		return nil, err
 	}
 
-	if len(cfg.Prefix) > 0 {
-		etcd.prefix = cfg.Prefix
+	prefix := "panoptes_config_etcd"
+	err = envconfig.Process(prefix, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(config.Prefix) > 0 {
+		etcd.prefix = config.Prefix
 	} else {
 		etcd.prefix = "config/"
 	}
 
-	if cfg.TLSConfig.CertFile != "" && !cfg.TLSConfig.Disabled {
-		tlsConfig, err = secret.GetTLSConfig(&cfg.TLSConfig)
+	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
-		Endpoints: cfg.Endpoints,
+		Endpoints: config.Endpoints,
 		TLS:       tlsConfig,
 	})
 	if err != nil {

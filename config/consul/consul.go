@@ -2,12 +2,13 @@ package consul
 
 import (
 	"encoding/json"
-	"errors"
+	"fmt"
 	"path"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -40,26 +41,32 @@ type consulConfig struct {
 func New(filename string) (config.Config, error) {
 	var (
 		err    error
-		cfg    = &consulConfig{}
+		config = &consulConfig{}
 		consul = &Consul{informer: make(chan struct{}, 1)}
 	)
 
-	if err := yaml.Read(filename, cfg); err != nil {
+	if err := yaml.Read(filename, config); err != nil {
+		return nil, err
+	}
+
+	prefix := "panoptes_config_consul"
+	err = envconfig.Process(prefix, config)
+	if err != nil {
 		return nil, err
 	}
 
 	apiConfig := api.DefaultConfig()
-	apiConfig.Address = cfg.Address
+	apiConfig.Address = config.Address
 
-	if cfg.TLSConfig.CertFile != "" && !cfg.TLSConfig.Disabled {
-		apiConfig.TLSConfig, err = getTLSConfig(cfg)
+	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+		apiConfig.TLSConfig, err = getTLSConfig(config)
 		if err != nil {
 			return nil, err
 		}
 	}
 
-	if len(cfg.Prefix) > 0 {
-		consul.prefix = cfg.Prefix
+	if len(config.Prefix) > 0 {
+		consul.prefix = config.Prefix
 	} else {
 		consul.prefix = "config/"
 	}
@@ -92,7 +99,7 @@ func (c *Consul) getRemoteConfig() error {
 	}
 
 	if len(pairs) < 1 {
-		return errors.New("consul is empty")
+		return fmt.Errorf("consul is empty, prefix=%s", c.prefix)
 	}
 
 	c.devices = c.devices[:0]

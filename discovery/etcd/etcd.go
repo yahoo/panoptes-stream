@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/clientv3/concurrency"
 	"go.uber.org/zap"
@@ -38,13 +39,19 @@ type etcdConfig struct {
 func New(cfg config.Config) (discovery.Discovery, error) {
 	var tlsConfig *tls.Config
 
-	etcdConfig, err := getConfig(cfg)
+	config, err := getConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	if etcdConfig.TLSConfig.CertFile != "" && !etcdConfig.TLSConfig.Disabled {
-		tlsConfig, err = secret.GetTLSConfig(&etcdConfig.TLSConfig)
+	prefix := "panoptes_discovery_etcd"
+	err = envconfig.Process(prefix, config)
+	if err != nil {
+		return nil, err
+	}
+
+	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
@@ -56,7 +63,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
-		Endpoints: etcdConfig.Endpoints,
+		Endpoints: config.Endpoints,
 		TLS:       tlsConfig,
 	})
 	if err != nil {
