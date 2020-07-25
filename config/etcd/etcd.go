@@ -43,7 +43,7 @@ type etcdConfig struct {
 func New(filename string) (config.Config, error) {
 	var (
 		err       error
-		tlsConfig *tls.Config
+		tlsConfig = &tls.Config{}
 		config    = &etcdConfig{}
 		etcd      = &etcd{informer: make(chan struct{}, 1)}
 	)
@@ -64,11 +64,13 @@ func New(filename string) (config.Config, error) {
 		etcd.prefix = "config/"
 	}
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{

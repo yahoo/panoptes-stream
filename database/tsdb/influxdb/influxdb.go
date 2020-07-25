@@ -2,6 +2,7 @@ package influxdb
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -119,12 +120,14 @@ func (i *InfluxDB) Start() {
 func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 	opts := influxdb2.DefaultOptions()
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		tls, err := secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
 		opts = opts.SetTlsConfig(tls)
+	} else {
+		opts = opts.SetTlsConfig(&tls.Config{InsecureSkipVerify: config.TLSConfig.InsecureSkipVerify})
 	}
 
 	token, err := getToken(config.Token)

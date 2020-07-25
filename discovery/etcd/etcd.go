@@ -37,7 +37,7 @@ type etcdConfig struct {
 }
 
 func New(cfg config.Config) (discovery.Discovery, error) {
-	var tlsConfig *tls.Config
+	var tlsConfig = &tls.Config{}
 
 	config, err := getConfig(cfg)
 	if err != nil {
@@ -50,11 +50,13 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	etcd := &Etcd{

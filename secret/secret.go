@@ -69,22 +69,33 @@ func ParseRemoteSecretInfo(key string) (string, string, bool) {
 }
 
 func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
-	var caCertPool *x509.CertPool
+	var (
+		caCertPool *x509.CertPool
+		tlsConfig  = &tls.Config{}
+	)
 
 	sType, path, ok := ParseRemoteSecretInfo(cfg.CertFile)
-	if ok {
-		sec, err := GetSecretEngine(sType)
-		if err != nil {
-			return nil, ok, err
-		}
+	if !ok {
+		return nil, false, nil
+	}
 
-		secrets, err := sec.GetSecrets(path)
-		if err != nil {
-			return nil, ok, err
-		}
+	sec, err := GetSecretEngine(sType)
+	if err != nil {
+		return nil, ok, err
+	}
 
-		if !isExist(secrets, "cert") || !isExist(secrets, "key") {
-			return nil, ok, errors.New("cert and private key is not available")
+	secrets, err := sec.GetSecrets(path)
+	if err != nil {
+		return nil, ok, err
+	}
+
+	if !isExist(secrets, "cert") && !isExist(secrets, "ca") {
+		return nil, ok, errors.New("secrets are not available")
+	}
+
+	if isExist(secrets, "cert") {
+		if !isExist(secrets, "key") {
+			secrets["key"] = secrets["cert"]
 		}
 
 		cert, err := tls.X509KeyPair(secrets["cert"], secrets["key"])
@@ -92,32 +103,39 @@ func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
 			return nil, ok, err
 		}
 
-		if isExist(secrets, "ca") {
-			caCertPool = x509.NewCertPool()
-			caCertPool.AppendCertsFromPEM(secrets["ca"])
-		}
-
-		return &tls.Config{
-			Certificates:       []tls.Certificate{cert},
-			RootCAs:            caCertPool,
-			InsecureSkipVerify: cfg.InsecureSkipVerify,
-		}, ok, nil
+		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
-	return nil, false, nil
+	if isExist(secrets, "ca") {
+		caCertPool = x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(secrets["ca"])
+
+		tlsConfig.RootCAs = caCertPool
+	}
+
+	tlsConfig.InsecureSkipVerify = cfg.InsecureSkipVerify
+
+	return tlsConfig, ok, nil
+
 }
 
 func getTLSConfigLocal(cfg *config.TLSConfig) (*tls.Config, error) {
-	var caCertPool *x509.CertPool
+	var (
+		caCertPool *x509.CertPool
+		tlsConfig  = &tls.Config{}
+	)
 
-	// combined cert and private key
-	if len(cfg.KeyFile) < 1 {
-		cfg.KeyFile = cfg.CertFile
-	}
+	if cfg.CertFile != "" {
+		if cfg.KeyFile == "" {
+			cfg.KeyFile = cfg.CertFile
+		}
 
-	cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
-	if err != nil {
-		return nil, err
+		cert, err := tls.LoadX509KeyPair(cfg.CertFile, cfg.KeyFile)
+		if err != nil {
+			return nil, err
+		}
+
+		tlsConfig.Certificates = []tls.Certificate{cert}
 	}
 
 	if cfg.CAFile != "" {
@@ -128,13 +146,13 @@ func getTLSConfigLocal(cfg *config.TLSConfig) (*tls.Config, error) {
 
 		caCertPool = x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
+
+		tlsConfig.RootCAs = caCertPool
 	}
 
-	return &tls.Config{
-		Certificates:       []tls.Certificate{cert},
-		RootCAs:            caCertPool,
-		InsecureSkipVerify: cfg.InsecureSkipVerify,
-	}, nil
+	tlsConfig.InsecureSkipVerify = cfg.InsecureSkipVerify
+
+	return tlsConfig, nil
 }
 
 func isExist(m map[string][]byte, k string) bool {

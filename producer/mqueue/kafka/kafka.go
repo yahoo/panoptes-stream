@@ -2,6 +2,7 @@ package kafka
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"os"
 	"strings"
@@ -203,12 +204,13 @@ func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.Writer
 		},
 	}
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		cfg.Dialer.TLS, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return cfg, err
 		}
-
+	} else {
+		cfg.Dialer.TLS = &tls.Config{InsecureSkipVerify: config.TLSConfig.InsecureSkipVerify}
 	}
 
 	switch config.Compression {

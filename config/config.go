@@ -66,12 +66,11 @@ type Global struct {
 }
 
 type TLSConfig struct {
-	Disabled bool
+	CertFile string `yaml:"certFile"`
+	KeyFile  string `yaml:"keyFile"`
+	CAFile   string `yaml:"caFile"`
 
-	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
-	CertFile           string `yaml:"certFile"`
-	KeyFile            string `yaml:"keyFile"`
-	CAFile             string `yaml:"caFile"`
+	InsecureSkipVerify bool `yaml:"insecureSkipVerify"`
 }
 
 type Status struct {

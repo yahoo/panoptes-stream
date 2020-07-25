@@ -58,11 +58,13 @@ func New(filename string) (config.Config, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = config.Address
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		apiConfig.TLSConfig, err = getTLSConfig(config)
 		if err != nil {
 			return nil, err
 		}
+	} else {
+		apiConfig.TLSConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	if len(config.Prefix) > 0 {

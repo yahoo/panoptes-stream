@@ -47,8 +47,10 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = config.Address
 
-	if config.TLSConfig.CertFile != "" && !config.TLSConfig.Disabled {
+	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
 		apiConfig.TLSConfig, err = getTLSConfig(config)
+	} else {
+		apiConfig.TLSConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	client, err := api.NewClient(apiConfig)
