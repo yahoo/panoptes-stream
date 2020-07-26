@@ -6,6 +6,7 @@ import (
 	"sync/atomic"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -47,13 +48,34 @@ func New(cfg config.Config) *Status {
 
 func (s *Status) Start() {
 	go func() {
-		addr := s.cfg.Global().Status.Addr
-		s.logger.Info("starting status server", zap.String("address", addr))
-
-		http.Handle("/metrics", promhttp.Handler())
-		http.Handle("/healthcheck", new(healthcheck))
-		http.ListenAndServe(addr, nil)
+		if err := s.start(); err != nil {
+			s.logger.Error("status", zap.Error(err))
+		}
 	}()
+}
+
+func (s *Status) start() error {
+	config := s.cfg.Global().Status
+	s.logger.Info("status", zap.String("address", config.Addr), zap.Bool("tls", config.TLSConfig.Enabled))
+
+	http.Handle("/metrics", promhttp.Handler())
+	http.Handle("/healthcheck", new(healthcheck))
+
+	if !config.TLSConfig.Enabled {
+		return http.ListenAndServe(config.Addr, nil)
+	}
+
+	tlsConfig, err := secret.GetTLSConfig(&config.TLSConfig)
+	if err != nil {
+		return err
+	}
+
+	srv := http.Server{
+		Addr:      config.Addr,
+		TLSConfig: tlsConfig,
+	}
+
+	return srv.ListenAndServeTLS("", "")
 }
 
 func Register(metrics ...interface{}) {
