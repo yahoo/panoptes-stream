@@ -8,7 +8,10 @@ import (
 	"fmt"
 
 	"github.com/hashicorp/vault/api"
+	"github.com/kelseyhightower/envconfig"
 	"software.sslmate.com/src/go-pkcs12"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
 // Vault represents Hashicorp Vault
@@ -16,9 +19,35 @@ type Vault struct {
 	client *api.Client
 }
 
+type vaultConfig struct {
+	Address   string
+	TLSConfig config.TLSConfig
+}
+
 // New constructs a new Vault
 func New() (*Vault, error) {
+	config := &vaultConfig{}
+	prefix := "panoptes_vault"
+	err := envconfig.Process(prefix, config)
+	if err != nil {
+		return nil, err
+	}
+
 	cfg := api.DefaultConfig()
+
+	if config.Address != "" {
+		cfg.Address = config.Address
+	}
+
+	if config.TLSConfig.Enabled {
+		cfg.ConfigureTLS(&api.TLSConfig{
+			ClientCert: config.TLSConfig.CertFile,
+			ClientKey:  config.TLSConfig.KeyFile,
+			CACert:     config.TLSConfig.CAFile,
+			Insecure:   config.TLSConfig.InsecureSkipVerify,
+		})
+	}
+
 	client, err := api.NewClient(cfg)
 	if err != nil {
 		return nil, err
