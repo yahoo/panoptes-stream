@@ -18,9 +18,7 @@ type DeviceConfig struct {
 
 	GroupID int
 
-	TLSConfig TLSConfig
-	Username  string
-	Password  string
+	DeviceOptions `yaml:",inline"`
 }
 
 type Sensor struct {
@@ -55,38 +53,44 @@ type Database struct {
 }
 
 type Global struct {
-	Version string
-	Redial  int
-
-	Discovery Discovery
-	TLSConfig TLSConfig
-	Status    Status
-	Shard     Shard
-	Logger    map[string]interface{}
+	DeviceOptions DeviceOptions `yaml:"deviceOptions"`
+	Version       string
+	Discovery     Discovery
+	Status        Status
+	Shard         Shard
+	Logger        map[string]interface{}
 }
 
 type TLSConfig struct {
-	CertFile string `yaml:"certFile"`
-	KeyFile  string `yaml:"keyFile"`
-	CAFile   string `yaml:"caFile"`
+	Enabled bool
 
-	InsecureSkipVerify bool `yaml:"insecureSkipVerify"`
+	CertFile           string `yaml:"certFile"`
+	KeyFile            string `yaml:"keyFile"`
+	CAFile             string `yaml:"caFile"`
+	InsecureSkipVerify bool   `yaml:"insecureSkipVerify"`
 }
 
 type Status struct {
-	Addr     string
-	Disabled bool
+	Addr      string
+	Disabled  bool
+	TLSConfig TLSConfig `yaml:"tlsConfig"`
 }
 
 type Shard struct {
 	Enabled           bool
-	InitializingShard int
-	NumberOfNodes     int
+	InitializingShard int `yaml:"initializingShard"`
+	NumberOfNodes     int `yaml:"numberOfNodes"`
 }
 
 type Discovery struct {
-	Service    string      `yaml:"service"`
-	Prefix     string      `yaml:"prefix"`
-	ConfigFile string      `yaml:"configFile"`
-	Config     interface{} `yaml:"config"`
+	ConfigFile string `yaml:"configFile"`
+	Service    string
+	Prefix     string
+	Config     interface{}
+}
+
+type DeviceOptions struct {
+	TLSConfig TLSConfig `yaml:"tlsConfig"`
+	Username  string
+	Password  string
 }
