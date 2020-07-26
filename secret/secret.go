@@ -114,6 +114,7 @@ func getTLSConfigRemote(cfg *config.TLSConfig) (*tls.Config, bool, error) {
 	}
 
 	tlsConfig.InsecureSkipVerify = cfg.InsecureSkipVerify
+	tlsConfig.Renegotiation = tls.RenegotiateNever
 
 	return tlsConfig, ok, nil
 
@@ -151,6 +152,7 @@ func getTLSConfigLocal(cfg *config.TLSConfig) (*tls.Config, error) {
 	}
 
 	tlsConfig.InsecureSkipVerify = cfg.InsecureSkipVerify
+	tlsConfig.Renegotiation = tls.RenegotiateNever
 
 	return tlsConfig, nil
 }
