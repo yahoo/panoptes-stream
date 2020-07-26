@@ -50,13 +50,11 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
+	if config.TLSConfig.Enabled {
 		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	etcd := &Etcd{
