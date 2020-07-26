@@ -64,13 +64,11 @@ func New(filename string) (config.Config, error) {
 		etcd.prefix = "config/"
 	}
 
-	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
+	if config.TLSConfig.Enabled {
 		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return nil, err
 		}
-	} else {
-		tlsConfig.InsecureSkipVerify = config.TLSConfig.InsecureSkipVerify
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
