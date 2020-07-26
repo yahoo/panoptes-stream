@@ -5,6 +5,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
@@ -32,9 +34,7 @@ func TestStartErrors(t *testing.T) {
 		}
 	}
 
-	if e != "channel not found" {
-		t.Error("expect to have error but nothing")
-	}
+	assert.Equal(t, e, "channel not found")
 
 	inChan <- telemetry.ExtDataStore{Output: "test1"}
 
@@ -47,9 +47,7 @@ func TestStartErrors(t *testing.T) {
 		}
 	}
 
-	if e != "output not found" {
-		t.Error("expect to have error but nothing")
-	}
+	assert.Equal(t, e, "output not found")
 
 }
 
