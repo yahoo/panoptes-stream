@@ -83,7 +83,7 @@ func main() {
 	// start demux
 	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
 	d.Init()
-	go d.Start()
+	d.Start()
 
 	// start telemetry
 	t := telemetry.New(ctx, cfg, telemetryRegistrar, outChan)
@@ -91,9 +91,11 @@ func main() {
 		t.Start()
 	}
 
-	// start status
-	s := status.New(cfg)
-	s.Start()
+	// status
+	if !cfg.Global().Status.Disabled {
+		s := status.New(cfg)
+		s.Start()
+	}
 
 	go updateLoop(cfg, t, d, updateRequest)
 
