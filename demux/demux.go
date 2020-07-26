@@ -68,6 +68,12 @@ func (d *Demux) Init() error {
 }
 
 func (d *Demux) Start() {
+	go func() {
+		d.start()
+	}()
+}
+
+func (d *Demux) start() {
 	var (
 		outChan telemetry.ExtDSChan
 		ok      bool
@@ -117,9 +123,9 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	// register cancelFunnc
 	ctx, d.register[producer.Name] = context.WithCancel(d.ctx)
 	// construct
-	m := new(ctx, producer, d.logger, ch)
+	p := new(ctx, producer, d.logger, ch)
 	// start the producer
-	go m.Start()
+	go p.Start()
 
 	return nil
 }
