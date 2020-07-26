@@ -3,6 +3,7 @@ package telemetry
 import (
 	"context"
 	"crypto/tls"
+	"errors"
 	"net"
 	"reflect"
 	"strconv"
@@ -253,14 +254,11 @@ func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 }
 
 func (t *Telemetry) getDialOpts(device *config.Device) ([]grpc.DialOption, error) {
-	var (
-		opts      []grpc.DialOption
-		tlsConfig *config.TLSConfig
-	)
+	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
 
-	if tlsConfig != nil {
+	if device.TLSConfig.Enabled {
 		creds, err := t.getTransportCredentials(device)
 		if err != nil {
 			return opts, err
@@ -283,8 +281,10 @@ func (t *Telemetry) getTransportCredentials(device *config.Device) (credentials.
 
 	if device.TLSConfig.CertFile != "" {
 		tlsConfig = &device.TLSConfig
-	} else if gCfg.TLSConfig.CertFile != "" {
-		tlsConfig = &gCfg.TLSConfig
+	} else if gCfg.DeviceOptions.TLSConfig.Enabled {
+		tlsConfig = &gCfg.DeviceOptions.TLSConfig
+	} else {
+		return nil, errors.New("TLS is not available")
 	}
 
 	tc, err, _ := t.group.Do(tlsConfig.CertFile, func() (interface{}, error) {
@@ -299,12 +299,23 @@ func (t *Telemetry) getTransportCredentials(device *config.Device) (credentials.
 }
 
 func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (context.Context, error) {
+	var (
+		dOptions           = t.cfg.Global().DeviceOptions
+		username, password string
+	)
 	// no username and password
-	if len(device.Username) < 1 {
+	if device.Username == "" && dOptions.Username == "" {
 		return ctx, nil
 	}
 
-	secrets, ok, err := secret.GetCredentials(device.Username)
+	if device.Username != "" {
+		username, password = device.Username, device.Password
+	} else {
+		username, password = dOptions.Username, device.Password
+	}
+
+	// remote username and password
+	secrets, ok, err := secret.GetCredentials(username)
 	if ok {
 		if err != nil {
 			return ctx, err
@@ -314,11 +325,13 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 			ctx = metadata.AppendToOutgoingContext(ctx, "username", u, "password", p)
 			return ctx, nil
 		}
+
+		return ctx, errors.New("username/password are not available")
 	}
 
 	// configured username and password
 	ctx = metadata.AppendToOutgoingContext(ctx,
-		"username", device.Username, "password", device.Password)
+		"username", username, "password", password)
 
 	return ctx, nil
 }
