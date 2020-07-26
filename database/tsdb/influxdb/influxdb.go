@@ -171,11 +171,12 @@ func (i *InfluxDB) getConfig() (*influxDBConfig, error) {
 }
 
 func getToken(tokenConfig string) (string, error) {
-	secrets, ok, err := secret.GetCredentials(tokenConfig)
+	sType, path, ok := secret.ParseRemoteSecretInfo(tokenConfig)
 	if !ok {
 		return tokenConfig, nil
 	}
 
+	secrets, err := secret.GetCredentials(sType, path)
 	if err != nil {
 		return tokenConfig, err
 	}

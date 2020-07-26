@@ -315,10 +315,10 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 	}
 
 	// remote username and password
-	_, _, ok := secret.ParseRemoteSecretInfo(username)
+	sType, path, ok := secret.ParseRemoteSecretInfo(username)
 	if ok {
 		tc, err, _ := t.group.Do(username, func() (interface{}, error) {
-			secrets, _, err := secret.GetCredentials(username)
+			secrets, err := secret.GetCredentials(sType, path)
 			return secrets, err
 		})
 		if err != nil {

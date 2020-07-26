@@ -34,28 +34,23 @@ func GetTLSConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	return getTLSConfigLocal(cfg)
 }
 
-func GetCredentials(key string) (map[string]string, bool, error) {
-	sType, path, ok := ParseRemoteSecretInfo(key)
-	if ok {
-		sec, err := GetSecretEngine(sType)
-		if err != nil {
-			return nil, ok, err
-		}
-
-		secrets, err := sec.GetSecrets(path)
-		if err != nil {
-			return nil, ok, err
-		}
-
-		result := make(map[string]string)
-		for k, v := range secrets {
-			result[k] = string(v)
-		}
-
-		return result, ok, nil
+func GetCredentials(sType, path string) (map[string]string, error) {
+	sec, err := GetSecretEngine(sType)
+	if err != nil {
+		return nil, err
 	}
 
-	return nil, ok, errors.New("uknown remote secret information")
+	secrets, err := sec.GetSecrets(path)
+	if err != nil {
+		return nil, err
+	}
+
+	result := make(map[string]string)
+	for k, v := range secrets {
+		result[k] = string(v)
+	}
+
+	return result, nil
 }
 
 func ParseRemoteSecretInfo(key string) (string, string, bool) {
