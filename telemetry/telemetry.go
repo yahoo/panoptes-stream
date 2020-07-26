@@ -291,7 +291,6 @@ func (t *Telemetry) getTransportCredentials(device *config.Device) (credentials.
 	tc, err, _ := t.group.Do(tlsConfig.CertFile, func() (interface{}, error) {
 		return secret.GetTLSConfig(tlsConfig)
 	})
-
 	if err != nil {
 		return nil, err
 	}
@@ -316,13 +315,17 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 	}
 
 	// remote username and password
-	secrets, ok, err := secret.GetCredentials(username)
+	_, _, ok := secret.ParseRemoteSecretInfo(username)
 	if ok {
+		tc, err, _ := t.group.Do(username, func() (interface{}, error) {
+			secrets, _, err := secret.GetCredentials(username)
+			return secrets, err
+		})
 		if err != nil {
 			return ctx, err
 		}
 
-		for u, p := range secrets {
+		for u, p := range tc.(map[string]string) {
 			ctx = metadata.AppendToOutgoingContext(ctx, "username", u, "password", p)
 			return ctx, nil
 		}
@@ -330,9 +333,7 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 		return ctx, errors.New("credentials are not available at remote host")
 	}
 
-	// configured username and password
-	ctx = metadata.AppendToOutgoingContext(ctx,
-		"username", username, "password", password)
+	ctx = metadata.AppendToOutgoingContext(ctx, "username", username, "password", password)
 
 	return ctx, nil
 }
