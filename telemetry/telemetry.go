@@ -244,11 +244,12 @@ func (d *DeviceFilterOpts) del(key string) {
 func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 	var opts []DeviceFilterOpt
 
-	d.Lock()
+	d.RLock()
+	defer d.RUnlock()
+
 	for _, opt := range d.filterOpts {
 		opts = append(opts, opt)
 	}
-	d.Unlock()
 
 	return opts
 }
@@ -326,7 +327,7 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 			return ctx, nil
 		}
 
-		return ctx, errors.New("username/password are not available")
+		return ctx, errors.New("credentials are not available at remote host")
 	}
 
 	// configured username and password
