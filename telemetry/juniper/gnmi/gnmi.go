@@ -152,7 +152,7 @@ func (g *GNMI) worker(ctx context.Context) {
 			path, err := getPath(ds)
 			if err != nil {
 				metricErrorsTotal.Inc()
-				g.logger.Warn("juniper.gnmi", zap.String("msg", "path not found"))
+				g.logger.Error("juniper.gnmi", zap.String("msg", "path not found"))
 				continue
 			}
 
@@ -171,7 +171,7 @@ func (g *GNMI) worker(ctx context.Context) {
 				}:
 				default:
 					metricDropsTotal.Inc()
-					g.logger.Error("juniper.gnmi", zap.String("msg", "dataset drop"))
+					g.logger.Warn("juniper.gnmi", zap.String("msg", "dataset drop"))
 				}
 			} else {
 				g.splitRawDataStore(ds, output)

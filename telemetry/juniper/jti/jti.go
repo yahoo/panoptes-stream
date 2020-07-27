@@ -114,13 +114,13 @@ func (j *JTI) worker(ctx context.Context) {
 			path := regxPath.FindStringSubmatch(d.Path)
 			if len(path) < 1 {
 				metricErrorsTotal.Inc()
-				j.logger.Warn("juniper.jti", zap.String("msg", "path not found"), zap.String("path", d.Path))
+				j.logger.Error("juniper.jti", zap.String("msg", "path not found"), zap.String("path", d.Path))
 				continue
 			}
 			output, ok := j.pathOutput[path[1]]
 			if !ok {
 				metricErrorsTotal.Inc()
-				j.logger.Warn("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", d.Path))
+				j.logger.Error("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", d.Path))
 				continue
 			}
 
