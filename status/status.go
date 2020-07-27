@@ -33,6 +33,8 @@ type MetricGauge struct {
 	Value uint64
 }
 
+type Labels = prometheus.Labels
+
 type healthcheck struct{}
 
 func (h *healthcheck) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -78,23 +80,25 @@ func (s *Status) start() error {
 	return srv.ListenAndServeTLS("", "")
 }
 
-func Register(metrics ...interface{}) {
+func Register(labels Labels, metrics ...interface{}) {
 	prefix := "panoptes_"
 
 	for _, metric := range metrics {
 		switch v := metric.(type) {
 		case *MetricCounter:
 			promauto.NewCounterFunc(prometheus.CounterOpts{
-				Name: prefix + v.Name,
-				Help: v.Help,
+				Name:        prefix + v.Name,
+				Help:        v.Help,
+				ConstLabels: labels,
 			},
 				func() float64 {
 					return float64(v.Value)
 				})
 		case *MetricGauge:
 			promauto.NewGaugeFunc(prometheus.GaugeOpts{
-				Name: prefix + v.Name,
-				Help: v.Help,
+				Name:        prefix + v.Name,
+				Help:        v.Help,
+				ConstLabels: labels,
 			},
 				func() float64 {
 					return float64(v.Value)
