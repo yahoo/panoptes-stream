@@ -26,6 +26,7 @@ var (
 
 	metricGRPCDataTotal  = status.NewCounter("generic_gnmi_grpc_data_total", "")
 	metricGNMIDropsTotal = status.NewCounter("generic_gnmi_drops_total", "")
+	metricErrorsTotal    = status.NewCounter("generic_gnmi_errors_total", "")
 )
 
 // GNMI represents a GNMI.
@@ -51,6 +52,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		status.Labels{"host": conn.Target()},
 		metricGRPCDataTotal,
 		metricGNMIDropsTotal,
+		metricErrorsTotal,
 	)
 
 	for _, sensor := range sensors {
@@ -130,26 +132,24 @@ func (g *GNMI) worker(ctx context.Context) {
 				return
 			}
 
-			switch resp := d.Response.(type) {
-			case *gpb.SubscribeResponse_Update:
-				output, err := g.findOutput(resp)
-				if err != nil {
-					g.logger.Error("generic.gnmi", zap.Error(err))
-					continue
-				}
-
-				if isRawRequested(output) {
-					g.rawDataStore(resp, output)
-				} else {
-					g.dataStore(resp, output)
-				}
-
-			case *gpb.SubscribeResponse_SyncResponse:
-				// TODO
-			case *gpb.SubscribeResponse_Error:
-				err := fmt.Errorf("%s", resp)
-				g.logger.Error("error in sub response", zap.Error(err))
+			resp, ok := d.Response.(*gpb.SubscribeResponse_Update)
+			if !ok {
+				continue
 			}
+
+			output, err := g.findOutput(resp)
+			if err != nil {
+				metricErrorsTotal.Inc()
+				g.logger.Error("generic.gnmi", zap.String("msg", "output lookup failed"), zap.Error(err))
+				continue
+			}
+
+			if isRawRequested(output) {
+				g.rawDataStore(resp, output)
+			} else {
+				g.dataStore(resp, output)
+			}
+
 		case <-ctx.Done():
 			return
 		}
