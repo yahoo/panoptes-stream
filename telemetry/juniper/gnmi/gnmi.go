@@ -21,13 +21,18 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
 )
 
 var (
 	gnmiVersion = "0.7.0"
+
 	labelsRegex = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
+
+	metricTotalDrop  = status.NewCounter("total_juniper_gnmi_drop", "")
+	metricTotalError = status.NewCounter("total_juniper_gnmi_error", "")
 )
 
 // GNMI represents a GNMI Juniper.
@@ -44,8 +49,16 @@ type GNMI struct {
 
 // New creates a GNMI.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
-	subscriptions := []*gpb.Subscription{}
-	pathOutput := make(map[string]string)
+	var (
+		subscriptions = []*gpb.Subscription{}
+		pathOutput    = make(map[string]string)
+	)
+
+	status.Register(
+		status.Labels{"host": conn.Target()},
+		metricTotalDrop,
+		metricTotalError,
+	)
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
@@ -102,7 +115,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 1; i++ {
 		go g.worker(ctx)
 	}
 
@@ -135,12 +148,14 @@ func (g *GNMI) worker(ctx context.Context) {
 
 				path, err := getPath(ds)
 				if err != nil {
+					metricTotalError.Inc()
 					g.logger.Warn("path not found")
 					continue
 				}
 
 				output, ok := g.pathOutput[path]
 				if !ok {
+					metricTotalError.Inc()
 					g.logger.Warn("path to output not found", zap.String("path", path))
 					continue
 				}
@@ -152,6 +167,7 @@ func (g *GNMI) worker(ctx context.Context) {
 						Output: output,
 					}:
 					default:
+						metricTotalDrop.Inc()
 						g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
 					}
 				} else {
@@ -184,6 +200,7 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataSt
 
 		value, err := getValue(update.Val)
 		if err != nil {
+			metricTotalError.Inc()
 			g.logger.Error("juniper.gnmi", zap.Error(err))
 			continue
 		}
@@ -215,6 +232,7 @@ func (g *GNMI) splitRawDataStore(ds telemetry.DataStore, output string) {
 				Output: output,
 			}:
 			default:
+				metricTotalDrop.Inc()
 				g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
 			}
 		}

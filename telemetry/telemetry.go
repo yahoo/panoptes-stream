@@ -49,21 +49,20 @@ type DeviceFilterOpts struct {
 type DeviceFilterOpt func(config.Device) bool
 
 var (
-	metricCurrentDevice  = status.NewGauge("current_device", "")
-	metricCurrentGRPConn = status.NewGauge("grpc_connection", "")
-	metricTotalReconnect = status.NewCounter("total_reconnect", "")
+	metricDevicesCurrent  = status.NewGauge("active_devices", "")
+	metricGRPConnCurrent  = status.NewGauge("active_grpc_connections", "")
+	metricReconnectsTotal = status.NewCounter("grpc_reconnects_total", "")
 )
-
-func init() {
-	status.Register(
-		metricCurrentDevice,
-		metricCurrentGRPConn,
-		metricTotalReconnect,
-	)
-}
 
 // New creates a new telemetry
 func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSChan) *Telemetry {
+	status.Register(
+		nil,
+		metricDevicesCurrent,
+		metricGRPConnCurrent,
+		metricReconnectsTotal,
+	)
+
 	return &Telemetry{
 		ctx:                ctx,
 		cfg:                cfg,
@@ -92,7 +91,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 	t.devices[device.Host] = device
 
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
-	metricCurrentDevice.Inc()
+	metricDevicesCurrent.Inc()
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
@@ -113,7 +112,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 				if err != nil {
 					t.logger.Error("subscribe.grpc", zap.Error(err))
 				} else {
-					metricCurrentGRPConn.Inc()
+					metricGRPConnCurrent.Inc()
 					t.logger.Info("subscribe.grpc", zap.String("host", device.Host), zap.String("service", sName))
 
 					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
@@ -121,7 +120,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 					err = nmi.Start(ctx)
 
 					conn.Close()
-					metricCurrentGRPConn.Dec()
+					metricGRPConnCurrent.Dec()
 
 					if err != nil {
 						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
@@ -132,7 +131,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 				select {
 				case <-time.After(time.Second * 30):
-					metricTotalReconnect.Inc()
+					metricReconnectsTotal.Inc()
 
 				case <-ctx.Done():
 					t.logger.Info("unsubscribed", zap.String("host", device.Host), zap.String("service", sName))
@@ -147,7 +146,7 @@ func (t *Telemetry) unsubscribe(device config.Device) {
 	t.register[device.Host]()
 	delete(t.register, device.Host)
 	delete(t.devices, device.Host)
-	metricCurrentDevice.Dec()
+	metricDevicesCurrent.Dec()
 }
 
 // Start subscribes configured devices

@@ -17,10 +17,16 @@ import (
 	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-var gnmiVersion = "0.0.1"
+var (
+	gnmiVersion = "0.0.1"
+
+	metricGRPCDataTotal  = status.NewCounter("arista_gnmi_grpc_data_total", "")
+	metricGNMIDropsTotal = status.NewCounter("arista_gnmi_drops_total", "")
+)
 
 // GNMI represents a GNMI.
 type GNMI struct {
@@ -36,8 +42,16 @@ type GNMI struct {
 
 // New creates a GNMI.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
-	subscriptions := []*gpb.Subscription{}
-	pathOutput := make(map[string]string)
+	var (
+		subscriptions = []*gpb.Subscription{}
+		pathOutput    = make(map[string]string)
+	)
+
+	status.Register(
+		status.Labels{"host": conn.Target()},
+		metricGRPCDataTotal,
+		metricGNMIDropsTotal,
+	)
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
@@ -102,6 +116,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 		if resp != nil {
 			g.dataChan <- resp
+			metricGRPCDataTotal.Inc()
 		}
 	}
 
@@ -169,6 +184,7 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
 			Output: output,
 		}:
 		default:
+			metricGNMIDropsTotal.Inc()
 			g.logger.Warn("arista.gnmi", zap.String("error", "dataset drop"))
 		}
 	}
@@ -204,6 +220,7 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 		Output: output,
 	}:
 	default:
+		metricGNMIDropsTotal.Inc()
 		g.logger.Warn("arista.gnmi", zap.String("error", "dataset drop"))
 	}
 }

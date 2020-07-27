@@ -16,14 +16,13 @@ import (
 )
 
 var (
-	jtiVersion              = "1.0"
-	metricTotalReceivedData = status.NewCounter("jti_total_received_data", "")
-	labelsRegex             = regexp.MustCompile(`(\/[^\/]*)\[([A-Za-z0-9\-\/]*\=[^\[]*)\]`)
-)
+	jtiVersion = "1.0"
 
-func init() {
-	status.Register(metricTotalReceivedData)
-}
+	labelsRegex = regexp.MustCompile(`(\/[^\/]*)\[([A-Za-z0-9\-\/]*\=[^\[]*)\]`)
+
+	metricGRPCDataTotal = status.NewCounter("juniper_jti_grpc_data_total", "")
+	metricJTIDropsTotal = status.NewCounter("juniper_jti_drops_total", "")
+)
 
 // JTI represents Junos Telemetry Interface.
 type JTI struct {
@@ -43,6 +42,12 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	var (
 		paths      = []*jpb.Path{}
 		pathOutput = make(map[string]string)
+	)
+
+	status.Register(
+		status.Labels{"host": conn.Target()},
+		metricGRPCDataTotal,
+		metricJTIDropsTotal,
 	)
 
 	for _, sensor := range sensors {
@@ -89,7 +94,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		}
 
 		j.dataChan <- d
-		metricTotalReceivedData.Inc()
+		metricGRPCDataTotal.Inc()
 	}
 
 	return nil
@@ -161,6 +166,7 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			Output: output,
 		}:
 		default:
+			metricJTIDropsTotal.Inc()
 			j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 		}
 
@@ -215,6 +221,7 @@ func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
 		Output: output,
 	}:
 	default:
+		metricJTIDropsTotal.Inc()
 		j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 	}
 }
