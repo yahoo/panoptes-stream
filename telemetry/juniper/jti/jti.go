@@ -22,6 +22,7 @@ var (
 
 	metricGRPCDataTotal = status.NewCounter("juniper_jti_grpc_data_total", "")
 	metricJTIDropsTotal = status.NewCounter("juniper_jti_drops_total", "")
+	metricErrorsTotal   = status.NewCounter("juniper_jti_errors_total", "")
 )
 
 // JTI represents Junos Telemetry Interface.
@@ -48,6 +49,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		status.Labels{"host": conn.Target()},
 		metricGRPCDataTotal,
 		metricJTIDropsTotal,
+		metricErrorsTotal,
 	)
 
 	for _, sensor := range sensors {
@@ -111,12 +113,14 @@ func (j *JTI) worker(ctx context.Context) {
 			}
 			path := regxPath.FindStringSubmatch(d.Path)
 			if len(path) < 1 {
-				j.logger.Warn("path not found", zap.String("path", d.Path))
+				metricErrorsTotal.Inc()
+				j.logger.Warn("juniper.jti", zap.String("msg", "path not found"), zap.String("path", d.Path))
 				continue
 			}
 			output, ok := j.pathOutput[path[1]]
 			if !ok {
-				j.logger.Warn("path to output not found", zap.String("path", d.Path))
+				metricErrorsTotal.Inc()
+				j.logger.Warn("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", d.Path))
 				continue
 			}
 
