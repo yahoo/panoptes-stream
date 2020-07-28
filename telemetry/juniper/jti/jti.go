@@ -19,10 +19,6 @@ var (
 	jtiVersion = "1.0"
 
 	labelsRegex = regexp.MustCompile(`(\/[^\/]*)\[([A-Za-z0-9\-\/]*\=[^\[]*)\]`)
-
-	metricGRPCDataTotal = status.NewCounter("juniper_jti_grpc_data_total", "")
-	metricJTIDropsTotal = status.NewCounter("juniper_jti_drops_total", "")
-	metricErrorsTotal   = status.NewCounter("juniper_jti_errors_total", "")
 )
 
 // JTI represents Junos Telemetry Interface.
@@ -35,6 +31,8 @@ type JTI struct {
 	outChan  telemetry.ExtDSChan
 	logger   *zap.Logger
 
+	metrics map[string]status.Metrics
+
 	pathOutput map[string]string
 }
 
@@ -43,14 +41,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	var (
 		paths      = []*jpb.Path{}
 		pathOutput = make(map[string]string)
+		metrics    = make(map[string]status.Metrics)
 	)
 
-	status.Register(
-		status.Labels{"host": conn.Target()},
-		metricGRPCDataTotal,
-		metricJTIDropsTotal,
-		metricErrorsTotal,
-	)
+	metrics["gRPCDataTotal"] = status.NewCounter("juniper_jti_grpc_data_total", "")
+	metrics["dropsTotal"] = status.NewCounter("juniper_jti_drops_total", "")
+	metrics["errorsTotal"] = status.NewCounter("juniper_jti_errors_total", "")
+
+	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
 	for _, sensor := range sensors {
 		path := &jpb.Path{
@@ -73,11 +71,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		dataChan:   make(chan *jpb.OpenConfigData, 100),
 		outChan:    outChan,
 		pathOutput: pathOutput,
+		metrics:    metrics,
 	}
 }
 
 // Start starts to get stream and fan-out to workers.
 func (j *JTI) Start(ctx context.Context) error {
+	defer status.Unregister(status.Labels{"host": j.conn.Target()}, j.metrics)
+
 	j.client = jpb.NewOpenConfigTelemetryClient(j.conn)
 	stream, err := j.client.TelemetrySubscribe(ctx,
 		&jpb.SubscriptionRequest{PathList: j.paths})
@@ -96,7 +97,7 @@ func (j *JTI) Start(ctx context.Context) error {
 		}
 
 		j.dataChan <- d
-		metricGRPCDataTotal.Inc()
+		j.metrics["gRPCDataTotal"].Inc()
 	}
 
 	return nil
@@ -113,13 +114,13 @@ func (j *JTI) worker(ctx context.Context) {
 			}
 			path := regxPath.FindStringSubmatch(d.Path)
 			if len(path) < 1 {
-				metricErrorsTotal.Inc()
+				j.metrics["errorsTotal"].Inc()
 				j.logger.Error("juniper.jti", zap.String("msg", "path not found"), zap.String("path", d.Path))
 				continue
 			}
 			output, ok := j.pathOutput[path[1]]
 			if !ok {
-				metricErrorsTotal.Inc()
+				j.metrics["errorsTotal"].Inc()
 				j.logger.Error("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", d.Path))
 				continue
 			}
@@ -170,7 +171,7 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			Output: output,
 		}:
 		default:
-			metricJTIDropsTotal.Inc()
+			j.metrics["dropsTotal"].Inc()
 			j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 		}
 
@@ -225,7 +226,7 @@ func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
 		Output: output,
 	}:
 	default:
-		metricJTIDropsTotal.Inc()
+		j.metrics["dropsTotal"].Inc()
 		j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 	}
 }

@@ -33,6 +33,7 @@ type Telemetry struct {
 	telemetryRegistrar *Registrar
 	informer           chan struct{}
 	deviceFilterOpts   DeviceFilterOpts
+	metrics            map[string]status.Metrics
 }
 
 type delta struct {
@@ -48,20 +49,15 @@ type DeviceFilterOpts struct {
 
 type DeviceFilterOpt func(config.Device) bool
 
-var (
-	metricDevicesCurrent  = status.NewGauge("active_devices", "")
-	metricGRPConnCurrent  = status.NewGauge("active_grpc_connections", "")
-	metricReconnectsTotal = status.NewCounter("grpc_reconnects_total", "")
-)
-
 // New creates a new telemetry
 func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSChan) *Telemetry {
-	status.Register(
-		nil,
-		metricDevicesCurrent,
-		metricGRPConnCurrent,
-		metricReconnectsTotal,
-	)
+	var metrics = make(map[string]status.Metrics)
+
+	metrics["devicesCurrent"] = status.NewGauge("subscribed_devices", "")
+	metrics["gRPConnCurrent"] = status.NewGauge("active_grpc_connections", "")
+	metrics["reconnectsTotal"] = status.NewCounter("grpc_reconnects_total", "")
+
+	status.Register(nil, metrics)
 
 	return &Telemetry{
 		ctx:                ctx,
@@ -73,6 +69,7 @@ func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSCha
 		informer:           make(chan struct{}, 1),
 		outChan:            outChan,
 		telemetryRegistrar: tr,
+		metrics:            metrics,
 	}
 }
 
@@ -91,7 +88,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 	t.devices[device.Host] = device
 
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
-	metricDevicesCurrent.Inc()
+	t.metrics["devicesCurrent"].Inc()
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
@@ -112,7 +109,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 				if err != nil {
 					t.logger.Error("subscribe.grpc", zap.Error(err))
 				} else {
-					metricGRPConnCurrent.Inc()
+					t.metrics["gRPConnCurrent"].Inc()
 					t.logger.Info("subscribe.grpc", zap.String("host", device.Host), zap.String("service", sName))
 
 					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
@@ -120,7 +117,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 					err = nmi.Start(ctx)
 
 					conn.Close()
-					metricGRPConnCurrent.Dec()
+					t.metrics["gRPConnCurrent"].Dec()
 
 					if err != nil {
 						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
@@ -131,10 +128,9 @@ func (t *Telemetry) subscribe(device config.Device) {
 
 				select {
 				case <-time.After(time.Second * 30):
-					metricReconnectsTotal.Inc()
+					t.metrics["reconnectsTotal"].Inc()
 
 				case <-ctx.Done():
-					t.logger.Info("unsubscribed", zap.String("host", device.Host), zap.String("service", sName))
 					return
 				}
 			}
@@ -146,7 +142,7 @@ func (t *Telemetry) unsubscribe(device config.Device) {
 	t.register[device.Host]()
 	delete(t.register, device.Host)
 	delete(t.devices, device.Host)
-	metricDevicesCurrent.Dec()
+	t.metrics["devicesCurrent"].Dec()
 }
 
 // Start subscribes configured devices

@@ -29,10 +29,6 @@ var (
 	gnmiVersion = "0.7.0"
 
 	labelsRegex = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
-
-	metricGRPCDataTotal = status.NewCounter("juniper_gnmi_grpc_data_total", "")
-	metricDropsTotal    = status.NewCounter("juniper_gnmi_drops_total", "")
-	metricErrorsTotal   = status.NewCounter("juniper_gnmi_errors_total", "")
 )
 
 // GNMI represents a GNMI Juniper.
@@ -44,6 +40,8 @@ type GNMI struct {
 	outChan  telemetry.ExtDSChan
 	logger   *zap.Logger
 
+	metrics map[string]status.Metrics
+
 	pathOutput map[string]string
 }
 
@@ -52,14 +50,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	var (
 		subscriptions = []*gpb.Subscription{}
 		pathOutput    = make(map[string]string)
+		metrics       = make(map[string]status.Metrics)
 	)
 
-	status.Register(
-		status.Labels{"host": conn.Target()},
-		metricGRPCDataTotal,
-		metricDropsTotal,
-		metricErrorsTotal,
-	)
+	metrics["gRPCDataTotal"] = status.NewCounter("juniper_gnmi_grpc_data_total", "")
+	metrics["gNMIDropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+	metrics["errorsTotal"] = status.NewCounter("juniper_gnmi_errors_total", "")
+
+	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
@@ -89,11 +87,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
 		pathOutput:    pathOutput,
+		metrics:       metrics,
 	}
 }
 
 // Start starts to get stream and fan-out to workers
 func (g *GNMI) Start(ctx context.Context) error {
+	defer status.Unregister(status.Labels{"host": g.conn.Target()}, g.metrics)
+
 	client := gpb.NewGNMIClient(g.conn)
 	subReq := &gpb.SubscribeRequest{
 		Request: &gpb.SubscribeRequest_Subscribe{
@@ -128,7 +129,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 		if resp != nil {
 			g.dataChan <- resp
-			metricGRPCDataTotal.Inc()
+			g.metrics["gRPCDataTotal"].Inc()
 		}
 	}
 
@@ -151,14 +152,14 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			path, err := getPath(ds)
 			if err != nil {
-				metricErrorsTotal.Inc()
+				g.metrics["errorsTotal"].Inc()
 				g.logger.Error("juniper.gnmi", zap.String("msg", "path not found"))
 				continue
 			}
 
 			output, ok := g.pathOutput[path]
 			if !ok {
-				metricErrorsTotal.Inc()
+				g.metrics["errorsTotal"].Inc()
 				g.logger.Error("juniper.gnmi", zap.String("msg", "output lookup failed"), zap.String("path", path))
 				continue
 			}
@@ -170,7 +171,7 @@ func (g *GNMI) worker(ctx context.Context) {
 					Output: output,
 				}:
 				default:
-					metricDropsTotal.Inc()
+					g.metrics["gNMIDropsTotal"].Inc()
 					g.logger.Warn("juniper.gnmi", zap.String("msg", "dataset drop"))
 				}
 			} else {
@@ -197,7 +198,7 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataSt
 
 		value, err := getValue(update.Val)
 		if err != nil {
-			metricErrorsTotal.Inc()
+			g.metrics["errorsTotal"].Inc()
 			g.logger.Error("juniper.gnmi", zap.Error(err))
 			continue
 		}
@@ -229,7 +230,7 @@ func (g *GNMI) splitRawDataStore(ds telemetry.DataStore, output string) {
 				Output: output,
 			}:
 			default:
-				metricDropsTotal.Inc()
+				g.metrics["gNMIDropsTotal"].Inc()
 				g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
 			}
 		}

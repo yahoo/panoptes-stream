@@ -21,13 +21,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-var (
-	gnmiVersion = "0.0.1"
-
-	metricGRPCDataTotal  = status.NewCounter("generic_gnmi_grpc_data_total", "")
-	metricGNMIDropsTotal = status.NewCounter("generic_gnmi_drops_total", "")
-	metricErrorsTotal    = status.NewCounter("generic_gnmi_errors_total", "")
-)
+var gnmiVersion = "0.0.1"
 
 // GNMI represents a GNMI.
 type GNMI struct {
@@ -38,6 +32,8 @@ type GNMI struct {
 	outChan  telemetry.ExtDSChan
 	logger   *zap.Logger
 
+	metrics map[string]status.Metrics
+
 	pathOutput map[string]string
 }
 
@@ -46,14 +42,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	var (
 		subscriptions = []*gpb.Subscription{}
 		pathOutput    = make(map[string]string)
+		metrics       = make(map[string]status.Metrics)
 	)
 
-	status.Register(
-		status.Labels{"host": conn.Target()},
-		metricGRPCDataTotal,
-		metricGNMIDropsTotal,
-		metricErrorsTotal,
-	)
+	metrics["gRPCDataTotal"] = status.NewCounter("generic_gnmi_grpc_data_total", "")
+	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
+	metrics["errorsTotal"] = status.NewCounter("generic_gnmi_errors_total", "")
+
+	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
@@ -79,11 +75,14 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
 		pathOutput:    pathOutput,
+		metrics:       metrics,
 	}
 }
 
 // Start starts to get stream and fan-out to workers
 func (g *GNMI) Start(ctx context.Context) error {
+	defer status.Unregister(status.Labels{"host": g.conn.Target()}, g.metrics)
+
 	client := gpb.NewGNMIClient(g.conn)
 	subReq := &gpb.SubscribeRequest{
 		Request: &gpb.SubscribeRequest_Subscribe{
@@ -118,7 +117,7 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 		if resp != nil {
 			g.dataChan <- resp
-			metricGRPCDataTotal.Inc()
+			g.metrics["gRPCDataTotal"].Inc()
 		}
 	}
 
@@ -139,7 +138,7 @@ func (g *GNMI) worker(ctx context.Context) {
 
 			output, err := g.findOutput(resp)
 			if err != nil {
-				metricErrorsTotal.Inc()
+				g.metrics["errorsTotal"].Inc()
 				g.logger.Error("generic.gnmi", zap.String("msg", "output lookup failed"), zap.Error(err))
 				continue
 			}
@@ -184,7 +183,7 @@ func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
 			Output: output,
 		}:
 		default:
-			metricGNMIDropsTotal.Inc()
+			g.metrics["dropsTotal"].Inc()
 			g.logger.Warn("generic.gnmi", zap.String("error", "dataset drop"))
 		}
 	}
@@ -220,7 +219,7 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 		Output: output,
 	}:
 	default:
-		metricGNMIDropsTotal.Inc()
+		g.metrics["dropsTotal"].Inc()
 		g.logger.Warn("generic.gnmi", zap.String("error", "dataset drop"))
 	}
 }
