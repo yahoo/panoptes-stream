@@ -8,10 +8,14 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/prometheus/client_golang/prometheus/promauto"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
 )
+
+type Metrics interface {
+	Dec()
+	Inc()
+}
 
 type Status struct {
 	cfg    config.Config
@@ -80,31 +84,57 @@ func (s *Status) start() error {
 	return srv.ListenAndServeTLS("", "")
 }
 
-func Register(labels Labels, metrics ...interface{}) {
+func Register(labels Labels, metrics map[string]Metrics) {
 	prefix := "panoptes_"
 
 	for _, metric := range metrics {
 		switch v := metric.(type) {
 		case *MetricCounter:
-			promauto.NewCounterFunc(prometheus.CounterOpts{
+			prometheus.Register(prometheus.NewCounterFunc(prometheus.CounterOpts{
 				Name:        prefix + v.Name,
 				Help:        v.Help,
 				ConstLabels: labels,
 			},
 				func() float64 {
 					return float64(v.Value)
-				})
+				}))
 		case *MetricGauge:
-			promauto.NewGaugeFunc(prometheus.GaugeOpts{
+			prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
 				Name:        prefix + v.Name,
 				Help:        v.Help,
 				ConstLabels: labels,
 			},
 				func() float64 {
 					return float64(v.Value)
-				})
+				}))
 		}
 	}
+}
+
+func Unregister(labels Labels, metrics map[string]Metrics) {
+	prefix := "panoptes_"
+
+	for _, metric := range metrics {
+		switch v := metric.(type) {
+		case *MetricCounter:
+			prometheus.Unregister(prometheus.NewCounterFunc(prometheus.CounterOpts{
+				Name:        prefix + v.Name,
+				ConstLabels: labels,
+			},
+				func() float64 {
+					return float64(v.Value)
+				}))
+		case *MetricGauge:
+			prometheus.Unregister(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
+				Name:        prefix + v.Name,
+				ConstLabels: labels,
+			},
+				func() float64 {
+					return float64(v.Value)
+				}))
+		}
+	}
+
 }
 
 func NewCounter(name, help string) *MetricCounter {
@@ -127,6 +157,10 @@ func NewGauge(name, help string) *MetricGauge {
 
 func (m *MetricCounter) Inc() {
 	atomic.AddUint64(&m.Value, 1)
+}
+
+func (m *MetricCounter) Dec() {
+	// doesn't support
 }
 
 func (m *MetricGauge) Inc() {
