@@ -27,7 +27,7 @@ func TestStartErrors(t *testing.T) {
 
 	e := ""
 	for i := 0; i < 3; i++ {
-		time.Sleep(1 * time.Microsecond)
+		time.Sleep(10 * time.Microsecond)
 		if len(cfg.LogOutput.String()) > 0 {
 			e = cfg.LogOutput.Unmarshal()["error"]
 			break
@@ -40,7 +40,7 @@ func TestStartErrors(t *testing.T) {
 
 	e = ""
 	for i := 0; i < 3; i++ {
-		time.Sleep(1 * time.Microsecond)
+		time.Sleep(10 * time.Microsecond)
 		if len(cfg.LogOutput.String()) > 0 {
 			e = cfg.LogOutput.Unmarshal()["error"]
 			break
