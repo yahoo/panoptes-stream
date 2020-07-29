@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"time"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -47,6 +48,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	metrics["gRPCDataTotal"] = status.NewCounter("juniper_jti_grpc_data_total", "")
 	metrics["dropsTotal"] = status.NewCounter("juniper_jti_drops_total", "")
 	metrics["errorsTotal"] = status.NewCounter("juniper_jti_errors_total", "")
+	metrics["processNSecond"] = status.NewGauge("juniper_jti_process_nanosecond", "")
 
 	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
@@ -104,7 +106,10 @@ func (j *JTI) Start(ctx context.Context) error {
 }
 
 func (j *JTI) worker(ctx context.Context) {
-	var regxPath = regexp.MustCompile(`/:(/.*/):`)
+	var (
+		regxPath = regexp.MustCompile(`/:(/.*/):`)
+		start    time.Time
+	)
 
 	for {
 		select {
@@ -112,6 +117,9 @@ func (j *JTI) worker(ctx context.Context) {
 			if !ok {
 				return
 			}
+
+			start = time.Now()
+
 			path := regxPath.FindStringSubmatch(d.Path)
 			if len(path) < 1 {
 				j.metrics["errorsTotal"].Inc()
@@ -130,6 +138,8 @@ func (j *JTI) worker(ctx context.Context) {
 			} else {
 				j.datastore(d, output)
 			}
+
+			j.metrics["processNSecond"].Set(uint64(time.Since(start).Nanoseconds()))
 
 		case <-ctx.Done():
 			return

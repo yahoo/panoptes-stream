@@ -56,6 +56,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	metrics["gRPCDataTotal"] = status.NewCounter("juniper_gnmi_grpc_data_total", "")
 	metrics["gNMIDropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
 	metrics["errorsTotal"] = status.NewCounter("juniper_gnmi_errors_total", "")
+	metrics["processNSecond"] = status.NewGauge("juniper_gnmi_process_nanosecond", "")
 
 	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
@@ -136,12 +137,16 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
+	var start time.Time
+
 	for {
 		select {
 		case d, ok := <-g.dataChan:
 			if !ok {
 				return
 			}
+
+			start = time.Now()
 
 			resp, ok := d.Response.(*gpb.SubscribeResponse_Update)
 			if !ok {
@@ -177,6 +182,8 @@ func (g *GNMI) worker(ctx context.Context) {
 			} else {
 				g.splitRawDataStore(ds, output)
 			}
+
+			g.metrics["processNSecond"].Set(uint64(time.Since(start).Nanoseconds()))
 
 		case <-ctx.Done():
 			return
