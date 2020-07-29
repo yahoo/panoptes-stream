@@ -34,7 +34,7 @@ func TestStartErrors(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, e, "channel not found")
+	assert.Equal(t, "channel not found", e)
 
 	inChan <- telemetry.ExtDataStore{Output: "test1"}
 
@@ -47,7 +47,7 @@ func TestStartErrors(t *testing.T) {
 		}
 	}
 
-	assert.Equal(t, e, "output not found")
+	assert.Equal(t, "output not found", e)
 
 }
 
