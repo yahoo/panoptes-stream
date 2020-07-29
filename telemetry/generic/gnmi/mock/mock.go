@@ -19,6 +19,7 @@ type GNMIServer struct {
 
 type Update struct {
 	Notification *gnmi.Notification
+	Attempt      int
 }
 
 func (*GNMIServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
@@ -35,10 +36,17 @@ func (g *GNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
 }
 
 func (u Update) Run(server gnmi.GNMI_SubscribeServer) error {
-	return server.Send(&gnmi.SubscribeResponse{
-		Response: &gnmi.SubscribeResponse_Update{
-			Update: u.Notification,
-		}})
+	for i := 0; i < u.Attempt; i++ {
+		err := server.Send(&gnmi.SubscribeResponse{
+			Response: &gnmi.SubscribeResponse_Update{
+				Update: u.Notification,
+			}})
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func StartGNMIServer(addr string, resp Response) (net.Listener, error) {
@@ -78,8 +86,33 @@ func AristaUpdate() *gnmi.Notification {
 	}
 }
 
+func AristaBGPUpdate() *gnmi.Notification {
+	return &gnmi.Notification{
+		Timestamp: 1595363593413814979,
+		Prefix:    &gnmi.Path{},
+		Update: []*gnmi.Update{
+			{
+				Path: &gnmi.Path{
+					Elem: []*gnmi.PathElem{
+						{Name: "network-instances"},
+						{Name: "network-instance", Key: map[string]string{"name": "default"}},
+						{Name: "protocols"},
+						{Name: "protocol", Key: map[string]string{"identifier": "BGP", "name": "BGP"}},
+						{Name: "bgp"},
+						{Name: "global"},
+						{Name: "afi-safis"},
+						{Name: "afi-safi", Key: map[string]string{"afi-safi-name": "IPV6_UNICAST"}},
+						{Name: "config"},
+						{Name: "afi-safi-name"},
+					},
+				},
+				Val: &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "openconfig-bgp-types:IPV6_UNICAST"}},
+			},
+		},
+	}
+}
+
 func JuniperUpdate() *gnmi.Notification {
-	//gnmi.TypedValue_AnyVal.
 	return &gnmi.Notification{
 		Timestamp: 1595951912880990837,
 		Prefix:    &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "lo0"}}}},
@@ -115,11 +148,3 @@ func JuniperUpdate() *gnmi.Notification {
 		},
 	}
 }
-
-//  Update:{path:{elem:{name:"__juniper_telemetry_header__"}} Val:{any_val:{type_url:"type.googleapis.com/GnmiJuniperTelemetryHeader" value:"\n\tcore1.nca\x10\xff\xff\x03\"esensor_1039_3_1:/interfaces/interface/state/counters/:/interfaces/interface/state/counters/:xmlproxyd(\x88\x80\x80\x01"}}}
-//  Update:{path:{elem:{name:"__timestamp__"}} val:{uint_val:1595951912883}}
-//  -update:{path:{elem:{name:"state"} elem:{name:"counters"} elem:{name:"in-octets"}} val:{uint_val:50302030597}}
-//  update:{path:{elem:{name:"state"} elem:{name:"counters"} elem:{name:"in-pkts"}} val:{uint_val:23004056}}
-//  update:{path:{elem:{name:"state"} elem:{name:"counters"} elem:{name:"out-octets"}} val:{uint_val:50302030597}}
-//  update:{path:{elem:{name:"state"} elem:{name:"counters"} elem:{name:"out-pkts"}} val:{uint_val:23004056}}
-//  update:{path:{elem:{name:"state"} elem:{name:"counters"} elem:{name:"last-clear"}} val:{string_val:"Never"}}})
