@@ -44,14 +44,15 @@ func TestAristaSimplePath(t *testing.T) {
 
 	resp := <-ch
 
-	assert.Equal(t, resp.DS["__prefix"].(string), sensors[0].Path, "unexpected result")
-	assert.Equal(t, resp.DS["__system_id"].(string), "127.0.0.1", "unexpected result")
-	assert.Equal(t, resp.DS["__timestamp"].(int64), int64(1595363593437180059), "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["name"], "Ethernet1", "unexpected result")
-	assert.Equal(t, resp.DS["/out-octets"].(int64), int64(50302030597), "unexpected result")
-	assert.Equal(t, resp.Output, "console::stdout", "unexpected result")
+	assert.Equal(t, sensors[0].Path, resp.DS["prefix"].(string))
+	assert.Equal(t, "127.0.0.1", resp.DS["system_id"].(string))
+	assert.Equal(t, int64(1595363593437180059), resp.DS["timestamp"].(int64))
+	assert.Equal(t, "Ethernet1", resp.DS["labels"].(map[string]string)["name"])
+	assert.Equal(t, "out-octets", resp.DS["key"].(string))
+	assert.Equal(t, int64(50302030597), resp.DS["value"].(int64))
+	assert.Equal(t, "console::stdout", resp.Output)
 
-	assert.Equal(t, cfg.LogOutput.String(), "", "unexpected logging")
+	assert.Equal(t, "", cfg.LogOutput.String())
 }
 
 func TestAristaBGPSimplePath(t *testing.T) {
@@ -85,17 +86,18 @@ func TestAristaBGPSimplePath(t *testing.T) {
 
 	resp := <-ch
 
-	assert.Equal(t, resp.DS["__prefix"].(string), sensors[0].Path, "unexpected result")
-	assert.Equal(t, resp.DS["__system_id"].(string), "127.0.0.1", "unexpected result")
-	assert.Equal(t, resp.DS["__timestamp"].(int64), int64(1595363593413814979), "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["name"], "default", "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["identifier"], "BGP", "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["afi-safi-name"], "IPV6_UNICAST", "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["/protocols/protocol/name"], "BGP", "unexpected result")
-	assert.Equal(t, resp.DS["/protocols/protocol/bgp/global/afi-safis/afi-safi/config/afi-safi-name"].(string), "openconfig-bgp-types:IPV6_UNICAST", "unexpected result")
-	assert.Equal(t, resp.Output, "console::stdout", "unexpected result")
+	assert.Equal(t, sensors[0].Path, resp.DS["prefix"].(string))
+	assert.Equal(t, "127.0.0.1", resp.DS["system_id"].(string))
+	assert.Equal(t, int64(1595363593413814979), resp.DS["timestamp"].(int64))
+	assert.Equal(t, "default", resp.DS["labels"].(map[string]string)["name"])
+	assert.Equal(t, "BGP", resp.DS["labels"].(map[string]string)["identifier"])
+	assert.Equal(t, "IPV6_UNICAST", resp.DS["labels"].(map[string]string)["afi-safi-name"])
+	assert.Equal(t, "BGP", resp.DS["labels"].(map[string]string)["/protocols/protocol/name"])
+	assert.Equal(t, "protocols/protocol/bgp/global/afi-safis/afi-safi/config/afi-safi-name", resp.DS["key"].(string))
+	assert.Equal(t, "openconfig-bgp-types:IPV6_UNICAST", resp.DS["value"].(string))
+	assert.Equal(t, "console::stdout", resp.Output)
 
-	assert.Equal(t, cfg.LogOutput.String(), "", "unexpected logging")
+	assert.Equal(t, "", cfg.LogOutput.String())
 }
 
 func TestAristaKVPath(t *testing.T) {
@@ -129,11 +131,12 @@ func TestAristaKVPath(t *testing.T) {
 
 	resp := <-ch
 
-	assert.Equal(t, resp.DS["__prefix"].(string), sensors[0].Path, "unexpected result")
-	assert.Equal(t, resp.DS["__system_id"].(string), "127.0.0.1", "unexpected result")
-	assert.Equal(t, resp.DS["__timestamp"].(int64), int64(1595363593437180059), "unexpected result")
-	assert.Equal(t, resp.DS["__labels"].(map[string]string)["name"], "Ethernet1", "unexpected result")
-	assert.Equal(t, resp.DS["/out-octets"].(int64), int64(50302030597), "unexpected result")
+	assert.Equal(t, resp.DS["prefix"].(string), sensors[0].Path)
+	assert.Equal(t, resp.DS["system_id"].(string), "127.0.0.1")
+	assert.Equal(t, resp.DS["timestamp"].(int64), int64(1595363593437180059))
+	assert.Equal(t, resp.DS["labels"].(map[string]string)["name"], "Ethernet1")
+	assert.Equal(t, resp.DS["key"].(string), "out-octets")
+	assert.Equal(t, resp.DS["value"].(int64), int64(50302030597))
 	assert.Equal(t, resp.Output, "console::stdout", "unexpected result")
 
 	assert.Equal(t, cfg.LogOutput.String(), "", "unexpected logging")
