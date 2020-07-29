@@ -6,7 +6,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"math"
 	"net"
 	"strings"
@@ -49,6 +48,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	metrics["gRPCDataTotal"] = status.NewCounter("generic_gnmi_grpc_data_total", "")
 	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
 	metrics["errorsTotal"] = status.NewCounter("generic_gnmi_errors_total", "")
+	metrics["processNSecond"] = status.NewGauge("generic_gnmi_process_nanosecond", "")
 
 	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
@@ -66,7 +66,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 			SuppressRedundant: sensor.SuppressRedundant,
 		})
 
-		pathOutput[pathToString(path)] = sensor.Output
+		pathOutput[sanitizePath(sensor.Path)] = sensor.Output
 	}
 
 	return &GNMI{
@@ -125,6 +125,8 @@ func (g *GNMI) Start(ctx context.Context) error {
 	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
+	var start time.Time
+
 	for {
 		select {
 		case d, ok := <-g.dataChan:
@@ -132,19 +134,21 @@ func (g *GNMI) worker(ctx context.Context) {
 				return
 			}
 
+			start = time.Now()
+
 			resp, ok := d.Response.(*gpb.SubscribeResponse_Update)
 			if !ok {
 				continue
 			}
 
-			if len(resp.Update.Update) == 1 {
-				err := g.signleUpdate(resp)
+			for _, update := range resp.Update.Update {
+				err := g.datastore(resp.Update.Prefix, update, resp.Update.Timestamp)
 				if err != nil {
 					g.logger.Error("generic.gnmi", zap.Error(err))
 				}
-			} else {
-				//g.multiUpdates(resp)
 			}
+
+			g.metrics["processNSecond"].Set(uint64(time.Since(start).Nanoseconds()))
 
 		case <-ctx.Done():
 			return
@@ -152,19 +156,20 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) signleUpdate(resp *gpb.SubscribeResponse_Update) error {
+func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64) error {
 	var (
-		labels map[string]string
 		path   []*gpb.PathElem
+		labels map[string]string
 		output string
 		prefix string
 		key    string
 	)
 
-	if resp.Update.Prefix != nil && len(resp.Update.Prefix.Elem) > 0 {
-		path = append(resp.Update.Prefix.Elem, resp.Update.Update[0].Path.Elem...)
+	if uPrefix != nil && len(uPrefix.Elem) > 0 {
+		path = append(path, uPrefix.Elem...)
+		path = append(path, update.Path.Elem...)
 	} else {
-		path = resp.Update.Update[0].Path.Elem
+		path = update.Path.Elem
 	}
 
 	for i := 0; i < 2; i++ {
@@ -191,7 +196,6 @@ func (g *GNMI) signleUpdate(resp *gpb.SubscribeResponse_Update) error {
 
 			// prefix
 			if output == "" {
-				log.Println("PREFIX", buf.String()+"/")
 				p, ok := g.pathOutput[buf.String()+"/"]
 				if ok {
 					output = p
@@ -207,14 +211,13 @@ func (g *GNMI) signleUpdate(resp *gpb.SubscribeResponse_Update) error {
 		if output != "" {
 			break
 		}
-
 	}
 
 	if output == "" {
 		return errors.New("output not found")
 	}
 
-	value, err := getValue(resp.Update.Update[0].Val)
+	value, err := getValue(update.Val)
 	if err != nil {
 		return err
 	}
@@ -224,7 +227,7 @@ func (g *GNMI) signleUpdate(resp *gpb.SubscribeResponse_Update) error {
 	ds := telemetry.DataStore{
 		"__prefix":    prefix,
 		"__labels":    labels,
-		"__timestamp": resp.Update.Timestamp,
+		"__timestamp": timestamp,
 		"__system_id": systemID,
 
 		key: value,
@@ -298,25 +301,16 @@ func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 	return list, nil
 }
 
-// pathToString converts path to string w/o keys and values
-func pathToString(path *gpb.Path) string {
-	buf := bytes.NewBufferString("")
-	for _, elem := range path.Elem {
-		if len(elem.Name) > 0 {
-			buf.WriteRune('/')
-			buf.WriteString(elem.Name)
-		}
-
-		for key, value := range elem.Key {
-			buf.WriteRune('[')
-			buf.WriteString(key + "=" + value)
-			buf.WriteRune(']')
-		}
+func sanitizePath(path string) string {
+	if !strings.HasSuffix(path, "/") {
+		path = fmt.Sprintf("%s/", path)
 	}
 
-	buf.WriteRune('/')
+	if !strings.HasPrefix(path, "/") {
+		path = fmt.Sprintf("/%s", path)
+	}
 
-	return buf.String()
+	return path
 }
 
 func isRawRequested(output string) bool {
