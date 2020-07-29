@@ -15,6 +15,7 @@ import (
 type Metrics interface {
 	Dec()
 	Inc()
+	Set(uint64)
 }
 
 type Status struct {
@@ -163,10 +164,18 @@ func (m *MetricCounter) Dec() {
 	// doesn't support
 }
 
+func (m *MetricCounter) Set(i uint64) {
+	// doesn't support
+}
+
 func (m *MetricGauge) Inc() {
 	atomic.AddUint64(&m.Value, 1)
 }
 
 func (m *MetricGauge) Dec() {
 	atomic.AddUint64(&m.Value, ^uint64(0))
+}
+
+func (m *MetricGauge) Set(i uint64) {
+	atomic.StoreUint64(&m.Value, i)
 }
