@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log"
 	"math"
 	"net"
 	"strings"
@@ -136,17 +137,13 @@ func (g *GNMI) worker(ctx context.Context) {
 				continue
 			}
 
-			output, err := g.findOutput(resp)
-			if err != nil {
-				g.metrics["errorsTotal"].Inc()
-				g.logger.Error("generic.gnmi", zap.String("msg", "output lookup failed"), zap.Error(err))
-				continue
-			}
-
-			if isRawRequested(output) {
-				g.rawDataStore(resp, output)
+			if len(resp.Update.Update) == 1 {
+				err := g.signleUpdate(resp)
+				if err != nil {
+					g.logger.Error("generic.gnmi", zap.Error(err))
+				}
 			} else {
-				g.dataStore(resp, output)
+				//g.multiUpdates(resp)
 			}
 
 		case <-ctx.Done():
@@ -155,63 +152,83 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) dataStore(resp *gpb.SubscribeResponse_Update, output string) {
-	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+func (g *GNMI) signleUpdate(resp *gpb.SubscribeResponse_Update) error {
+	var (
+		labels map[string]string
+		path   []*gpb.PathElem
+		output string
+		prefix string
+		key    string
+	)
 
-	for _, update := range resp.Update.Update {
-		labels, prefix, key := g.parsePath(update)
-
-		value, err := getValue(update.Val)
-		if err != nil {
-			g.logger.Error("generic.gnmi", zap.Error(err))
-			continue
-		}
-		key = strings.Replace(key, prefix, "", -1)
-
-		ds := telemetry.DataStore{
-			"__prefix":    prefix,
-			"__labels":    labels,
-			"__timestamp": resp.Update.Timestamp,
-			"__system_id": systemID,
-
-			key: value,
-		}
-
-		select {
-		case g.outChan <- telemetry.ExtDataStore{
-			DS:     ds,
-			Output: output,
-		}:
-		default:
-			g.metrics["dropsTotal"].Inc()
-			g.logger.Warn("generic.gnmi", zap.String("error", "dataset drop"))
-		}
-	}
-}
-
-func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
-	ds := make(telemetry.DataStore)
-
-	for _, update := range resp.Update.Update {
-		key, err := ygot.PathToString(update.Path)
-		if err != nil {
-			g.logger.Error("generic.gnmi", zap.Error(err))
-			continue
-		}
-
-		value, err := getValue(update.Val)
-		if err != nil {
-			g.logger.Error("generic.gnmi", zap.Error(err))
-			continue
-		}
-		ds[key] = value
+	if resp.Update.Prefix != nil && len(resp.Update.Prefix.Elem) > 0 {
+		path = append(resp.Update.Prefix.Elem, resp.Update.Update[0].Path.Elem...)
+	} else {
+		path = resp.Update.Update[0].Path.Elem
 	}
 
+	for i := 0; i < 2; i++ {
+		labels = make(map[string]string)
+		buf := bytes.NewBufferString("")
+
+		for _, elem := range path {
+			if len(elem.Name) > 0 {
+				buf.WriteRune('/')
+				buf.WriteString(elem.Name)
+			}
+
+			// labels
+			for key, value := range elem.Key {
+				if _, ok := labels[key]; ok {
+					labels[buf.String()+"/"+key] = value
+				} else {
+					labels[key] = value
+					if i == 1 {
+						buf.WriteString(fmt.Sprintf("[%s=%s]", key, value))
+					}
+				}
+			}
+
+			// prefix
+			if output == "" {
+				log.Println("PREFIX", buf.String()+"/")
+				p, ok := g.pathOutput[buf.String()+"/"]
+				if ok {
+					output = p
+					prefix = buf.String() + "/"
+					buf.Reset()
+				}
+			}
+
+		}
+
+		key = buf.String()
+
+		if output != "" {
+			break
+		}
+
+	}
+
+	if output == "" {
+		return errors.New("output not found")
+	}
+
+	value, err := getValue(resp.Update.Update[0].Val)
+	if err != nil {
+		return err
+	}
+
 	systemID, _, _ := net.SplitHostPort(g.conn.Target())
 
-	ds["__timestamp__"] = resp.Update.Timestamp
-	ds["__system_id__"] = systemID
-	ds["__service__"] = "generic.gnmi"
+	ds := telemetry.DataStore{
+		"__prefix":    prefix,
+		"__labels":    labels,
+		"__timestamp": resp.Update.Timestamp,
+		"__system_id": systemID,
+
+		key: value,
+	}
 
 	select {
 	case g.outChan <- telemetry.ExtDataStore{
@@ -220,8 +237,10 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update, output string) {
 	}:
 	default:
 		g.metrics["dropsTotal"].Inc()
-		g.logger.Warn("generic.gnmi", zap.String("error", "dataset drop"))
+		return errors.New("dataset drop")
 	}
+
+	return nil
 }
 
 func getValue(tv *gpb.TypedValue) (interface{}, error) {
@@ -266,57 +285,6 @@ func getValue(tv *gpb.TypedValue) (interface{}, error) {
 	return value, err
 }
 
-func (g *GNMI) findOutput(resp *gpb.SubscribeResponse_Update) (string, error) {
-	if len(resp.Update.Update) < 1 {
-		return "", errors.New("update is empty")
-	}
-
-	path := resp.Update.Update[0].Path
-	buf := bytes.NewBufferString("")
-
-	for _, elem := range path.Elem {
-		if len(elem.Name) > 0 {
-			buf.WriteRune('/')
-			buf.WriteString(elem.Name)
-		}
-		p, ok := g.pathOutput[buf.String()+"/"]
-		if ok {
-			return p, nil
-		}
-	}
-
-	return "", errors.New("path to output not found")
-}
-
-func (g *GNMI) parsePath(update *gpb.Update) (map[string]string, string, string) {
-	Labels := make(map[string]string)
-	buf := bytes.NewBufferString("")
-	prefix := ""
-
-	for _, elem := range update.Path.Elem {
-		if len(elem.Name) > 0 {
-			buf.WriteRune('/')
-			buf.WriteString(elem.Name)
-		}
-
-		_, ok := g.pathOutput[buf.String()+"/"]
-		if ok {
-			prefix = buf.String() + "/"
-		}
-
-		for key, value := range elem.Key {
-			if _, ok := Labels[key]; ok {
-				Labels[buf.String()+"/"+key] = value
-			} else {
-				Labels[key] = value
-			}
-
-		}
-	}
-
-	return Labels, prefix, buf.String()
-}
-
 func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 	list := []interface{}{}
 	for _, v := range elems {
@@ -337,6 +305,12 @@ func pathToString(path *gpb.Path) string {
 		if len(elem.Name) > 0 {
 			buf.WriteRune('/')
 			buf.WriteString(elem.Name)
+		}
+
+		for key, value := range elem.Key {
+			buf.WriteRune('[')
+			buf.WriteString(key + "=" + value)
+			buf.WriteRune(']')
 		}
 	}
 
