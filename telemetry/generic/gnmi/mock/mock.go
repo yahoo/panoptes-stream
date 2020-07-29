@@ -131,7 +131,7 @@ func JuniperUpdate() *gnmi.Notification {
 			},
 			{
 				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "state"}, {Name: "counters"}, {Name: "in-pkts"}}},
-				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 23004056}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 23004050}},
 			},
 			{
 				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "state"}, {Name: "counters"}, {Name: "out-octets"}}},
