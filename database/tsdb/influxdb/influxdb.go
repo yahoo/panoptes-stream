@@ -1,6 +1,7 @@
 package influxdb
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -48,11 +49,6 @@ func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan teleme
 }
 
 func (i *InfluxDB) Start() {
-	var (
-		tagSet, fieldSet       []string
-		measurement, timestamp string
-	)
-
 	config, err := i.getConfig()
 	if err != nil {
 		i.logger.Error("influxdb", zap.Error(err))
@@ -76,44 +72,42 @@ func (i *InfluxDB) Start() {
 				break
 			}
 
-			out := strings.Split(v.Output, "::")
-			if len(out) < 2 {
-				i.logger.Error("influxdb.invalid", zap.String("output", v.Output))
-				continue
+			line, err := getLineProtocol(v)
+			if err != nil {
+				i.logger.Error("influxdb", zap.Error(err), zap.String("output", v.Output))
 			}
 
-			measurement = out[1]
-
-			for k, v := range v.DS {
-				switch k {
-				case "__prefix":
-					tagSet = append(tagSet, fmt.Sprintf("prefix=%s", v.(string)))
-				case "__labels":
-					labels := v.(map[string]string)
-					for k, v := range labels {
-						tagSet = append(tagSet, fmt.Sprintf("%s=%s", escape.String(k), v))
-					}
-				case "__system_id":
-					tagSet = append(tagSet, fmt.Sprintf("system_id=%s", v.(string)))
-				case "__timestamp":
-					timestamp = getValueString(v)
-				default:
-					fieldSet = append(fieldSet, fmt.Sprintf(" %s=%s", escape.String(k), getValueString(v)))
-				}
-			}
-
-			line := fmt.Sprintf("%s,%s %s %s", measurement, strings.Join(tagSet, ","), strings.Join(fieldSet, ","), timestamp)
 			writeApi.WriteRecord(line)
 
-			tagSet = tagSet[:0]
-			fieldSet = fieldSet[:0]
-
 		case <-i.ctx.Done():
-			i.logger.Info("database has been terminated", zap.String("name", i.cfg.Name))
+			i.logger.Info("influxdb", zap.String("msg", "database has been terminated"), zap.String("name", i.cfg.Name))
 			return
 		}
 	}
 
+}
+
+func getLineProtocol(v telemetry.ExtDataStore) (string, error) {
+	out := strings.Split(v.Output, "::")
+	if len(out) < 2 {
+		return "", errors.New("invalid output")
+	}
+
+	buf := bytes.NewBufferString(out[1])
+	buf.WriteRune(',')
+	buf.WriteString("prefix=" + v.DS["prefix"].(string))
+	buf.WriteRune(',')
+	buf.WriteString("system_id=" + v.DS["system_id"].(string))
+	for k, v := range v.DS["labels"].(map[string]string) {
+		buf.WriteRune(',')
+		buf.WriteString(escape.String(k) + "=" + v)
+	}
+	buf.WriteRune(' ')
+	buf.WriteString(escape.String(v.DS["key"].(string)) + "=" + getValueString(v.DS["value"]))
+	buf.WriteRune(' ')
+	buf.WriteString(getValueString(v.DS["timestamp"]))
+
+	return buf.String(), nil
 }
 
 func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
