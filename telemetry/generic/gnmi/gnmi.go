@@ -206,6 +206,7 @@ func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64)
 
 		}
 
+		buf.ReadRune()
 		key = buf.String()
 
 		if output != "" {
@@ -225,12 +226,12 @@ func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64)
 	systemID, _, _ := net.SplitHostPort(g.conn.Target())
 
 	ds := telemetry.DataStore{
-		"__prefix":    prefix,
-		"__labels":    labels,
-		"__timestamp": timestamp,
-		"__system_id": systemID,
-
-		key: value,
+		"prefix":    prefix,
+		"labels":    labels,
+		"timestamp": timestamp,
+		"system_id": systemID,
+		"key":       key,
+		"value":     value,
 	}
 
 	select {

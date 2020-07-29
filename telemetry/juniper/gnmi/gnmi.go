@@ -210,7 +210,6 @@ func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataSt
 			continue
 		}
 		ds[key] = value
-
 	}
 
 	return ds
@@ -223,12 +222,12 @@ func (g *GNMI) splitRawDataStore(ds telemetry.DataStore, output string) {
 	for key, value := range ds {
 		if !strings.HasPrefix(key, "__") {
 			dataStore := telemetry.DataStore{
-				"__prefix":    prefix,
-				"__labels":    labels,
-				"__timestamp": ds["__update_timestamp__"],
-				"__system_id": systemID,
-
-				key: value,
+				"prefix":    prefix,
+				"labels":    labels,
+				"timestamp": ds["__update_timestamp__"],
+				"system_id": systemID,
+				"key":       key,
+				"value":     value,
 			}
 
 			select {

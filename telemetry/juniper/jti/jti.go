@@ -167,12 +167,12 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 		}
 
 		ds = telemetry.DataStore{
-			"__prefix":    prefix,
-			"__labels":    labels,
-			"__timestamp": d.Timestamp * 1000000,
-			"__system_id": d.SystemId,
-
-			v.Key: getValue(v),
+			"prefix":    prefix,
+			"labels":    labels,
+			"timestamp": d.Timestamp * 1000000,
+			"system_id": d.SystemId,
+			"key":       v.Key,
+			"value":     getValue(v),
 		}
 
 		select {
