@@ -110,19 +110,20 @@ func (g *GNMI) Start(ctx context.Context) error {
 		go g.worker(ctx)
 	}
 
-	for ctx.Err() == nil {
+	for {
 		resp, err := subClient.Recv()
 		if err != nil && ctx.Err() == nil {
 			return err
 		}
 
-		if resp != nil {
-			g.dataChan <- resp
-			g.metrics["gRPCDataTotal"].Inc()
+		if ctx.Err() != nil {
+			return nil
 		}
+
+		g.dataChan <- resp
+		g.metrics["gRPCDataTotal"].Inc()
 	}
 
-	return nil
 }
 func (g *GNMI) worker(ctx context.Context) {
 	var start time.Time

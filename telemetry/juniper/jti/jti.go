@@ -82,7 +82,7 @@ func (j *JTI) Start(ctx context.Context) error {
 	defer status.Unregister(status.Labels{"host": j.conn.Target()}, j.metrics)
 
 	j.client = jpb.NewOpenConfigTelemetryClient(j.conn)
-	stream, err := j.client.TelemetrySubscribe(ctx,
+	subClient, err := j.client.TelemetrySubscribe(ctx,
 		&jpb.SubscriptionRequest{PathList: j.paths})
 	if err != nil {
 		return err
@@ -93,16 +93,19 @@ func (j *JTI) Start(ctx context.Context) error {
 	}
 
 	for {
-		d, err := stream.Recv()
-		if err != nil {
-			break
+		resp, err := subClient.Recv()
+		if err != nil && ctx.Err() == nil {
+			return err
 		}
 
-		j.dataChan <- d
+		if ctx.Err() != nil {
+			return nil
+		}
+
+		j.dataChan <- resp
 		j.metrics["gRPCDataTotal"].Inc()
 	}
 
-	return nil
 }
 
 func (j *JTI) worker(ctx context.Context) {
