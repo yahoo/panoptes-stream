@@ -45,6 +45,8 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 		addr    = "127.0.0.1:50500"
 		ch      = make(telemetry.ExtDSChan, 10)
 		sensors []*config.Sensor
+		labels  map[string]string
+		prefix  string
 	)
 
 	cfg := &config.MockConfig{}
@@ -66,42 +68,27 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 	j := New(cfg.Logger(), conn, sensors, ch)
 	j.Start(ctx)
 
-	expected := []struct {
-		key   string
-		value interface{}
-	}{
-		{
-			key:   "state/counters/in-octets",
-			value: uint64(52613105736),
-		},
-		{
-			key:   "state/counters/in-pkts",
-			value: uint64(23609955),
-		},
-		{
-			key:   "state/counters/out-octets",
-			value: uint64(52613105736),
-		},
-		{
-			key:   "state/counters/out-pkts",
-			value: uint64(23609955),
-		},
-		{
-			key:   "state/counters/last-clear",
-			value: "Never",
-		},
-	}
+	KV := mock.JuniperLo0InterfaceSample().Kv
 
-	for i := 0; i < 5; i++ {
+	for _, metric := range KV {
+		if metric.Key == "__prefix__" {
+			labels, prefix = getLabels(getValue(metric).(string))
+			continue
+		}
+
+		if strings.HasPrefix(metric.Key, "__") {
+			continue
+		}
+
 		select {
 		case resp := <-ch:
-			assert.Equal(t, expected[i].key, resp.DS["key"].(string))
-			assert.Equal(t, expected[i].value, resp.DS["value"])
-
-			assert.Equal(t, "/interfaces/interface/", resp.DS["prefix"].(string))
-			assert.Equal(t, "core1.lax", resp.DS["system_id"].(string))
-			assert.Equal(t, uint64(1596067993610)*1000000, resp.DS["timestamp"].(uint64))
-			assert.Equal(t, "lo0", resp.DS["labels"].(map[string]string)["name"])
+			assert.Equal(t, metric.Key, resp.DS["key"])
+			assert.Equal(t, getValue(metric), resp.DS["value"])
+			assert.Equal(t, prefix, resp.DS["prefix"])
+			assert.Equal(t, "/interfaces/interface/", resp.DS["prefix"])
+			assert.Equal(t, "core1.lax", resp.DS["system_id"])
+			assert.Equal(t, uint64(1596067993610)*1000000, resp.DS["timestamp"])
+			assert.Equal(t, labels, resp.DS["labels"])
 
 		case <-ctx.Done():
 			assert.Fail(t, "context deadline exceeded")
@@ -154,12 +141,12 @@ func JuniperBGPSample(t *testing.T) {
 
 		select {
 		case resp := <-ch:
-			assert.Equal(t, labels, resp.DS["labels"].(map[string]string))
+			assert.Equal(t, labels, resp.DS["labels"])
 			assert.Equal(t, prefix, resp.DS["prefix"])
 			assert.Equal(t, metric.Key, resp.DS["key"])
 			assert.Equal(t, getValue(metric), resp.DS["value"])
 			assert.Equal(t, "core1.lax", resp.DS["system_id"])
-			assert.Equal(t, uint64(1596087032354*1000000), resp.DS["timestamp"].(uint64))
+			assert.Equal(t, uint64(1596087032354*1000000), resp.DS["timestamp"])
 
 		case <-ctx.Done():
 			assert.Fail(t, "context deadline exceeded")
