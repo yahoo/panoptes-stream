@@ -5,13 +5,10 @@ import (
 	"testing"
 	"time"
 
-	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
-	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic/gnmi/mock"
 )
@@ -46,7 +43,7 @@ func TestJuniperCountersMock(t *testing.T) {
 	g := New(cfg.Logger(), conn, sensors, ch)
 	g.Start(ctx)
 
-	tt := []struct {
+	expected := []struct {
 		key   string
 		value interface{}
 	}{
@@ -79,56 +76,21 @@ func TestJuniperCountersMock(t *testing.T) {
 		case resp := <-ch:
 			r[resp.DS["key"].(string)] = resp
 
-			assert.Equal(t, resp.DS["prefix"].(string), "/interfaces/interface")
-			assert.Equal(t, resp.DS["system_id"].(string), "127.0.0.1")
-			assert.Equal(t, resp.DS["timestamp"].(int64), int64(1595951912880990837))
-			assert.Equal(t, resp.DS["labels"].(map[string]string)["name"], "lo0")
+			assert.Equal(t, "/interfaces/interface", resp.DS["prefix"].(string))
+			assert.Equal(t, "127.0.0.1", resp.DS["system_id"].(string))
+			assert.Equal(t, int64(1595951912880990837), resp.DS["timestamp"].(int64))
+			assert.Equal(t, "lo0", resp.DS["labels"].(map[string]string)["name"])
 
 		case <-ctx.Done():
-			assert.Error(t, ctx.Err(), "timeout")
+			assert.Fail(t, "context deadline exceeded")
 			return
 		}
 	}
 
-	for _, test := range tt {
-		resp := r[test.key]
-		assert.Equal(t, resp.DS["value"], test.value)
+	for _, e := range expected {
+		resp := r[e.key]
+		assert.Equal(t, e.value, resp.DS["value"])
 	}
-}
 
-func TestGNMI_splitRawDataStore(t *testing.T) {
-	type fields struct {
-		conn          *grpc.ClientConn
-		subscriptions []*gpb.Subscription
-		dataChan      chan *gpb.SubscribeResponse
-		outChan       telemetry.ExtDSChan
-		logger        *zap.Logger
-		metrics       map[string]status.Metrics
-		pathOutput    map[string]string
-	}
-	type args struct {
-		ds     telemetry.DataStore
-		output string
-	}
-	tests := []struct {
-		name   string
-		fields fields
-		args   args
-	}{
-		// TODO: Add test cases.
-	}
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			g := &GNMI{
-				conn:          tt.fields.conn,
-				subscriptions: tt.fields.subscriptions,
-				dataChan:      tt.fields.dataChan,
-				outChan:       tt.fields.outChan,
-				logger:        tt.fields.logger,
-				metrics:       tt.fields.metrics,
-				pathOutput:    tt.fields.pathOutput,
-			}
-			g.splitRawDataStore(tt.args.ds, tt.args.output)
-		})
-	}
+	assert.Equal(t, "", cfg.LogOutput.String())
 }
