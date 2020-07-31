@@ -1,19 +1,22 @@
 package gnmi
 
 import (
+	"bytes"
 	"context"
 	"testing"
 	"time"
 
+	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic/gnmi/mock"
 )
 
-func TestJuniperCountersMock(t *testing.T) {
+func estJuniperCountersMock(t *testing.T) {
 	var (
 		addr    = "127.0.0.1:50500"
 		ch      = make(telemetry.ExtDSChan, 10)
@@ -93,4 +96,30 @@ func TestJuniperCountersMock(t *testing.T) {
 	}
 
 	assert.Equal(t, "", cfg.LogOutput.String())
+}
+
+func BenchmarkDS(b *testing.B) {
+	cfg := &config.MockConfig{}
+	buf := &bytes.Buffer{}
+	metrics := make(map[string]status.Metrics)
+
+	metrics["gNMIDropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+
+	g := &GNMI{
+		logger:  cfg.Logger(),
+		outChan: make(telemetry.ExtDSChan, 100),
+		metrics: metrics,
+	}
+
+	g.pathOutput = map[string]string{"/interfaces/interface/state/counters/": "console::stdout"}
+
+	update := &gnmi.SubscribeResponse_Update{
+		Update: mock.JuniperUpdate(),
+	}
+
+	for i := 0; i < b.N; i++ {
+		g.datastore(buf, update, "core1.lax")
+		buf.Reset()
+		<-g.outChan
+	}
 }
