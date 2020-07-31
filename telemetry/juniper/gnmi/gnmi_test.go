@@ -16,7 +16,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic/gnmi/mock"
 )
 
-func estJuniperCountersMock(t *testing.T) {
+func TestJuniperCountersMock(t *testing.T) {
 	var (
 		addr    = "127.0.0.1:50500"
 		ch      = make(telemetry.ExtDSChan, 10)
