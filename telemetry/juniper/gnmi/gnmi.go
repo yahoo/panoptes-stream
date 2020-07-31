@@ -1,9 +1,9 @@
 package gnmi
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/golang/protobuf/ptypes"
-	"github.com/openconfig/gnmi/path"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/ygot/ygot"
 	"go.uber.org/zap"
@@ -138,7 +137,11 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 }
 func (g *GNMI) worker(ctx context.Context) {
-	var start time.Time
+	var (
+		start          time.Time
+		buf            = new(bytes.Buffer)
+		systemID, _, _ = net.SplitHostPort(g.conn.Target())
+	)
 
 	for {
 		select {
@@ -154,35 +157,11 @@ func (g *GNMI) worker(ctx context.Context) {
 				continue
 			}
 
-			ds := g.rawDataStore(resp)
-
-			path, err := getPath(ds)
-			if err != nil {
-				g.metrics["errorsTotal"].Inc()
-				g.logger.Error("juniper.gnmi", zap.String("msg", "path not found"))
-				continue
+			if err := g.datastore(buf, resp, systemID); err != nil {
+				g.logger.Error("juniper.gnmi", zap.Error(err))
 			}
 
-			output, ok := g.pathOutput[path]
-			if !ok {
-				g.metrics["errorsTotal"].Inc()
-				g.logger.Error("juniper.gnmi", zap.String("msg", "output lookup failed"), zap.String("path", path))
-				continue
-			}
-
-			if isRawRequested(output) {
-				select {
-				case g.outChan <- telemetry.ExtDataStore{
-					DS:     ds,
-					Output: output,
-				}:
-				default:
-					g.metrics["gNMIDropsTotal"].Inc()
-					g.logger.Warn("juniper.gnmi", zap.String("msg", "dataset drop"))
-				}
-			} else {
-				g.splitRawDataStore(ds, output)
-			}
+			buf.Reset()
 
 			g.metrics["processNSecond"].Set(uint64(time.Since(start).Nanoseconds()))
 
@@ -192,71 +171,134 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) rawDataStore(resp *gpb.SubscribeResponse_Update) telemetry.DataStore {
-	ds := make(telemetry.DataStore)
-	ds["__service__"] = fmt.Sprintf("gnmi_v%s", gnmiVersion)
+func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, systemID string) error {
+	var (
+		path, output string
+		timestamp    interface{}
+		label        map[string]string
+		ok           bool
+	)
 
-	ds["__update_timestamp__"] = resp.Update.GetTimestamp()
-	ds["__prefix__"], _ = ygot.PathToString(resp.Update.GetPrefix())
+	prefix, prefixLabels := getPrefix(buf, resp.Update.Prefix.Elem)
 
 	for _, update := range resp.Update.Update {
+		buf.Reset()
 
-		pathSlice := path.ToStrings(update.Path, false)
-		key := strings.Join(pathSlice, "/")
-
+		key, keyLabels := getKey(buf, update.Path.Elem)
 		value, err := getValue(update.Val)
 		if err != nil {
-			g.metrics["errorsTotal"].Inc()
-			g.logger.Error("juniper.gnmi", zap.Error(err))
 			continue
 		}
-		ds[key] = value
+
+		if key == "__juniper_telemetry_header__" {
+			path, err = getPath(value)
+			if err != nil {
+				return err
+			}
+			continue
+		}
+
+		if key == "__timestamp__" {
+			timestamp = resp.Update.GetTimestamp()
+			continue
+		}
+
+		if strings.HasPrefix(key, "__") {
+			continue
+		}
+
+		if output == "" && path != "" {
+			output, ok = g.pathOutput[path]
+			if !ok {
+				return fmt.Errorf("out not found - %s", path)
+			}
+		}
+
+		if len(keyLabels) > 0 {
+			for k, v := range prefixLabels {
+				keyLabels[k] = v
+			}
+			label = keyLabels
+		} else {
+			label = prefixLabels
+		}
+
+		dataStore := telemetry.DataStore{
+			"prefix":    prefix,
+			"labels":    label,
+			"timestamp": timestamp,
+			"system_id": systemID,
+			"key":       key,
+			"value":     value,
+		}
+
+		select {
+		case g.outChan <- telemetry.ExtDataStore{
+			DS:     dataStore,
+			Output: output,
+		}:
+		default:
+			g.metrics["gNMIDropsTotal"].Inc()
+			g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
+		}
+
 	}
 
-	return ds
+	return nil
 }
 
-func (g *GNMI) splitRawDataStore(ds telemetry.DataStore, output string) {
-	labels, prefix := getLabels(ds["__prefix__"].(string))
-	systemID, _, _ := net.SplitHostPort(g.conn.Target())
+func getPrefix(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string) {
+	labels := make(map[string]string)
 
-	for key, value := range ds {
-		if !strings.HasPrefix(key, "__") {
-			dataStore := telemetry.DataStore{
-				"prefix":    prefix,
-				"labels":    labels,
-				"timestamp": ds["__update_timestamp__"],
-				"system_id": systemID,
-				"key":       key,
-				"value":     value,
-			}
+	for _, elem := range path {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
 
-			select {
-			case g.outChan <- telemetry.ExtDataStore{
-				DS:     dataStore,
-				Output: output,
-			}:
-			default:
-				g.metrics["gNMIDropsTotal"].Inc()
-				g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
-			}
+		for key, value := range elem.Key {
+			labels[key] = value
 		}
 	}
 
+	return buf.String(), labels
 }
 
-func getPath(ds telemetry.DataStore) (string, error) {
-	regxPath := regexp.MustCompile("/:(/.*/):")
+func getKey(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string) {
+	labels := make(map[string]string)
 
-	if _, ok := ds["__juniper_telemetry_header__"]; ok {
-		h := ds["__juniper_telemetry_header__"].(GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader)
-		path := regxPath.FindStringSubmatch(h.Path)
-		if len(path) > 1 {
-			return path[1], nil
+	for _, elem := range path {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
+
+		for key, value := range elem.Key {
+			labels[key] = value
 		}
 	}
 
-	return "", errors.New("path not found")
+	buf.ReadRune()
+
+	return buf.String(), labels
+}
+
+func getPath(value interface{}) (string, error) {
+	var path string
+
+	h, ok := value.(GnmiJuniperTelemetryHeader.GnmiJuniperTelemetryHeader)
+	if ok {
+		p := strings.Split(h.Path, ":")
+		if len(p) > 1 {
+			path = p[1]
+		}
+	}
+
+	if path == "" {
+		return path, fmt.Errorf("invalid juniper telemetry header")
+	}
+
+	return path, nil
 }
 
 func getValue(tv *gpb.TypedValue) (interface{}, error) {
