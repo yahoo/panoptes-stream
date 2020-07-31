@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"regexp"
 	"strings"
 	"time"
 
@@ -24,11 +23,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
 )
 
-var (
-	gnmiVersion = "0.7.0"
-
-	labelsRegex = regexp.MustCompile("(\\/[^\\/]*)\\[([A-Za-z0-9\\-\\/]*\\=[^\\[]*)\\]")
-)
+var gnmiVersion = "0.7.0"
 
 // GNMI represents a GNMI Juniper.
 type GNMI struct {
@@ -377,21 +372,6 @@ func getAnyVal(anyMsg *anypb.Any) (interface{}, error) {
 
 func isRawRequested(output string) bool {
 	return strings.HasSuffix(output, "::raw")
-}
-
-func getLabels(prefix string) (map[string]string, string) {
-	labels := make(map[string]string)
-	subs := labelsRegex.FindAllStringSubmatch(prefix, -1)
-	for _, sub := range subs {
-		if len(sub) != 3 {
-			continue
-		}
-		kv := strings.Split(sub[2], "=")
-		labels[kv[0]] = strings.ReplaceAll(kv[1], "'", "")
-		prefix = strings.Replace(prefix, sub[0], sub[1], 1)
-	}
-
-	return labels, prefix
 }
 
 func Version() string {
