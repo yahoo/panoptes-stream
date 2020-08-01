@@ -200,7 +200,7 @@ func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64)
 				p, ok := g.pathOutput[buf.String()+"/"]
 				if ok {
 					output = p
-					prefix = buf.String() + "/"
+					prefix = buf.String()
 					buf.Reset()
 				}
 			}

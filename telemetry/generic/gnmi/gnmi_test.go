@@ -36,7 +36,7 @@ func TestAristaSimplePath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/interfaces/interface/state/counters/",
+		Path:    "/interfaces/interface/state/counters",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
@@ -78,7 +78,7 @@ func TestAristaBGPSimplePath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/network-instances/network-instance/",
+		Path:    "/network-instances/network-instance",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
@@ -123,7 +123,7 @@ func TestAristaKVPath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/interfaces/interface[name=Ethernet1]/state/counters/",
+		Path:    "/interfaces/interface[name=Ethernet1]/state/counters",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
