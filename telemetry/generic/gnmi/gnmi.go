@@ -126,7 +126,11 @@ func (g *GNMI) Start(ctx context.Context) error {
 
 }
 func (g *GNMI) worker(ctx context.Context) {
-	var start time.Time
+	var (
+		start          time.Time
+		buf            = new(bytes.Buffer)
+		systemID, _, _ = net.SplitHostPort(g.conn.Target())
+	)
 
 	for {
 		select {
@@ -143,7 +147,7 @@ func (g *GNMI) worker(ctx context.Context) {
 			}
 
 			for _, update := range resp.Update.Update {
-				err := g.datastore(resp.Update.Prefix, update, resp.Update.Timestamp)
+				err := g.datastore(buf, resp.Update, update, systemID)
 				if err != nil {
 					g.logger.Error("generic.gnmi", zap.Error(err))
 				}
@@ -157,7 +161,7 @@ func (g *GNMI) worker(ctx context.Context) {
 	}
 }
 
-func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64) error {
+func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, update *gpb.Update, systemID string) error {
 	var (
 		path   []*gpb.PathElem
 		labels map[string]string
@@ -166,16 +170,15 @@ func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64)
 		key    string
 	)
 
-	if uPrefix != nil && len(uPrefix.Elem) > 0 {
-		path = append(path, uPrefix.Elem...)
-		path = append(path, update.Path.Elem...)
-	} else {
-		path = update.Path.Elem
+	if n.Prefix != nil && len(n.Prefix.Elem) > 0 {
+		path = n.Prefix.Elem
 	}
+
+	path = append(path, update.Path.Elem...)
 
 	for i := 0; i < 2; i++ {
 		labels = make(map[string]string)
-		buf := bytes.NewBufferString("")
+		buf.Reset()
 
 		for _, elem := range path {
 			if len(elem.Name) > 0 {
@@ -224,12 +227,10 @@ func (g *GNMI) datastore(uPrefix *gpb.Path, update *gpb.Update, timestamp int64)
 		return err
 	}
 
-	systemID, _, _ := net.SplitHostPort(g.conn.Target())
-
 	ds := telemetry.DataStore{
 		"prefix":    prefix,
 		"labels":    labels,
-		"timestamp": timestamp,
+		"timestamp": n.Timestamp,
 		"system_id": systemID,
 		"key":       key,
 		"value":     value,
