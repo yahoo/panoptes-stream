@@ -1,12 +1,12 @@
 package gnmi
 
 import (
+	"bytes"
 	"context"
-	"log"
 	"testing"
-	"time"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic/gnmi/mock"
 	"github.com/stretchr/testify/assert"
@@ -142,38 +142,27 @@ func TestAristaKVPath(t *testing.T) {
 	assert.Equal(t, cfg.LogOutput.String(), "", "unexpected logging")
 }
 
-func aTestTwo(t *testing.T) {
+func BenchmarkDS(b *testing.B) {
 	var (
-		addr    = "127.0.0.1:50500"
-		ch      = make(telemetry.ExtDSChan, 10)
-		ctx     = context.Background()
-		sensors []*config.Sensor
+		cfg     = &config.MockConfig{}
+		buf     = &bytes.Buffer{}
+		metrics = make(map[string]status.Metrics)
 	)
-	ln, err := mock.StartGNMIServer(addr, mock.Update{Notification: mock.JuniperUpdate(), Attempt: 1})
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer ln.Close()
 
-	cfg := &config.MockConfig{}
+	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
 
-	conn, err := grpc.Dial(addr, grpc.WithInsecure())
-	if err != nil {
-		// TODO
-		t.Fatal(err)
+	g := GNMI{
+		logger:  cfg.Logger(),
+		outChan: make(telemetry.ExtDSChan, 100),
+		metrics: metrics,
 	}
 
-	sensors = append(sensors, &config.Sensor{
-		Service: "generic.gnmi",
-		Output:  "console::stdout",
-		Path:    "/interfaces/interface/state/counters",
-	})
+	g.pathOutput = map[string]string{"/interfaces/interface/state/counters/": "console::stdout"}
 
-	g := New(cfg.Logger(), conn, sensors, ch)
-	g.Start(ctx)
+	n := mock.AristaUpdate()
 
-	time.Sleep(1 & time.Second)
-	log.Println("log::", cfg.LogOutput.String())
-	<-ch
-
+	for i := 0; i < b.N; i++ {
+		g.datastore(buf, n, n.Update[0], "127.0.0.1")
+		<-g.outChan
+	}
 }
