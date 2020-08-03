@@ -66,12 +66,12 @@ func (k *Kafka) Start() {
 	for _, topic := range config.Topics {
 		chMap[topic] = make(chan telemetry.DataStore, 1)
 
-		go func(topic string) {
-			err := k.start(config, chMap[topic], topic)
+		go func(topic string, ch chan telemetry.DataStore) {
+			err := k.start(config, ch, topic)
 			if err != nil {
 				k.logger.Error("kafka", zap.Error(err))
 			}
-		}(topic)
+		}(topic, chMap[topic])
 	}
 
 	for {
