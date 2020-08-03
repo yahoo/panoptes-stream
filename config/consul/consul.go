@@ -45,9 +45,7 @@ func New(filename string) (config.Config, error) {
 		consul = &Consul{informer: make(chan struct{}, 1)}
 	)
 
-	if err := yaml.Read(filename, config); err != nil {
-		return nil, err
-	}
+	yaml.Read(filename, config)
 
 	prefix := "panoptes_config_consul"
 	err = envconfig.Process(prefix, config)
@@ -242,6 +240,8 @@ func (c *Consul) watch(watchType, value string, ch chan<- struct{}) {
 }
 
 func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
+	var CAPEM []byte
+
 	sType, path, ok := secret.ParseRemoteSecretInfo(cfg.TLSConfig.CertFile)
 	if ok {
 		sec, err := secret.GetSecretEngine(sType)
@@ -254,16 +254,23 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 			return api.TLSConfig{}, nil
 		}
 
+		if v, ok := secrets["ca"]; ok {
+			CAPEM = v
+		}
+
 		return api.TLSConfig{
-			CertPEM: secrets["cert"],
-			KeyPEM:  secrets["key"],
+			CertPEM:            secrets["cert"],
+			KeyPEM:             secrets["key"],
+			CAPem:              CAPEM,
+			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 		}, nil
 
 	}
 
 	return api.TLSConfig{
-		CertFile: cfg.TLSConfig.CertFile,
-		KeyFile:  cfg.TLSConfig.KeyFile,
-		CAFile:   cfg.TLSConfig.CAFile,
+		CertFile:           cfg.TLSConfig.CertFile,
+		KeyFile:            cfg.TLSConfig.KeyFile,
+		CAFile:             cfg.TLSConfig.CAFile,
+		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 	}, nil
 }
