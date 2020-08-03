@@ -1,6 +1,7 @@
 package jti
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -112,35 +113,33 @@ func (j *JTI) worker(ctx context.Context) {
 	var (
 		regxPath = regexp.MustCompile(`/:(/.*/):`)
 		start    time.Time
+		rBuf     = new(bytes.Buffer)
+		wBuf     = new(bytes.Buffer)
 	)
 
 	for {
 		select {
-		case d, ok := <-j.dataChan:
+		case data, ok := <-j.dataChan:
 			if !ok {
 				return
 			}
 
 			start = time.Now()
 
-			path := regxPath.FindStringSubmatch(d.Path)
+			path := regxPath.FindStringSubmatch(data.Path)
 			if len(path) < 1 {
 				j.metrics["errorsTotal"].Inc()
-				j.logger.Error("juniper.jti", zap.String("msg", "path not found"), zap.String("path", d.Path))
+				j.logger.Error("juniper.jti", zap.String("msg", "path not found"), zap.String("path", data.Path))
 				continue
 			}
 			output, ok := j.pathOutput[path[1]]
 			if !ok {
 				j.metrics["errorsTotal"].Inc()
-				j.logger.Error("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", d.Path))
+				j.logger.Error("juniper.jti", zap.String("msg", "output lookup failed"), zap.String("path", data.Path))
 				continue
 			}
 
-			if isRawRequested(output) {
-				j.rawDatastore(d, output)
-			} else {
-				j.datastore(d, output)
-			}
+			j.datastore(rBuf, wBuf, data, output)
 
 			j.metrics["processNSecond"].Set(uint64(time.Since(start).Nanoseconds()))
 
@@ -150,17 +149,20 @@ func (j *JTI) worker(ctx context.Context) {
 	}
 }
 
-func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
+func (j *JTI) datastore(rBuf, wBuf *bytes.Buffer, data *jpb.OpenConfigData, output string) {
 	var (
-		ds     = make(telemetry.DataStore)
-		labels = make(map[string]string)
-		prefix string
+		ds                   = make(telemetry.DataStore)
+		labels, prefixLabels map[string]string
+		prefix               string
 	)
 
-	for _, v := range d.Kv {
+	// convert to nanoseconds
+	data.Timestamp = data.Timestamp * 1000000
+
+	for _, v := range data.Kv {
 
 		if v.Key == "__prefix__" {
-			labels, prefix = getLabels(v.GetStrValue())
+			prefixLabels, prefix = getLabels(rBuf, wBuf, v.GetStrValue())
 			continue
 		}
 
@@ -169,12 +171,26 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			continue
 		}
 
+		keyLabels, key := getLabels(rBuf, wBuf, v.Key)
+		if len(keyLabels) > 0 {
+			for k, v := range prefixLabels {
+				if _, ok := keyLabels[k]; ok {
+					keyLabels[prefix+k] = v
+				} else {
+					keyLabels[k] = v
+				}
+			}
+			labels = keyLabels
+		} else {
+			labels = prefixLabels
+		}
+
 		ds = telemetry.DataStore{
 			"prefix":    prefix,
 			"labels":    labels,
-			"timestamp": d.Timestamp * 1000000,
-			"system_id": d.SystemId,
-			"key":       v.Key,
+			"timestamp": data.Timestamp,
+			"system_id": data.SystemId,
+			"key":       key,
 			"value":     getValue(v),
 		}
 
@@ -188,59 +204,6 @@ func (j *JTI) datastore(d *jpb.OpenConfigData, output string) {
 			j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 		}
 
-	}
-}
-
-func (j *JTI) rawDatastore(d *jpb.OpenConfigData, output string) {
-	var (
-		ds      = make(telemetry.DataStore)
-		dsSlice = []telemetry.DataStore{}
-		jHeader = telemetry.DataStore{
-			"system_id":        d.SystemId,
-			"component_id":     d.SystemId,
-			"sub_component_id": d.SubComponentId,
-			"path":             d.Path,
-			"timestamp":        d.Timestamp,
-			"sequence_number":  d.SequenceNumber,
-			"__service__":      fmt.Sprintf("jti_v%s", jtiVersion),
-		}
-	)
-
-	for _, v := range d.Kv {
-
-		if v.Key == "__prefix__" {
-			if _, ok := ds[v.Key]; ok {
-				dsSlice = append(dsSlice, ds)
-				ds = make(telemetry.DataStore)
-			}
-
-			ds[v.Key] = v.GetStrValue()
-			continue
-		}
-
-		if _, ok := ds["__prefix__"]; !ok {
-			jHeader[v.Key] = getValue(v)
-			continue
-		}
-
-		ds[v.Key] = getValue(v)
-
-	}
-
-	// last dataset
-	dsSlice = append(dsSlice, ds)
-	ds = make(telemetry.DataStore)
-	ds["__juniper_telemetry_header__"] = jHeader
-	ds["dataset"] = dsSlice
-
-	select {
-	case j.outChan <- telemetry.ExtDataStore{
-		DS:     ds,
-		Output: output,
-	}:
-	default:
-		j.metrics["dropsTotal"].Inc()
-		j.logger.Warn("juniper.jti", zap.String("error", "dataset drop"))
 	}
 }
 
@@ -271,21 +234,47 @@ func Version() string {
 	return jtiVersion
 }
 
-func isRawRequested(output string) bool {
-	return strings.HasSuffix(output, "::raw")
-}
+func getLabels(r, w *bytes.Buffer, path string) (map[string]string, string) {
+	var key, value, s string
+	var err error
 
-func getLabels(prefix string) (map[string]string, string) {
+	r.Reset()
+	w.Reset()
+
+	r.WriteString(path)
+
 	labels := make(map[string]string)
-	subs := labelsRegex.FindAllStringSubmatch(prefix, -1)
-	for _, sub := range subs {
-		if len(sub) != 3 {
-			continue
+
+	for {
+		s, err = r.ReadString('[')
+		if err != nil {
+			break
 		}
-		kv := strings.Split(sub[2], "=")
-		labels[kv[0]] = strings.ReplaceAll(kv[1], "'", "")
-		prefix = strings.Replace(prefix, sub[0], sub[1], 1)
+
+		w.WriteString(s[:len(s)-1])
+
+		key, err = r.ReadString('=')
+		if err != nil {
+			break
+		}
+
+		value, err = r.ReadString(']')
+		if err != nil {
+			break
+		}
+
+		if len(key) > 0 && len(value) > 0 {
+			if value[0] == '\'' && len(value) > 2 {
+				// string
+				labels[key[:len(key)-1]] = value[1 : len(value)-2]
+			} else {
+				// number
+				labels[key[:len(key)-1]] = value[:len(value)-1]
+			}
+		}
 	}
 
-	return labels, prefix
+	w.WriteString(s)
+
+	return labels, w.String()
 }
