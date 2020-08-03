@@ -48,7 +48,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	)
 
 	metrics["gRPCDataTotal"] = status.NewCounter("juniper_gnmi_grpc_data_total", "")
-	metrics["gNMIDropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+	metrics["dropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
 	metrics["errorsTotal"] = status.NewCounter("juniper_gnmi_errors_total", "")
 	metrics["processNSecond"] = status.NewGauge("juniper_gnmi_process_nanosecond", "")
 
@@ -211,7 +211,11 @@ func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, 
 
 		if len(keyLabels) > 0 {
 			for k, v := range prefixLabels {
-				keyLabels[k] = v
+				if _, ok := keyLabels[k]; ok {
+					keyLabels[prefix+k] = v
+				} else {
+					keyLabels[k] = v
+				}
 			}
 			label = keyLabels
 		} else {
@@ -233,7 +237,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, 
 			Output: output,
 		}:
 		default:
-			g.metrics["gNMIDropsTotal"].Inc()
+			g.metrics["dropsTotal"].Inc()
 			g.logger.Warn("juniper.gnmi", zap.String("error", "dataset drop"))
 		}
 
