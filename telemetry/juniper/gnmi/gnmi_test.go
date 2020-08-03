@@ -98,12 +98,72 @@ func TestJuniperCountersMock(t *testing.T) {
 	assert.Equal(t, "", cfg.LogOutput.String())
 }
 
+func TestJuniperKeyLabel(t *testing.T) {
+	var (
+		cfg     = &config.MockConfig{}
+		buf     = &bytes.Buffer{}
+		metrics = make(map[string]status.Metrics)
+		ch      = make(telemetry.ExtDSChan, 1)
+	)
+
+	metrics["dropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+
+	g := &GNMI{
+		logger:     cfg.Logger(),
+		outChan:    ch,
+		metrics:    metrics,
+		pathOutput: map[string]string{"/interfaces/interface/state/counters/": "console::stdout"},
+	}
+
+	g.datastore(buf, &gnmi.SubscribeResponse_Update{Update: mock.JuniperFakeKeyLabel()}, "127.0.0.1")
+
+	select {
+	case resp := <-ch:
+		assert.Equal(t, map[string]string{"name": "lo0", "queue-number": "2"}, resp.DS["labels"])
+	case <-ctx.Done():
+		assert.Fail(t, "context deadline exceeded")
+	}
+}
+
+func TestJunipeDuplicateLabel(t *testing.T) {
+	var (
+		cfg     = &config.MockConfig{}
+		buf     = &bytes.Buffer{}
+		metrics = make(map[string]status.Metrics)
+		ch      = make(telemetry.ExtDSChan, 1)
+	)
+
+	metrics["dropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
+
+	g := &GNMI{
+		logger:     cfg.Logger(),
+		outChan:    ch,
+		metrics:    metrics,
+		pathOutput: map[string]string{"/interfaces/interface/state/counters/": "console::stdout"},
+	}
+
+	g.datastore(buf, &gnmi.SubscribeResponse_Update{Update: mock.JuniperFakeDuplicateLabel()}, "127.0.0.1")
+
+	select {
+	case resp := <-ch:
+		assert.Equal(t, map[string]string{"/interfaces/interfacename": "lo0", "name": "fake"}, resp.DS["labels"])
+	case <-ctx.Done():
+		assert.Fail(t, "context deadline exceeded")
+	}
+}
+
 func BenchmarkDS(b *testing.B) {
 	cfg := &config.MockConfig{}
 	buf := &bytes.Buffer{}
 	metrics := make(map[string]status.Metrics)
 
-	metrics["gNMIDropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
+	metrics["dropsTotal"] = status.NewCounter("juniper_gnmi_drops_total", "")
 
 	g := &GNMI{
 		logger:  cfg.Logger(),
