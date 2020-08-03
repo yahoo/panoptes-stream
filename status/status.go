@@ -97,7 +97,7 @@ func Register(labels Labels, metrics map[string]Metrics) {
 				ConstLabels: labels,
 			},
 				func() float64 {
-					return float64(v.Value)
+					return float64(atomic.LoadUint64(&v.Value))
 				}))
 		case *MetricGauge:
 			prometheus.Register(prometheus.NewGaugeFunc(prometheus.GaugeOpts{
@@ -106,7 +106,7 @@ func Register(labels Labels, metrics map[string]Metrics) {
 				ConstLabels: labels,
 			},
 				func() float64 {
-					return float64(v.Value)
+					return float64(atomic.LoadUint64(&v.Value))
 				}))
 		}
 	}
