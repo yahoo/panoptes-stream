@@ -73,6 +73,24 @@ func JuniperLo0InterfaceSample() *jpb.OpenConfigData {
 	}
 }
 
+func JuniperMix() *jpb.OpenConfigData {
+	return &jpb.OpenConfigData{
+		SystemId:       "core1.lax",
+		ComponentId:    65535,
+		Path:           "sensor_1040_3_1:/mixes/mix[name='lo0']/state/:/mixes/mix[name='lo0']/state/:xmlproxyd",
+		Timestamp:      1596067993610,
+		SequenceNumber: 1,
+		Kv: []*jpb.KeyValue{
+			{Key: "__timestamp__", Value: &jpb.KeyValue_UintValue{UintValue: 1596067993611}},
+			{Key: "__junos_re_stream_creation_timestamp__", Value: &jpb.KeyValue_UintValue{UintValue: 1596067993562}},
+			{Key: "__junos_re_payload_get_timestamp__", Value: &jpb.KeyValue_UintValue{UintValue: 1596067993609}},
+			{Key: "__prefix__", Value: &jpb.KeyValue_StrValue{StrValue: "/interfaces/interface[name='lo0']/"}},
+			{Key: "state/counters/in-octets", Value: &jpb.KeyValue_UintValue{UintValue: 52613105736}},
+			{Key: "state/counters/out-queue[queue-number=0]/pkts", Value: &jpb.KeyValue_UintValue{UintValue: 526131}},
+		},
+	}
+}
+
 func JuniperBGPSample() *jpb.OpenConfigData {
 	return &jpb.OpenConfigData{
 		SystemId:       "core1.lax",
