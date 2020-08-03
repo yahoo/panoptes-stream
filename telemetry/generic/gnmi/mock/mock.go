@@ -148,3 +148,45 @@ func JuniperUpdate() *gnmi.Notification {
 		},
 	}
 }
+
+func JuniperFakeKeyLabel() *gnmi.Notification {
+	return &gnmi.Notification{
+		Timestamp: 1595951912880990837,
+		Prefix:    &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "lo0"}}}},
+		Update: []*gnmi.Update{
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "__juniper_telemetry_header__"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_AnyVal{AnyVal: &anypb.Any{TypeUrl: "type.googleapis.com/GnmiJuniperTelemetryHeader", Value: []byte("\n\tcore1.nca\x10\xff\xff\x03\"esensor_1039_3_1:/interfaces/interface/state/counters/:/interfaces/interface/state/counters/:xmlproxyd(\x88\x80\x80\x01")}}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "__timestamp__"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 1595951912883}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "state"}, {Name: "out-queue", Key: map[string]string{"queue-number": "2"}}, {Name: "pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 50302030597}},
+			},
+		},
+	}
+}
+
+func JuniperFakeDuplicateLabel() *gnmi.Notification {
+	return &gnmi.Notification{
+		Timestamp: 1595951912880990837,
+		Prefix:    &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "interfaces"}, {Name: "interface", Key: map[string]string{"name": "lo0"}}}},
+		Update: []*gnmi.Update{
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "__juniper_telemetry_header__"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_AnyVal{AnyVal: &anypb.Any{TypeUrl: "type.googleapis.com/GnmiJuniperTelemetryHeader", Value: []byte("\n\tcore1.nca\x10\xff\xff\x03\"esensor_1039_3_1:/interfaces/interface/state/counters/:/interfaces/interface/state/counters/:xmlproxyd(\x88\x80\x80\x01")}}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "__timestamp__"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 1595951912883}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "state"}, {Name: "out-queue", Key: map[string]string{"name": "fake"}}, {Name: "pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 50302030597}},
+			},
+		},
+	}
+}
