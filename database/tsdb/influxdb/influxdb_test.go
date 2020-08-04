@@ -1,11 +1,13 @@
 package influxdb
 
 import (
+	"bytes"
 	"testing"
 
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"gotest.tools/assert"
+
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
 func TestLineProtocol(t *testing.T) {
@@ -21,7 +23,9 @@ func TestLineProtocol(t *testing.T) {
 		},
 	}
 
-	l, err := getLineProtocol(data)
+	buf := new(bytes.Buffer)
+
+	l, err := getLineProtocol(buf, data)
 	require.Equal(t, err, nil)
 	assert.Equal(t, l, "ifcounters,prefix=/interfaces/interface/state/counters/,system_id=core1.bur,name=Ethernet3 out-octets=5587651 1595768623436661269")
 }
@@ -39,7 +43,9 @@ func BenchmarkLineProtocol(b *testing.B) {
 		},
 	}
 
+	buf := new(bytes.Buffer)
+
 	for i := 0; i < b.N; i++ {
-		getLineProtocol(data)
+		getLineProtocol(buf, data)
 	}
 }

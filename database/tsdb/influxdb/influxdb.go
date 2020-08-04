@@ -65,6 +65,8 @@ func (i *InfluxDB) Start() {
 
 	i.logger.Info("influxdb", zap.String("name", i.cfg.Name), zap.String("server", config.Server), zap.String("bucket", config.Bucket))
 
+	buf := new(bytes.Buffer)
+
 	for {
 		select {
 		case v, ok := <-i.ch:
@@ -72,7 +74,7 @@ func (i *InfluxDB) Start() {
 				break
 			}
 
-			line, err := getLineProtocol(v)
+			line, err := getLineProtocol(buf, v)
 			if err != nil {
 				i.logger.Error("influxdb", zap.Error(err), zap.String("output", v.Output))
 			}
@@ -87,13 +89,14 @@ func (i *InfluxDB) Start() {
 
 }
 
-func getLineProtocol(v telemetry.ExtDataStore) (string, error) {
+func getLineProtocol(buf *bytes.Buffer, v telemetry.ExtDataStore) (string, error) {
 	out := strings.Split(v.Output, "::")
 	if len(out) < 2 {
 		return "", errors.New("invalid output")
 	}
 
-	buf := bytes.NewBufferString(out[1])
+	buf.Reset()
+	buf.WriteString(out[1])
 	buf.WriteRune(',')
 	buf.WriteString("prefix=" + v.DS["prefix"].(string))
 	buf.WriteRune(',')
