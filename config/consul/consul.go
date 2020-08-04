@@ -3,6 +3,7 @@ package consul
 import (
 	"encoding/json"
 	"fmt"
+	"os"
 	"path"
 	"strings"
 
@@ -79,7 +80,13 @@ func New(filename string) (config.Config, error) {
 	}
 
 	if !consul.global.WatcherDisabled {
-		go consul.watch("keyprefix", consul.prefix, consul.informer)
+		go func() {
+			err := consul.watch(config.Address)
+			if err != nil {
+				consul.logger.Error("consul.watcher", zap.Error(err))
+				os.Exit(1)
+			}
+		}()
 	}
 
 	return consul, nil
@@ -208,37 +215,35 @@ func (c *Consul) Update() error {
 	return c.getRemoteConfig()
 }
 
-func (c *Consul) watch(watchType, value string, ch chan<- struct{}) {
-	params := make(map[string]interface{})
-	params["type"] = watchType
-
-	switch watchType {
-	case "keyprefix":
-		params["prefix"] = value
-	case "key":
-		params["key"] = value
+func (c *Consul) watch(addr string) error {
+	params := map[string]interface{}{
+		"type":   "keyprefix",
+		"prefix": c.prefix,
 	}
 
 	wp, err := watch.Parse(params)
 	if err != nil {
-		panic(err)
+		return err
 	}
 
 	lastIdx := uint64(0)
 	wp.Handler = func(idx uint64, data interface{}) {
 		if lastIdx != 0 {
-			c.logger.Info("watcher", zap.String("name", value), zap.String("type", watchType))
+			c.logger.Info("consul.watcher", zap.String("event", "triggered"), zap.String("prefix", c.prefix))
 			select {
-			case ch <- struct{}{}:
+			case c.informer <- struct{}{}:
 			default:
+				c.logger.Warn("consul.watcher", zap.String("event", "notification has been dropped"))
 			}
 		}
 		lastIdx = idx
 	}
 
-	if err := wp.Run("localhost:8500"); err != nil {
-		panic(err)
+	if err := wp.Run(addr); err != nil {
+		return err
 	}
+
+	return nil
 }
 
 func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
