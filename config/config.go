@@ -29,9 +29,9 @@ type Sensor struct {
 	Origin            string
 	Path              string
 	Mode              string
-	SampleInterval    uint64 `yaml:"sampleInterval"`
-	HeartbeatInterval uint64 `yaml:"heartbeatInterval"`
-	SuppressRedundant bool   `yaml:"suppressRedundant"`
+	SampleInterval    int  `yaml:"sampleInterval"`
+	HeartbeatInterval int  `yaml:"heartbeatInterval"`
+	SuppressRedundant bool `yaml:"suppressRedundant"`
 }
 
 type Device struct {
@@ -53,12 +53,13 @@ type Database struct {
 }
 
 type Global struct {
-	DeviceOptions DeviceOptions `yaml:"deviceOptions"`
-	Version       string
-	Discovery     Discovery
-	Status        Status
-	Shard         Shard
-	Logger        map[string]interface{}
+	Discovery       Discovery
+	Status          Status
+	Shard           Shard
+	DeviceOptions   DeviceOptions `yaml:"deviceOptions"`
+	WatcherDisabled bool          `yaml:"watcherDisabled"`
+	Version         string
+	Logger          map[string]interface{}
 }
 
 type TLSConfig struct {

@@ -78,7 +78,9 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	go consul.watch("keyprefix", consul.prefix, consul.informer)
+	if !consul.global.WatcherDisabled {
+		go consul.watch("keyprefix", consul.prefix, consul.informer)
+	}
 
 	return consul, nil
 }

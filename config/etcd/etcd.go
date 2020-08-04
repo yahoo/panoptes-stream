@@ -83,7 +83,9 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	go etcd.watch(etcd.informer)
+	if !etcd.global.WatcherDisabled {
+		go etcd.watch(etcd.informer)
+	}
 
 	return etcd, nil
 }
