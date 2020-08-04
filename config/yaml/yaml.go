@@ -3,6 +3,7 @@ package yaml
 import (
 	"io/ioutil"
 	"log"
+	"os"
 
 	"github.com/fsnotify/fsnotify"
 	"go.uber.org/zap"
@@ -62,7 +63,15 @@ func New(filename string) (config.Config, error) {
 		informer: make(chan struct{}, 1),
 	}
 
-	go y.watcher()
+	if !yamlCfg.Global.WatcherDisabled {
+		go func() {
+			if err := y.watcher(); err != nil {
+				y.logger.Error("watcher", zap.Error(err))
+				os.Exit(1)
+			}
+
+		}()
+	}
 
 	return y, nil
 }
@@ -204,10 +213,10 @@ func configGlobal(g *config.Global) *config.Global {
 	return g
 }
 
-func (y *yaml) watcher() {
+func (y *yaml) watcher() error {
 	watcher, err := fsnotify.NewWatcher()
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 	defer watcher.Close()
 
@@ -228,23 +237,26 @@ func (y *yaml) watcher() {
 					default:
 					}
 
-					y.logger.Info("watcher", zap.String("name", event.Name))
+					y.logger.Info("watcher.loop", zap.String("name", event.Name))
 				}
 			case err, ok := <-watcher.Errors:
 				if !ok {
 					return
 				}
-				log.Println("error:", err)
+
+				y.logger.Error("watcher.loop", zap.Error(err))
 			}
 		}
 	}()
 
 	err = watcher.Add(y.filename)
 	if err != nil {
-		log.Fatal(err)
+		return err
 	}
 
 	<-done
+
+	return nil
 }
 
 func (y *yaml) Informer() chan struct{} {
