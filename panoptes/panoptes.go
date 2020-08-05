@@ -17,6 +17,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/register"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"go.uber.org/zap"
 )
 
 var (
@@ -125,7 +126,11 @@ func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, updat
 			informed = false
 		}
 
-		cfg.Update()
+		if err := cfg.Update(); err != nil {
+			cfg.Logger().Error("update", zap.Error(err))
+			continue
+		}
+
 		d.Update()
 		t.Update()
 	}
