@@ -63,6 +63,10 @@ func New(filename string) (config.Config, error) {
 		informer: make(chan struct{}, 1),
 	}
 
+	if y.logger == nil {
+		y.logger = config.GetDefaultLogger()
+	}
+
 	if !yamlCfg.Global.WatcherDisabled {
 		go func() {
 			if err := y.watcher(); err != nil {

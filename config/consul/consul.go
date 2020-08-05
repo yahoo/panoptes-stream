@@ -159,6 +159,10 @@ func (c *Consul) getRemoteConfig() error {
 		}
 	}
 
+	if c.logger == nil {
+		c.logger = config.GetDefaultLogger()
+	}
+
 	for _, d := range devicesTpl {
 		device := config.ConvDeviceTemplate(d)
 		device.Sensors = make(map[string][]*config.Sensor)

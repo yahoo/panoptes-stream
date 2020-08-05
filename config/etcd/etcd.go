@@ -156,6 +156,10 @@ func (e *etcd) getRemoteConfig() error {
 		}
 	}
 
+	if e.logger == nil {
+		e.logger = config.GetDefaultLogger()
+	}
+
 	for _, d := range devicesTpl {
 		device := config.ConvDeviceTemplate(d)
 		device.Sensors = make(map[string][]*config.Sensor)
