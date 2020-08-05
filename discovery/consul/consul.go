@@ -3,6 +3,7 @@ package consul
 import (
 	"encoding/json"
 	"os"
+	"path"
 	"sort"
 	"strconv"
 
@@ -19,6 +20,7 @@ import (
 // Consul represents the consul
 type Consul struct {
 	id          string
+	addr        string
 	cfg         config.Config
 	logger      *zap.Logger
 	client      *api.Client
@@ -58,6 +60,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 
 	return &Consul{
 		client: client,
+		addr:   config.Address,
 		cfg:    cfg,
 		logger: cfg.Logger(),
 	}, nil
@@ -89,9 +92,9 @@ func (c *Consul) Register() error {
 			continue
 		}
 		ids = append(ids, id)
-		// recover node
+		// recovered node
 		if instance.Address == hostname() {
-			if err := c.register(instance.ID, meta); err != nil {
+			if err := c.register(instance.ID, hostname(), meta); err != nil {
 				return err
 			}
 
@@ -106,7 +109,7 @@ func (c *Consul) Register() error {
 	// new register node
 	// TODO: if id > numbber_of_nodes then it needs clean up!
 	c.id = getID(ids)
-	if err := c.register(c.id, meta); err != nil {
+	if err := c.register(c.id, hostname(), meta); err != nil {
 		return err
 	}
 
@@ -115,16 +118,23 @@ func (c *Consul) Register() error {
 	return nil
 }
 
-func (c *Consul) register(id string, meta map[string]string) error {
+func (c *Consul) register(id, hostname string, meta map[string]string) error {
 	reg := &api.AgentServiceRegistration{
 		ID:      id,
 		Name:    "panoptes",
 		Meta:    meta,
-		Address: hostname(),
+		Address: hostname,
+	}
+
+	hcEndpoint := path.Join(c.cfg.Global().Status.Addr, "healthcheck")
+	if c.cfg.Global().Status.TLSConfig.Enabled {
+		hcEndpoint = "https://" + hcEndpoint
+	} else {
+		hcEndpoint = "http://" + hcEndpoint
 	}
 
 	reg.Check = &api.AgentServiceCheck{
-		HTTP:     "http://localhost:8081/healthcheck",
+		HTTP:     hcEndpoint,
 		Interval: "10s",
 		Timeout:  "2s",
 	}
@@ -227,7 +237,7 @@ func (c *Consul) Watch(ch chan<- struct{}) {
 		lastIdx = idx
 	}
 
-	if err := wp.Run("localhost:8500"); err != nil {
+	if err := wp.Run(c.addr); err != nil {
 		panic(err)
 	}
 }
@@ -245,6 +255,8 @@ func getConfig(cfg config.Config) (*consulConfig, error) {
 }
 
 func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
+	var CAPEM []byte
+
 	sType, path, ok := secret.ParseRemoteSecretInfo(cfg.TLSConfig.CertFile)
 	if ok {
 		sec, err := secret.GetSecretEngine(sType)
@@ -257,16 +269,23 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 			return api.TLSConfig{}, nil
 		}
 
+		if v, ok := secrets["ca"]; ok {
+			CAPEM = v
+		}
+
 		return api.TLSConfig{
-			CertPEM: secrets["cert"],
-			KeyPEM:  secrets["key"],
+			CertPEM:            secrets["cert"],
+			KeyPEM:             secrets["key"],
+			CAPem:              CAPEM,
+			InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 		}, nil
 
 	}
 
 	return api.TLSConfig{
-		CertFile: cfg.TLSConfig.CertFile,
-		KeyFile:  cfg.TLSConfig.KeyFile,
-		CAFile:   cfg.TLSConfig.CAFile,
+		CertFile:           cfg.TLSConfig.CertFile,
+		KeyFile:            cfg.TLSConfig.KeyFile,
+		CAFile:             cfg.TLSConfig.CAFile,
+		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 	}, nil
 }
