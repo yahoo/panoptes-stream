@@ -52,6 +52,8 @@ func TestNewConsul(t *testing.T) {
 }
 
 func TestGetTLSConfig(t *testing.T) {
+	t.Parallel()
+
 	cfg := &consulConfig{}
 	tls, err := getTLSConfig(cfg)
 	assert.Equal(t, nil, err)
@@ -67,4 +69,20 @@ func TestGetTLSConfig(t *testing.T) {
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "/etc/certs/cert.file", tls.CertFile)
 	assert.Equal(t, true, tls.InsecureSkipVerify)
+}
+
+func TestEmptyConfig(t *testing.T) {
+	srv, err := testutil.NewTestServerConfigT(t, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer srv.Stop()
+
+	os.Setenv("PANOPTES_CONFIG_CONSUL_ADDRESS", srv.HTTPAddr)
+
+	config := map[string][]byte{"config/": []byte("")}
+	srv.PopulateKV(t, config)
+
+	_, err = New("-")
+	assert.Equal(t, nil, err)
 }
