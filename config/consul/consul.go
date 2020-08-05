@@ -42,8 +42,8 @@ type consulConfig struct {
 func New(filename string) (config.Config, error) {
 	var (
 		err    error
+		consul = &Consul{informer: make(chan struct{}, 1), global: &config.Global{}}
 		config = &consulConfig{}
-		consul = &Consul{informer: make(chan struct{}, 1)}
 	)
 
 	yaml.Read(filename, config)
