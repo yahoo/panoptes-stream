@@ -43,19 +43,21 @@ type etcdConfig struct {
 func New(filename string) (config.Config, error) {
 	var (
 		err       error
-		tlsConfig = &tls.Config{}
+		tlsConfig *tls.Config
+		etcd      = &etcd{informer: make(chan struct{}, 1), global: &config.Global{}}
 		config    = &etcdConfig{}
-		etcd      = &etcd{informer: make(chan struct{}, 1)}
 	)
 
-	if err := yaml.Read(filename, config); err != nil {
-		return nil, err
-	}
+	yaml.Read(filename, config)
 
 	prefix := "panoptes_config_etcd"
 	err = envconfig.Process(prefix, config)
 	if err != nil {
 		return nil, err
+	}
+
+	if len(config.Endpoints) < 1 {
+		config.Endpoints = []string{"127.0.0.1:2379"}
 	}
 
 	if len(config.Prefix) > 0 {
