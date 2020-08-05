@@ -25,14 +25,37 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	var cfg zap.Config
 	b, err := json.Marshal(lcfg)
 	if err != nil {
-		panic(err)
+		return nil
 	}
 
 	if err := json.Unmarshal(b, &cfg); err != nil {
-		panic(err)
+		return nil
 	}
 
+	cfg.Encoding = "console"
 	cfg.EncoderConfig = zap.NewProductionEncoderConfig()
+	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
+	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
+	cfg.EncoderConfig.EncodeCaller = nil
+	cfg.DisableStacktrace = true
+
+	logger, err := cfg.Build()
+	if err != nil {
+		return nil
+	}
+
+	return logger
+}
+
+func GetDefaultLogger() *zap.Logger {
+	var cfg = zap.Config{
+		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		EncoderConfig:    zap.NewProductionEncoderConfig(),
+		Encoding:         "console",
+		OutputPaths:      []string{"stdout"},
+		ErrorOutputPaths: []string{"stderr"},
+	}
+
 	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.EncoderConfig.EncodeCaller = nil
