@@ -22,6 +22,7 @@ import (
 
 type Etcd struct {
 	id          string
+	prefix      string
 	cfg         config.Config
 	logger      *zap.Logger
 	client      *clientv3.Client
@@ -37,7 +38,13 @@ type etcdConfig struct {
 }
 
 func New(cfg config.Config) (discovery.Discovery, error) {
-	var tlsConfig = &tls.Config{}
+	var (
+		tlsConfig *tls.Config
+		etcd      = &Etcd{
+			cfg:    cfg,
+			logger: cfg.Logger(),
+		}
+	)
 
 	config, err := getConfig(cfg)
 	if err != nil {
@@ -57,9 +64,14 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		}
 	}
 
-	etcd := &Etcd{
-		cfg:    cfg,
-		logger: cfg.Logger(),
+	if len(config.Prefix) > 0 {
+		etcd.prefix = config.Prefix
+	} else {
+		etcd.prefix = "/panoptes/"
+	}
+
+	if len(config.Endpoints) < 1 {
+		config.Endpoints = []string{"127.0.0.1:2379"}
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
@@ -97,7 +109,7 @@ func (e *Etcd) Register() error {
 		ids = append(ids, id)
 
 		if instance.Address == hostname() {
-			if err := e.register(instance.ID, meta); err != nil {
+			if err := e.register(instance.ID, hostname(), meta); err != nil {
 				return err
 			}
 
@@ -110,7 +122,7 @@ func (e *Etcd) Register() error {
 	}
 
 	e.id = getID(ids)
-	e.register(e.id, meta)
+	e.register(e.id, hostname(), meta)
 
 	// TODO check lease id > 0
 
@@ -118,11 +130,14 @@ func (e *Etcd) Register() error {
 
 	return nil
 }
+
 func (e *Etcd) Deregister() error {
 	return nil
 }
+
 func (e *Etcd) Watch(ch chan<- struct{}) {
-	rch := e.client.Watch(context.Background(), e.cfg.Global().Discovery.Prefix, clientv3.WithPrefix())
+	prefix := path.Join(e.prefix, "services")
+	rch := e.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
 			e.logger.Info("etcd watcher triggered", zap.ByteString("key", ev.Kv.Key))
@@ -153,11 +168,11 @@ func (e *Etcd) hearthBeat(leaseID clientv3.LeaseID) {
 	}()
 }
 
-func (e *Etcd) register(id string, meta map[string]string) error {
+func (e *Etcd) register(id, hostname string, meta map[string]string) error {
 	reg := discovery.Instance{
 		ID:      id,
 		Meta:    meta,
-		Address: hostname(),
+		Address: hostname,
 		Status:  "passing",
 	}
 
@@ -175,7 +190,7 @@ func (e *Etcd) register(id string, meta map[string]string) error {
 	b, _ := json.Marshal(&reg)
 
 	ctx, cancel = context.WithTimeout(context.Background(), requestTimeout)
-	prefix := path.Join(e.cfg.Global().Discovery.Prefix, e.id)
+	prefix := path.Join(e.prefix, "services", e.id)
 	_, err = e.client.Put(ctx, prefix, string(b), clientv3.WithLease(resp.ID))
 	cancel()
 	if err != nil {
@@ -188,10 +203,9 @@ func (e *Etcd) register(id string, meta map[string]string) error {
 }
 
 func (e *Etcd) GetInstances() ([]discovery.Instance, error) {
-	requestTimeout, _ := time.ParseDuration("5s")
-
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-	resp, err := e.client.Get(ctx, e.cfg.Global().Discovery.Prefix, clientv3.WithPrefix())
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	prefix := path.Join(e.prefix, "services")
+	resp, err := e.client.Get(ctx, prefix, clientv3.WithPrefix())
 	cancel()
 	if err != nil {
 		return nil, err
@@ -212,26 +226,27 @@ func (e *Etcd) GetInstances() ([]discovery.Instance, error) {
 
 func (e *Etcd) lock() error {
 	var err error
-	e.session, err = concurrency.NewSession(e.client)
+
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	e.session, err = concurrency.NewSession(e.client, concurrency.WithContext(ctx))
 	if err != nil {
 		return err
 	}
-
-	requestTimeout, _ := time.ParseDuration("5s")
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
-
-	e.lockHandler = concurrency.NewMutex(e.session, "/panoptes_global_locki/")
-	e.lockHandler.Lock(ctx)
 	cancel()
 
-	return nil
+	ctx, cancel = context.WithTimeout(context.Background(), time.Second*5)
+	defer cancel()
+	prefix := path.Join(e.prefix, "global_lock")
+	e.lockHandler = concurrency.NewMutex(e.session, prefix)
+	cancel()
+	return e.lockHandler.Lock(ctx)
 }
 
 func (e *Etcd) unlock() error {
 	defer e.session.Close()
 
-	requestTimeout, _ := time.ParseDuration("5s")
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	defer cancel()
 
 	return e.lockHandler.Unlock(ctx)
