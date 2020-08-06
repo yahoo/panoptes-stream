@@ -20,6 +20,7 @@ import (
 // Consul represents the consul
 type Consul struct {
 	id          string
+	prefix      string
 	addr        string
 	cfg         config.Config
 	logger      *zap.Logger
@@ -58,17 +59,25 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
+	if len(config.Prefix) > 0 {
+		prefix = config.Prefix
+	} else {
+		prefix = "/panoptes/"
+	}
+
 	return &Consul{
 		client: client,
 		addr:   config.Address,
 		cfg:    cfg,
+		prefix: prefix,
 		logger: cfg.Logger(),
 	}, nil
 }
 
 // Register registers the panoptes at consul
 func (c *Consul) Register() error {
-	_, err := c.lock("panoptes_global_lock", nil)
+	key := path.Join(c.prefix, "global_lock")[1:]
+	_, err := c.lock(key, nil)
 	if err != nil {
 		return err
 	}
