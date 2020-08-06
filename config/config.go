@@ -86,7 +86,6 @@ type Shard struct {
 type Discovery struct {
 	ConfigFile string `yaml:"configFile"`
 	Service    string
-	Prefix     string
 	Config     interface{}
 }
 
