@@ -26,8 +26,8 @@ func TestStartErrors(t *testing.T) {
 	inChan <- telemetry.ExtDataStore{Output: "test1::test"}
 
 	e := ""
-	for i := 0; i < 3; i++ {
-		time.Sleep(10 * time.Microsecond)
+	for i := 0; i < 5; i++ {
+		time.Sleep(100 * time.Microsecond)
 		if len(cfg.LogOutput.String()) > 0 {
 			e = cfg.LogOutput.Unmarshal()["error"]
 			break
@@ -39,8 +39,8 @@ func TestStartErrors(t *testing.T) {
 	inChan <- telemetry.ExtDataStore{Output: "test1"}
 
 	e = ""
-	for i := 0; i < 3; i++ {
-		time.Sleep(10 * time.Microsecond)
+	for i := 0; i < 5; i++ {
+		time.Sleep(100 * time.Microsecond)
 		if len(cfg.LogOutput.String()) > 0 {
 			e = cfg.LogOutput.Unmarshal()["error"]
 			break
