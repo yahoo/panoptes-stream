@@ -66,6 +66,8 @@ func getCli() (*cmd, error) {
 	}
 
 	app := &cli.App{
+		Name:  "Panoptes Streaming",
+		Usage: "A cloud native distributed streaming network telemetry",
 		Flags: flags,
 		Action: func(c *cli.Context) error {
 			cm = cmd{
