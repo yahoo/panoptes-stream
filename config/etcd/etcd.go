@@ -151,6 +151,13 @@ func (e *etcd) getRemoteConfig() error {
 				if err != nil {
 					return err
 				}
+
+				prefix := "panoptes"
+				err = envconfig.Process(prefix, e.global)
+				if err != nil {
+					return err
+				}
+
 				e.logger = config.GetLogger(e.global.Logger)
 			}
 		}
