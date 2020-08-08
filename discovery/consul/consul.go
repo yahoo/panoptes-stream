@@ -20,17 +20,17 @@ import (
 // Consul represents the consul
 type Consul struct {
 	id          string
-	prefix      string
-	addr        string
 	cfg         config.Config
+	config      *consulConfig
 	logger      *zap.Logger
 	client      *api.Client
 	lockHandler *api.Lock
 }
 
 type consulConfig struct {
-	Address string
-	Prefix  string
+	Address        string
+	Prefix         string
+	HealthcheckURL string
 
 	TLSConfig config.TLSConfig
 }
@@ -59,24 +59,21 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	if len(config.Prefix) > 0 {
-		prefix = config.Prefix
-	} else {
-		prefix = "/panoptes/"
+	if len(config.Prefix) < 1 {
+		config.Prefix = "/panoptes/"
 	}
 
 	return &Consul{
-		client: client,
-		addr:   config.Address,
 		cfg:    cfg,
-		prefix: prefix,
+		config: config,
+		client: client,
 		logger: cfg.Logger(),
 	}, nil
 }
 
 // Register registers the panoptes at consul
 func (c *Consul) Register() error {
-	key := path.Join(c.prefix, "global_lock")[1:]
+	key := path.Join(c.config.Prefix, "global_lock")[1:]
 	_, err := c.lock(key, nil)
 	if err != nil {
 		return err
@@ -135,15 +132,8 @@ func (c *Consul) register(id, hostname string, meta map[string]string) error {
 		Address: hostname,
 	}
 
-	hcEndpoint := path.Join(c.cfg.Global().Status.Addr, "healthcheck")
-	if c.cfg.Global().Status.TLSConfig.Enabled {
-		hcEndpoint = "https://" + hcEndpoint
-	} else {
-		hcEndpoint = "http://" + hcEndpoint
-	}
-
 	reg.Check = &api.AgentServiceCheck{
-		HTTP:     hcEndpoint,
+		HTTP:     c.getHealthcheckURL(),
 		Interval: "10s",
 		Timeout:  "2s",
 	}
@@ -246,7 +236,7 @@ func (c *Consul) Watch(ch chan<- struct{}) {
 		lastIdx = idx
 	}
 
-	if err := wp.Run(c.addr); err != nil {
+	if err := wp.Run(c.config.Address); err != nil {
 		panic(err)
 	}
 }
@@ -297,4 +287,24 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 		CAFile:             cfg.TLSConfig.CAFile,
 		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 	}, nil
+}
+
+func (c *Consul) getHealthcheckURL() string {
+	if len(c.config.HealthcheckURL) > 0 {
+		return c.config.HealthcheckURL
+	}
+
+	// TODO: if status binded to all and there is
+	// one ip address, assign it to hc
+
+	if len(c.cfg.Global().Status.Addr) > 0 {
+		hc := path.Join(c.cfg.Global().Status.Addr, "healthcheck")
+		if c.cfg.Global().Status.TLSConfig.Enabled {
+			return "https://" + hc
+		}
+
+		return "http://" + hc
+	}
+
+	return "http://127.0.0.1:8081"
 }

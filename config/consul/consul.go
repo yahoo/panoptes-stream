@@ -114,7 +114,7 @@ func (c *Consul) getRemoteConfig() error {
 	c.databases = c.databases[:0]
 
 	for _, p := range pairs {
-		// skip folder
+		// skip folder and empty value
 		if len(p.Value) < 1 {
 			continue
 		}
@@ -154,6 +154,13 @@ func (c *Consul) getRemoteConfig() error {
 				if err != nil {
 					return err
 				}
+
+				prefix := "panoptes"
+				err = envconfig.Process(prefix, c.global)
+				if err != nil {
+					return err
+				}
+
 				c.logger = config.GetLogger(c.global.Logger)
 			}
 		}
