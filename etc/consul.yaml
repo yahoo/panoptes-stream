@@ -1,1 +1,4 @@
 address: 127.0.0.1:8500
+TLSConfig:
+  disabled: true
+  keyFile: etc/certs/panoptes.key

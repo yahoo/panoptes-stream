@@ -1,10 +1,9 @@
 devices:
   - host: 192.168.59.3
     port: 50051
-    username: admin
-    password: __vault::secret/creds
+    username: __vault::secret/creds
     sensors:
-      - sensor4
+      - sensor2
 
 sensors:
   sensor1:
@@ -42,8 +41,7 @@ databases:
     configFile: etc/influxdb.yaml
 
 logger:
-  level: "debug"
-  encoding: console
+  level: debug
   outputPaths:
     - stdout
   errorOutputPaths:
@@ -55,3 +53,10 @@ status:
 discovery:
   service: "consul"
   configFile: etc/consul.yaml
+
+deviceOptions:
+  tlsConfig:
+    Enabled: false
+    caFile: ""
+  username: "admin"
+  password: "admin"
