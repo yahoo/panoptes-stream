@@ -65,6 +65,7 @@ func TestSecondNodes(t *testing.T) {
 	c := &Consul{
 		client: client,
 		cfg:    cfg,
+		config: &consulConfig{},
 		logger: cfg.Logger(),
 	}
 
