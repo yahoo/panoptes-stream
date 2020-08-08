@@ -40,7 +40,7 @@ func main() {
 
 	cfg, err := getConfig()
 	if err != nil {
-		fmt.Println(err.Error())
+		fmt.Println(err)
 		os.Exit(1)
 	}
 
@@ -50,26 +50,15 @@ func main() {
 	logger.Info("starting ...")
 
 	// discovery
-	switch cfg.Global().Discovery.Service {
-
-	case "consul":
-		discovery, err = consul.New(cfg)
-		if err != nil {
-			panic(err)
-		}
-	case "etcd":
-		discovery, err = etcd.New(cfg)
-		if err != nil {
-			panic(err)
-		}
-	default:
-		logger.Info("discovery disabled")
+	discovery, err = discoveryRegister(cfg)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 
-	if err := discovery.Register(); err != nil {
-		panic(err)
+	if discovery != nil {
+		defer discovery.Deregister()
 	}
-	defer discovery.Deregister()
 
 	// producer
 	producerRegistrar = producer.NewRegistrar(logger)
@@ -136,4 +125,30 @@ func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, updat
 		d.Update()
 		t.Update()
 	}
+}
+
+func discoveryRegister(cfg config.Config) (discovery.Discovery, error) {
+	var (
+		discovery discovery.Discovery
+		err       error
+	)
+
+	switch cfg.Global().Discovery.Service {
+
+	case "consul":
+		discovery, err = consul.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+	case "etcd":
+		discovery, err = etcd.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+	default:
+		cfg.Logger().Info("discovery disabled")
+		return nil, nil
+	}
+
+	return discovery, discovery.Register()
 }
