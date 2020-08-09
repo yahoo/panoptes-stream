@@ -2,6 +2,8 @@ package console
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 	"strings"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -32,8 +34,22 @@ func (c *Console) Start() {
 			continue
 		}
 
-		v.DS.PrettyPrint(out[1])
+		PrettyPrint(v.DS, out[1])
 	}
+}
+
+func PrettyPrint(ds telemetry.DataStore, fdType string) error {
+	b, err := json.MarshalIndent(ds, "", "  ")
+	if err != nil {
+		return err
+	}
+
+	if fdType == "stdout" {
+		os.Stdout.Write(b)
+	} else {
+		os.Stderr.Write(b)
+	}
+	return nil
 }
 
 func Register(producerRegistrar *producer.Registrar) {

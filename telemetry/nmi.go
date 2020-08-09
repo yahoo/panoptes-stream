@@ -2,8 +2,6 @@ package telemetry
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
@@ -28,17 +26,3 @@ type ExtDataStore struct {
 }
 
 type ExtDSChan chan ExtDataStore
-
-func (ds DataStore) PrettyPrint(fdType string) error {
-	b, err := json.MarshalIndent(ds, "", "  ")
-	if err != nil {
-		return err
-	}
-
-	if fdType == "stdout" {
-		os.Stdout.Write(b)
-	} else {
-		os.Stderr.Write(b)
-	}
-	return nil
-}
