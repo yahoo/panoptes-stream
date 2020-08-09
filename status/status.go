@@ -63,6 +63,11 @@ func (s *Status) Start() {
 
 func (s *Status) start() error {
 	config := s.cfg.Global().Status
+
+	if len(config.Addr) < 1 {
+		config.Addr = ":8081"
+	}
+
 	s.logger.Info("status", zap.String("address", config.Addr), zap.Bool("tls", config.TLSConfig.Enabled))
 
 	http.Handle("/metrics", promhttp.Handler())
