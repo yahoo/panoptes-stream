@@ -121,19 +121,24 @@ func TestNewYaml(t *testing.T) {
 		// producers
 		assert.Equal(t, "kafka1", cfg.Producers()[0].Name)
 		assert.Equal(t, "kafka", cfg.Producers()[0].Service)
-		assert.Equal(t, 100, cfg.Producers()[0].Config["batchSize"])
-		assert.Equal(t, []interface{}{"127.0.0.1:9092"}, cfg.Producers()[0].Config["brokers"])
-		assert.Equal(t, []interface{}{"interface", "bgp"}, cfg.Producers()[0].Config["topics"])
+		assert.NotEqual(t, nil, cfg.Producers()[0].Config)
+
+		config := cfg.Producers()[0].Config.(map[string]interface{})
+		assert.Equal(t, []interface{}{"127.0.0.1:9092"}, config["brokers"])
+		assert.Equal(t, []interface{}{"interface", "bgp"}, config["topics"])
 
 		// databases
 		assert.Equal(t, "influxdb1", cfg.Databases()[0].Name)
 		assert.Equal(t, "influxdb", cfg.Databases()[0].Service)
-		assert.Equal(t, "http://localhost:8086", cfg.Databases()[0].Config["server"].(string))
-		assert.Equal(t, "mydb", cfg.Databases()[0].Config["bucket"].(string))
+		assert.NotEqual(t, nil, cfg.Databases()[0].Config)
+
+		config = cfg.Databases()[0].Config.(map[string]interface{})
+		assert.Equal(t, "mydb", config["bucket"])
+		assert.Equal(t, "http://localhost:8086", config["server"])
 
 		// global
 		assert.Equal(t, "0.0.0.0:8081", cfg.Global().Status.Addr)
-		assert.Equal(t, "debug", cfg.Global().Logger["level"].(string))
+		assert.Equal(t, "debug", cfg.Global().Logger["level"])
 		assert.Equal(t, true, cfg.Global().Shard.Enabled)
 		assert.Equal(t, "juniper", cfg.Global().DeviceOptions.Username)
 
@@ -142,9 +147,10 @@ func TestNewYaml(t *testing.T) {
 }
 
 func TestConfigDevices(t *testing.T) {
+	y := &yaml{}
 	yamlCfg := &yamlConfig{}
 	yml.Unmarshal([]byte(yamlContent), yamlCfg)
-	devices := configDevices(yamlCfg)
+	devices := y.configDevices(yamlCfg)
 	if len(devices) < 1 {
 		t.Error("expect to have a device but return ", len(devices))
 	}

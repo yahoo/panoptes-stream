@@ -43,13 +43,13 @@ type Device struct {
 type Producer struct {
 	Name    string
 	Service string
-	Config  map[string]interface{}
+	Config  interface{}
 }
 
 type Database struct {
 	Name    string
 	Service string
-	Config  map[string]interface{}
+	Config  interface{}
 }
 
 type Global struct {
