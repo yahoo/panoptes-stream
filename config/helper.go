@@ -2,6 +2,7 @@ package config
 
 import (
 	"encoding/json"
+	"fmt"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -67,4 +68,20 @@ func GetDefaultLogger() *zap.Logger {
 	}
 
 	return logger
+}
+
+func DeviceValidation(device Device) error {
+	if len(device.Sensors) < 1 {
+		return fmt.Errorf("device: %s doesn't have any sensors", device.Host)
+	}
+
+	if len(device.Host) < 1 {
+		return fmt.Errorf("device: %s doesn't have host", device.Host)
+	}
+
+	if device.Port < 1 {
+		return fmt.Errorf("device: %s has invalid port", device.Host)
+	}
+
+	return nil
 }

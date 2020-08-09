@@ -186,6 +186,11 @@ func (c *Consul) getRemoteConfig() error {
 			}
 		}
 
+		if err := config.DeviceValidation(device); err != nil {
+			c.logger.Error("consul", zap.Error(err))
+			continue
+		}
+
 		c.devices = append(c.devices, device)
 	}
 

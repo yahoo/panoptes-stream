@@ -183,6 +183,11 @@ func (e *etcd) getRemoteConfig() error {
 			}
 		}
 
+		if err := config.DeviceValidation(device); err != nil {
+			e.logger.Error("etcd", zap.Error(err))
+			continue
+		}
+
 		e.devices = append(e.devices, device)
 	}
 

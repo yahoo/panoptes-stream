@@ -52,20 +52,18 @@ func New(filename string) (config.Config, error) {
 
 	y := &yaml{
 		filename: filename,
-
-		devices:   configDevices(yamlCfg),
-		producers: configProducers(yamlCfg.Producers),
-		databases: configDatabases(yamlCfg.Databases),
-		global:    configGlobal(&yamlCfg.Global),
-
-		logger: config.GetLogger(yamlCfg.Global.Logger),
-
+		logger:   config.GetLogger(yamlCfg.Global.Logger),
 		informer: make(chan struct{}, 1),
 	}
 
 	if y.logger == nil {
 		y.logger = config.GetDefaultLogger()
 	}
+
+	y.devices = y.configDevices(yamlCfg)
+	y.producers = y.configProducers(yamlCfg.Producers)
+	y.databases = y.configDatabases(yamlCfg.Databases)
+	y.global = y.configGlobal(&yamlCfg.Global)
 
 	if !yamlCfg.Global.WatcherDisabled {
 		go func() {
@@ -87,9 +85,9 @@ func (y *yaml) Update() error {
 		return err
 	}
 
-	y.devices = configDevices(yamlCfg)
-	y.producers = configProducers(yamlCfg.Producers)
-	y.databases = configDatabases(yamlCfg.Databases)
+	y.devices = y.configDevices(yamlCfg)
+	y.producers = y.configProducers(yamlCfg.Producers)
+	y.databases = y.configDatabases(yamlCfg.Databases)
 	y.global = &yamlCfg.Global
 
 	return nil
@@ -115,15 +113,15 @@ func (y *yaml) Logger() *zap.Logger {
 	return y.logger
 }
 
-func configDevices(y *yamlConfig) []config.Device {
+func (y *yaml) configDevices(cfg *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
-	for name, sensor := range y.Sensors {
+	for name, sensor := range cfg.Sensors {
 		sensor := sensor
 		sensors[name] = &sensor
 	}
 
 	devices := []config.Device{}
-	for _, d := range y.Devices {
+	for _, d := range cfg.Devices {
 
 		device := config.ConvDeviceTemplate(d)
 		device.Sensors = make(map[string][]*config.Sensor)
@@ -137,6 +135,11 @@ func configDevices(y *yamlConfig) []config.Device {
 			if !sensor.Disabled {
 				device.Sensors[sensor.Service] = append(device.Sensors[sensor.Service], sensor)
 			}
+		}
+
+		if err := config.DeviceValidation(device); err != nil {
+			y.logger.Error("yaml", zap.Error(err))
+			continue
 		}
 
 		devices = append(devices, device)
@@ -159,11 +162,13 @@ func Read(filename string, c interface{}) error {
 	return nil
 }
 
-func configProducers(p map[string]producer) []config.Producer {
-	var producers []config.Producer
-	for name, pConfig := range p {
-		cfg := make(map[string]interface{})
+func (y *yaml) configProducers(p map[string]producer) []config.Producer {
+	var (
+		producers []config.Producer
+		cfg       interface{}
+	)
 
+	for name, pConfig := range p {
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
 			log.Fatal(pConfig.ConfigFile, err)
 		}
@@ -184,11 +189,13 @@ func configProducers(p map[string]producer) []config.Producer {
 	return producers
 }
 
-func configDatabases(p map[string]database) []config.Database {
-	var databases []config.Database
-	for name, pConfig := range p {
-		cfg := make(map[string]interface{})
+func (y *yaml) configDatabases(p map[string]database) []config.Database {
+	var (
+		databases []config.Database
+		cfg       interface{}
+	)
 
+	for name, pConfig := range p {
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
 			log.Fatal(pConfig.ConfigFile, err)
 		}
@@ -203,7 +210,7 @@ func configDatabases(p map[string]database) []config.Database {
 	return databases
 }
 
-func configGlobal(g *config.Global) *config.Global {
+func (y *yaml) configGlobal(g *config.Global) *config.Global {
 	var config = make(map[string]interface{})
 
 	if g.Discovery.ConfigFile != "" {
