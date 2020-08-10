@@ -51,6 +51,7 @@ func (m *MockConfig) Logger() *zap.Logger {
 	})
 
 	cfg.OutputPaths = []string{"memory://"}
+	cfg.DisableStacktrace = true
 	cfg.Encoding = "json"
 
 	logger, err := cfg.Build()
