@@ -121,6 +121,11 @@ func (g *GNMI) worker(ctx context.Context) {
 				continue
 			}
 
+			if err := respValidation(resp); err != nil {
+				g.logger.Error("cisco.gnmi", zap.Error(err))
+				continue
+			}
+
 			if err := g.datastore(buf, resp.Update, systemID); err != nil {
 				g.logger.Error("cisco.gnmi", zap.Error(err))
 			}
@@ -220,6 +225,14 @@ func (g *GNMI) getPrefix(buf *bytes.Buffer, path *gpb.Path) (string, map[string]
 	}
 
 	return prefix, labels, output
+}
+
+func respValidation(resp *gpb.SubscribeResponse_Update) error {
+	if resp.Update.Prefix == nil {
+		return errors.New("invalid cisco response")
+	}
+
+	return nil
 }
 
 func Version() string {
