@@ -76,41 +76,36 @@ func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSCha
 func (t *Telemetry) subscribe(device config.Device) {
 	var ctx context.Context
 
-	if len(device.Sensors) < 1 {
-		return
-	}
-
 	if _, ok := t.devices[device.Host]; ok {
-		t.logger.Error("device already subscribed", zap.String("name", device.Host))
+		t.logger.Error("subscribe", zap.String("msg", "device already has been subscribed"), zap.String("name", device.Host))
 		return
 	}
 
 	t.devices[device.Host] = device
-
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 	t.metrics["devicesCurrent"].Inc()
 
 	for sName, sensors := range device.Sensors {
 		go func(sName string, sensors []*config.Sensor) {
-
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
-			ctx, err := t.setCredentials(ctx, &device)
-			if err != nil {
-				t.logger.Error("subscribe.creds", zap.Error(err))
-			}
-
-			opts, err := t.getDialOpts(&device)
-			if err != nil {
-				t.logger.Error("subscribe.dialOpts", zap.Error(err))
-			}
 
 			for {
+				ctx, err := t.setCredentials(ctx, &device)
+				if err != nil {
+					t.logger.Error("subscribe", zap.String("event", "grpc.credentials"), zap.Error(err))
+				}
+
+				opts, err := t.getDialOpts(&device)
+				if err != nil {
+					t.logger.Error("subscribe", zap.String("event", "grpc.dialopts"), zap.Error(err))
+				}
+
 				conn, err := grpc.DialContext(ctx, addr, opts...)
 				if err != nil {
-					t.logger.Error("subscribe.grpc", zap.Error(err))
+					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.Error(err))
 				} else {
 					t.metrics["gRPConnCurrent"].Inc()
-					t.logger.Info("subscribe.grpc", zap.String("host", device.Host), zap.String("service", sName))
+					t.logger.Info("subscribe", zap.String("event", "grpc.connect"), zap.String("host", device.Host), zap.String("service", sName))
 
 					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
 					nmi := new(t.logger, conn, sensors, t.outChan)
@@ -120,9 +115,9 @@ func (t *Telemetry) subscribe(device config.Device) {
 					t.metrics["gRPConnCurrent"].Dec()
 
 					if err != nil {
-						t.logger.Warn("nmi.start", zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
+						t.logger.Warn("subscribe", zap.String("event", "nmi"), zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
 					} else {
-						t.logger.Warn("subscribe.grpc", zap.String("msg", "terminated"), zap.String("host", device.Host), zap.String("service", sName))
+						t.logger.Warn("subscribe", zap.String("event", "grpc.terminate"), zap.String("host", device.Host), zap.String("service", sName))
 					}
 				}
 
