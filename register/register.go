@@ -7,12 +7,14 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/producer/console"
 	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper"
 )
 
 func Telemetry(telemetryRegistrar *telemetry.Registrar) {
 	juniper.Register(telemetryRegistrar)
+	cisco.Register(telemetryRegistrar)
 	generic.Register(telemetryRegistrar)
 }
 
