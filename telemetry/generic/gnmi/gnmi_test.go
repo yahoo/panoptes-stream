@@ -8,7 +8,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/generic/gnmi/mock"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 )

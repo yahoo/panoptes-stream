@@ -13,8 +13,8 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/jti/mock"
 	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
 )
 
 type Update struct{}
@@ -22,11 +22,11 @@ type Update struct{}
 func (u *Update) Run(subReq *jpb.SubscriptionRequest, subServer jpb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	switch subReq.PathList[0].Path {
 	case "/interfaces/interface[name='lo0']/state/counters/":
-		return subServer.Send(mock.JuniperLo0InterfaceSample())
+		return subServer.Send(mock.JuniperJTILo0InterfaceSample())
 	case "/network-instances/network-instance/protocols/protocol/bgp/":
 		return subServer.Send(mock.JuniperBGPSample())
 	case "/mixes/mix[name='lo0']/state/":
-		return subServer.Send(mock.JuniperMix())
+		return subServer.Send(mock.JuniperJTIMix())
 	}
 	return nil
 }
@@ -74,7 +74,7 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 	j := New(cfg.Logger(), conn, sensors, ch)
 	j.Start(ctx)
 
-	KV := mock.JuniperLo0InterfaceSample().Kv
+	KV := mock.JuniperJTILo0InterfaceSample().Kv
 
 	r := new(bytes.Buffer)
 	w := new(bytes.Buffer)
@@ -136,7 +136,7 @@ func JuniperMix(t *testing.T) {
 	j := New(cfg.Logger(), conn, sensors, ch)
 	j.Start(ctx)
 
-	KV := mock.JuniperMix().Kv
+	KV := mock.JuniperJTIMix().Kv
 
 	r := new(bytes.Buffer)
 	w := new(bytes.Buffer)
