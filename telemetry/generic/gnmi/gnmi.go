@@ -12,7 +12,6 @@ import (
 	"time"
 
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
-	"github.com/openconfig/ygot/ygot"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -39,11 +38,7 @@ type GNMI struct {
 
 // New creates a GNMI.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
-	var (
-		subscriptions = []*gpb.Subscription{}
-		pathOutput    = make(map[string]string)
-		metrics       = make(map[string]status.Metrics)
-	)
+	var metrics = make(map[string]status.Metrics)
 
 	metrics["gRPCDataTotal"] = status.NewCounter("generic_gnmi_grpc_data_total", "")
 	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
@@ -52,30 +47,13 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 
 	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
-	for _, sensor := range sensors {
-		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
-
-		mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
-		sampleInterval := time.Duration(sensor.SampleInterval) * time.Second
-		heartbeatInterval := time.Duration(sensor.HeartbeatInterval) * time.Second
-		subscriptions = append(subscriptions, &gpb.Subscription{
-			Path:              path,
-			Mode:              gpb.SubscriptionMode(mode),
-			SampleInterval:    uint64(sampleInterval.Nanoseconds()),
-			HeartbeatInterval: uint64(heartbeatInterval.Nanoseconds()),
-			SuppressRedundant: sensor.SuppressRedundant,
-		})
-
-		pathOutput[sanitizePath(sensor.Path)] = sensor.Output
-	}
-
 	return &GNMI{
 		logger:        logger,
 		conn:          conn,
-		subscriptions: subscriptions,
+		subscriptions: telemetry.GetGNMISubscriptions(sensors),
+		pathOutput:    telemetry.GetPathOutput(sensors),
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
-		pathOutput:    pathOutput,
 		metrics:       metrics,
 	}
 }
