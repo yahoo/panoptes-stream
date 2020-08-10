@@ -112,6 +112,75 @@ func AristaBGPUpdate() *gnmi.Notification {
 	}
 }
 
+func CiscoXRInterface() *gnmi.Notification {
+	return &gnmi.Notification{
+		Timestamp: 1596928627212000000,
+		Prefix: &gnmi.Path{
+			Origin: "openconfig",
+			Elem: []*gnmi.PathElem{
+				{Name: "interfaces"},
+				{Name: "interface", Key: map[string]string{"name": "GigabitEthernet0/0/0/0"}},
+				{Name: "state"},
+				{Name: "counters"},
+			},
+		},
+		Update: []*gnmi.Update{
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-octets"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 102387}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-octets"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 2642}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-multicast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 65918}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-broadcast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 49283}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-multicast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 312}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-broadcast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 9813}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-unknown-protos"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 76}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-errors"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 2}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-errors"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 1}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-unicast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 952612}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "in-discards"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 1}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-unicast-pkts"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 718252}},
+			},
+			{
+				Path: &gnmi.Path{Elem: []*gnmi.PathElem{{Name: "out-discards"}}},
+				Val:  &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 2}},
+			},
+		},
+	}
+}
+
 func JuniperUpdate() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595951912880990837,
