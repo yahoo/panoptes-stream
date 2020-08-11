@@ -138,3 +138,18 @@ func SanitizePath(path string) string {
 
 	return path
 }
+
+func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[string]string {
+	if len(keyLabels) > 0 {
+		for k, v := range prefixLabels {
+			if _, ok := keyLabels[k]; ok {
+				keyLabels[prefix+k] = v
+			} else {
+				keyLabels[k] = v
+			}
+		}
+		return keyLabels
+	}
+
+	return prefixLabels
+}

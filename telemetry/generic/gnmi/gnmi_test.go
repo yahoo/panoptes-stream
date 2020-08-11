@@ -36,7 +36,7 @@ func TestAristaSimplePath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/interfaces/interface/state/counters",
+		Path:    "/interfaces/interface/state/counters/",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
@@ -78,7 +78,7 @@ func TestAristaBGPSimplePath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/network-instances/network-instance",
+		Path:    "/network-instances/network-instance/",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
@@ -123,7 +123,7 @@ func TestAristaKVPath(t *testing.T) {
 	sensors = append(sensors, &config.Sensor{
 		Service: "generic.gnmi",
 		Output:  "console::stdout",
-		Path:    "/interfaces/interface[name=Ethernet1]/state/counters",
+		Path:    "/interfaces/interface[name=Ethernet1]/state/counters/",
 	})
 
 	g := New(cfg.Logger(), conn, sensors, ch)
@@ -131,13 +131,13 @@ func TestAristaKVPath(t *testing.T) {
 
 	resp := <-ch
 
-	assert.Equal(t, resp.DS["prefix"].(string), sensors[0].Path)
-	assert.Equal(t, resp.DS["system_id"].(string), "127.0.0.1")
-	assert.Equal(t, resp.DS["timestamp"].(int64), int64(1595363593437180059))
-	assert.Equal(t, resp.DS["labels"].(map[string]string)["name"], "Ethernet1")
-	assert.Equal(t, resp.DS["key"].(string), "out-octets")
-	assert.Equal(t, resp.DS["value"].(int64), int64(50302030597))
-	assert.Equal(t, resp.Output, "console::stdout", "unexpected result")
+	assert.Equal(t, sensors[0].Path, resp.DS["prefix"].(string))
+	assert.Equal(t, "127.0.0.1", resp.DS["system_id"].(string))
+	assert.Equal(t, int64(1595363593437180059), resp.DS["timestamp"].(int64))
+	assert.Equal(t, "Ethernet1", resp.DS["labels"].(map[string]string)["name"])
+	assert.Equal(t, "out-octets", resp.DS["key"].(string))
+	assert.Equal(t, int64(50302030597), resp.DS["value"].(int64))
+	assert.Equal(t, "console::stdout", resp.Output)
 
 	assert.Equal(t, cfg.LogOutput.String(), "", "unexpected logging")
 }

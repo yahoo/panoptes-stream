@@ -183,18 +183,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, 
 			}
 		}
 
-		if len(keyLabels) > 0 {
-			for k, v := range prefixLabels {
-				if _, ok := keyLabels[k]; ok {
-					keyLabels[prefix+k] = v
-				} else {
-					keyLabels[k] = v
-				}
-			}
-			label = keyLabels
-		} else {
-			label = prefixLabels
-		}
+		label = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
 
 		dataStore := telemetry.DataStore{
 			"prefix":    prefix,
@@ -233,6 +222,8 @@ func getPrefix(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]stri
 			labels[key] = value
 		}
 	}
+
+	buf.WriteRune('/')
 
 	return buf.String(), labels
 }

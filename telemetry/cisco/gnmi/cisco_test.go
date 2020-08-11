@@ -19,7 +19,7 @@ func TestGetPrefix(t *testing.T) {
 	md := mock.CiscoXRInterface()
 	prefix, labels, output := g.getPrefix(buf, md.Prefix)
 
-	assert.Equal(t, "/interfaces/interface/state/counters", prefix)
+	assert.Equal(t, "/interfaces/interface/state/counters/", prefix)
 	assert.Equal(t, "out::out", output)
 	assert.Equal(t, map[string]string{"name": "GigabitEthernet0/0/0/0"}, labels)
 }
@@ -33,7 +33,7 @@ func TestGetPrefixWithKey(t *testing.T) {
 	md := mock.CiscoXRInterface()
 	prefix, labels, output := g.getPrefix(buf, md.Prefix)
 
-	assert.Equal(t, "/interfaces/interface/state/counters", prefix)
+	assert.Equal(t, "/interfaces/interface/state/counters/", prefix)
 	assert.Equal(t, "out::out", output)
 	assert.Equal(t, map[string]string{"name": "GigabitEthernet0/0/0/0"}, labels)
 }

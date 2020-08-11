@@ -157,18 +157,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, systemID string
 			continue
 		}
 
-		if len(keyLabels) > 0 {
-			for k, v := range prefixLabels {
-				if _, ok := keyLabels[k]; ok {
-					keyLabels[prefix+k] = v
-				} else {
-					keyLabels[k] = v
-				}
-			}
-			label = keyLabels
-		} else {
-			label = prefixLabels
-		}
+		label = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
 
 		dataStore := telemetry.DataStore{
 			"prefix":    prefix,
@@ -212,11 +201,13 @@ func (g *GNMI) getPrefix(buf *bytes.Buffer, path *gpb.Path) (string, map[string]
 			}
 		}
 
+		buf.WriteRune('/')
+
 		if len(prefix) < 1 {
 			prefix = buf.String()
 		}
 
-		if v, ok := g.pathOutput[buf.String()+"/"]; ok {
+		if v, ok := g.pathOutput[buf.String()]; ok {
 			output = v
 			break
 		}
