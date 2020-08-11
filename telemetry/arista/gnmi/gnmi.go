@@ -40,10 +40,10 @@ type GNMI struct {
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var metrics = make(map[string]status.Metrics)
 
-	metrics["gRPCDataTotal"] = status.NewCounter("generic_gnmi_grpc_data_total", "")
-	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
-	metrics["errorsTotal"] = status.NewCounter("generic_gnmi_errors_total", "")
-	metrics["processNSecond"] = status.NewGauge("generic_gnmi_process_nanosecond", "")
+	metrics["gRPCDataTotal"] = status.NewCounter("arista_gnmi_grpc_data_total", "")
+	metrics["dropsTotal"] = status.NewCounter("arista_gnmi_drops_total", "")
+	metrics["errorsTotal"] = status.NewCounter("arista_gnmi_errors_total", "")
+	metrics["processNSecond"] = status.NewGauge("arista_gnmi_process_nanosecond", "")
 
 	status.Register(status.Labels{"host": conn.Target()}, metrics)
 
@@ -127,7 +127,7 @@ func (g *GNMI) worker(ctx context.Context) {
 			for _, update := range resp.Update.Update {
 				err := g.datastore(buf, resp.Update, update, systemID)
 				if err != nil {
-					g.logger.Error("generic.gnmi", zap.Error(err))
+					g.logger.Error("arista.gnmi", zap.Error(err))
 				}
 			}
 

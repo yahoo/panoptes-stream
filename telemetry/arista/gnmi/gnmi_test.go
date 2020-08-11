@@ -34,7 +34,7 @@ func TestAristaSimplePath(t *testing.T) {
 	}
 
 	sensors = append(sensors, &config.Sensor{
-		Service: "generic.gnmi",
+		Service: "arista.gnmi",
 		Output:  "console::stdout",
 		Path:    "/interfaces/interface/state/counters",
 	})
@@ -76,7 +76,7 @@ func TestAristaBGPSimplePath(t *testing.T) {
 	}
 
 	sensors = append(sensors, &config.Sensor{
-		Service: "generic.gnmi",
+		Service: "arista.gnmi",
 		Output:  "console::stdout",
 		Path:    "/network-instances/network-instance",
 	})
@@ -121,7 +121,7 @@ func TestAristaKVPath(t *testing.T) {
 	}
 
 	sensors = append(sensors, &config.Sensor{
-		Service: "generic.gnmi",
+		Service: "arista.gnmi",
 		Output:  "console::stdout",
 		Path:    "/interfaces/interface[name=Ethernet1]/state/counters",
 	})
@@ -149,7 +149,7 @@ func BenchmarkDS(b *testing.B) {
 		metrics = make(map[string]status.Metrics)
 	)
 
-	metrics["dropsTotal"] = status.NewCounter("generic_gnmi_drops_total", "")
+	metrics["dropsTotal"] = status.NewCounter("arista_gnmi_drops_total", "")
 
 	g := GNMI{
 		logger:  cfg.Logger(),
