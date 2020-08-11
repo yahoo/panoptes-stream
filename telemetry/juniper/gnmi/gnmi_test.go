@@ -79,7 +79,7 @@ func TestJuniperCountersMock(t *testing.T) {
 		case resp := <-ch:
 			r[resp.DS["key"].(string)] = resp
 
-			assert.Equal(t, "/interfaces/interface/", resp.DS["prefix"].(string))
+			assert.Equal(t, "/interfaces/interface", resp.DS["prefix"].(string))
 			assert.Equal(t, "127.0.0.1", resp.DS["system_id"].(string))
 			assert.Equal(t, int64(1595951912880990837), resp.DS["timestamp"].(int64))
 			assert.Equal(t, "lo0", resp.DS["labels"].(map[string]string)["name"])

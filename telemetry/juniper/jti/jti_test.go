@@ -82,6 +82,9 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 	for _, metric := range KV {
 		if metric.Key == "__prefix__" {
 			labels, prefix = getLabels(r, w, getValue(metric).(string))
+			if len(prefix) > 1 {
+				prefix = prefix[:len(prefix)-1]
+			}
 			continue
 		}
 
@@ -94,7 +97,7 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 			assert.Equal(t, metric.Key, resp.DS["key"])
 			assert.Equal(t, getValue(metric), resp.DS["value"])
 			assert.Equal(t, prefix, resp.DS["prefix"])
-			assert.Equal(t, "/interfaces/interface/", resp.DS["prefix"])
+			assert.Equal(t, "/interfaces/interface", resp.DS["prefix"])
 			assert.Equal(t, "core1.lax", resp.DS["system_id"])
 			assert.Equal(t, uint64(1596067993610)*1000000, resp.DS["timestamp"])
 			assert.Equal(t, labels, resp.DS["labels"])
@@ -144,6 +147,9 @@ func JuniperMix(t *testing.T) {
 	for _, metric := range KV {
 		if metric.Key == "__prefix__" {
 			labels, prefix = getLabels(r, w, getValue(metric).(string))
+			if len(prefix) > 1 {
+				prefix = prefix[:len(prefix)-1]
+			}
 			continue
 		}
 
@@ -216,6 +222,9 @@ func JuniperBGPSample(t *testing.T) {
 	for _, metric := range KV {
 		if metric.Key == "__prefix__" {
 			labels, prefix = getLabels(r, w, getValue(metric).(string))
+			if len(prefix) > 1 {
+				prefix = prefix[:len(prefix)-1]
+			}
 			continue
 		}
 

@@ -143,7 +143,7 @@ func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[s
 	if len(keyLabels) > 0 {
 		for k, v := range prefixLabels {
 			if _, ok := keyLabels[k]; ok {
-				keyLabels[prefix+k] = v
+				keyLabels[prefix+"/"+k] = v
 			} else {
 				keyLabels[k] = v
 			}

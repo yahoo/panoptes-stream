@@ -163,6 +163,9 @@ func (j *JTI) datastore(rBuf, wBuf *bytes.Buffer, data *jpb.OpenConfigData, outp
 
 		if v.Key == "__prefix__" {
 			prefixLabels, prefix = getLabels(rBuf, wBuf, v.GetStrValue())
+			if len(prefix) > 1 {
+				prefix = prefix[:len(prefix)-1]
+			}
 			continue
 		}
 
@@ -172,18 +175,7 @@ func (j *JTI) datastore(rBuf, wBuf *bytes.Buffer, data *jpb.OpenConfigData, outp
 		}
 
 		keyLabels, key := getLabels(rBuf, wBuf, v.Key)
-		if len(keyLabels) > 0 {
-			for k, v := range prefixLabels {
-				if _, ok := keyLabels[k]; ok {
-					keyLabels[prefix+k] = v
-				} else {
-					keyLabels[k] = v
-				}
-			}
-			labels = keyLabels
-		} else {
-			labels = prefixLabels
-		}
+		labels = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
 
 		ds = telemetry.DataStore{
 			"prefix":    prefix,

@@ -181,7 +181,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, update *gpb.Upd
 				p, ok := g.pathOutput[buf.String()+"/"]
 				if ok {
 					output = p
-					prefix = buf.String() + "/"
+					prefix = buf.String()
 					buf.Reset()
 				}
 			}

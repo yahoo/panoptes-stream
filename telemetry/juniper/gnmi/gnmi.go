@@ -144,7 +144,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, 
 	var (
 		path, output string
 		timestamp    interface{}
-		label        map[string]string
+		labels       map[string]string
 		ok           bool
 	)
 
@@ -183,11 +183,11 @@ func (g *GNMI) datastore(buf *bytes.Buffer, resp *gpb.SubscribeResponse_Update, 
 			}
 		}
 
-		label = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
+		labels = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
 
 		dataStore := telemetry.DataStore{
 			"prefix":    prefix,
-			"labels":    label,
+			"labels":    labels,
 			"timestamp": timestamp,
 			"system_id": systemID,
 			"key":       key,
@@ -222,8 +222,6 @@ func getPrefix(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]stri
 			labels[key] = value
 		}
 	}
-
-	buf.WriteRune('/')
 
 	return buf.String(), labels
 }
