@@ -56,8 +56,8 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	}
 
 	for _, sensor := range sensors {
-		m.subscriptions = append(m.subscriptions, sensor.SubscriptionId)
-		m.pathOutput[sensor.SubscriptionId] = sensor.Output
+		m.subscriptions = append(m.subscriptions, sensor.SubscriptionID)
+		m.pathOutput[sensor.SubscriptionID] = sensor.Output
 	}
 
 	m.systemID, _, _ = net.SplitHostPort(m.conn.Target())

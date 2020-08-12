@@ -32,6 +32,8 @@ type Sensor struct {
 	SampleInterval    int  `yaml:"sampleInterval"`
 	HeartbeatInterval int  `yaml:"heartbeatInterval"`
 	SuppressRedundant bool `yaml:"suppressRedundant"`
+
+	SubscriptionID string `yaml:"subscriptionID"`
 }
 
 type Device struct {
