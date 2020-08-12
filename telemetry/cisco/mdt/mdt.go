@@ -8,14 +8,15 @@ import (
 	"os"
 	"strconv"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"github.com/golang/protobuf/proto"
 	mdtGRPC "github.com/ios-xr/telemetry-go-collector/mdt_grpc_dialin"
 	mdt "github.com/ios-xr/telemetry-go-collector/telemetry"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
 const (
@@ -100,6 +101,7 @@ func (m *MDT) Start(ctx context.Context) error {
 }
 
 func (m *MDT) worker(ctx context.Context) {
+	var buf = new(bytes.Buffer)
 	for {
 		select {
 		case d, ok := <-m.dataChan:
@@ -107,7 +109,7 @@ func (m *MDT) worker(ctx context.Context) {
 				return
 			}
 
-			if err := m.datastore(d); err != nil {
+			if err := m.datastore(buf, d); err != nil {
 				m.logger.Error("cisco.mdt", zap.Error(err))
 			}
 
@@ -117,21 +119,20 @@ func (m *MDT) worker(ctx context.Context) {
 	}
 }
 
-func (m *MDT) datastore(data []byte) error {
+func (m *MDT) datastore(buf *bytes.Buffer, data []byte) error {
 	tm := &mdt.Telemetry{}
 	err := proto.Unmarshal(data, tm)
 	if err != nil {
 		return err
 	}
 
-	m.handler(tm)
+	m.handler(buf, tm)
 
 	return nil
 }
 
-func (m *MDT) handler(tm *mdt.Telemetry) {
+func (m *MDT) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 	var (
-		buf            = new(bytes.Buffer)
 		prefix, output string
 		timestamp      uint64
 		ok             bool
