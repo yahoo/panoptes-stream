@@ -122,20 +122,12 @@ func MDTInterfaceII() *telemetry.Telemetry {
 										Name: "counters",
 										Fields: []*telemetry.TelemetryField{
 											{
-												Name:        "in-octed",
+												Name:        "in-octets",
 												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 1023},
 											},
 											{
 												Name:        "out-octets",
 												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 872},
-											},
-											{
-												Name:        "multicast-pkts",
-												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 7},
-											},
-											{
-												Name:        "in-broadcast-pkts",
-												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 5},
 											},
 										},
 									},
@@ -167,20 +159,12 @@ func MDTInterfaceII() *telemetry.Telemetry {
 										Name: "counters",
 										Fields: []*telemetry.TelemetryField{
 											{
-												Name:        "in-octed",
+												Name:        "in-octets",
 												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 1223},
 											},
 											{
 												Name:        "out-octets",
 												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 8172},
-											},
-											{
-												Name:        "multicast-pkts",
-												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 17},
-											},
-											{
-												Name:        "in-broadcast-pkts",
-												ValueByType: &telemetry.TelemetryField_Uint64Value{Uint64Value: 15},
 											},
 										},
 									},
