@@ -24,6 +24,8 @@ const (
 	json
 )
 
+var mdtVersion = "0.0.1"
+
 type MDT struct {
 	conn          *grpc.ClientConn
 	subscriptions []string
@@ -56,8 +58,8 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	}
 
 	for _, sensor := range sensors {
-		m.subscriptions = append(m.subscriptions, sensor.SubscriptionID)
-		m.pathOutput[sensor.SubscriptionID] = sensor.Output
+		m.subscriptions = append(m.subscriptions, sensor.Subscription)
+		m.pathOutput[sensor.Subscription] = sensor.Output
 	}
 
 	m.systemID, _, _ = net.SplitHostPort(m.conn.Target())
@@ -68,9 +70,8 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 func (m *MDT) Start(ctx context.Context) error {
 
 	subsArgs := &mdtGRPC.CreateSubsArgs{
-		ReqId:  int64(os.Getpid()),
-		Encode: gpbkv,
-		//Subidstr: "Sub3",
+		ReqId:         int64(os.Getpid()),
+		Encode:        gpbkv,
 		Subscriptions: m.subscriptions,
 		Qos:           &mdtGRPC.QOSMarking{Marking: 10},
 	}
@@ -78,7 +79,7 @@ func (m *MDT) Start(ctx context.Context) error {
 	client := mdtGRPC.NewGRPCConfigOperClient(m.conn)
 	stream, err := client.CreateSubs(ctx, subsArgs)
 	if err != nil {
-		m.logger.Error("cisco.mdt", zap.Error(err))
+		return err
 	}
 
 	for i := 0; i < 1; i++ {
@@ -286,4 +287,8 @@ func getKeyValue(field *mdt.TelemetryField) interface{} {
 	}
 
 	return nil
+}
+
+func Version() string {
+	return mdtVersion
 }
