@@ -49,6 +49,11 @@ type DeviceFilterOpts struct {
 
 type DeviceFilterOpt func(config.Device) bool
 
+type mdtCredentials struct {
+	username string
+	password string
+}
+
 // New creates a new telemetry
 func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSChan) *Telemetry {
 	var metrics = make(map[string]status.Metrics)
@@ -85,8 +90,8 @@ func (t *Telemetry) subscribe(device config.Device) {
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 	t.metrics["devicesCurrent"].Inc()
 
-	for sName, sensors := range device.Sensors {
-		go func(sName string, sensors []*config.Sensor) {
+	for service, sensors := range device.Sensors {
+		go func(service string, sensors []*config.Sensor) {
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
 
 			for {
@@ -95,7 +100,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 					t.logger.Error("subscribe", zap.String("event", "grpc.credentials"), zap.Error(err))
 				}
 
-				opts, err := t.getDialOpts(&device)
+				opts, err := t.getDialOpts(&device, service)
 				if err != nil {
 					t.logger.Error("subscribe", zap.String("event", "grpc.dialopts"), zap.Error(err))
 				}
@@ -105,9 +110,9 @@ func (t *Telemetry) subscribe(device config.Device) {
 					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.Error(err))
 				} else {
 					t.metrics["gRPConnCurrent"].Inc()
-					t.logger.Info("subscribe", zap.String("event", "grpc.connect"), zap.String("host", device.Host), zap.String("service", sName))
+					t.logger.Info("subscribe", zap.String("event", "grpc.connect"), zap.String("host", device.Host), zap.String("service", service))
 
-					new, _ := t.telemetryRegistrar.GetNMIFactory(sName)
+					new, _ := t.telemetryRegistrar.GetNMIFactory(service)
 					nmi := new(t.logger, conn, sensors, t.outChan)
 					err = nmi.Start(ctx)
 
@@ -115,9 +120,9 @@ func (t *Telemetry) subscribe(device config.Device) {
 					t.metrics["gRPConnCurrent"].Dec()
 
 					if err != nil {
-						t.logger.Warn("subscribe", zap.String("event", "nmi"), zap.Error(err), zap.String("host", device.Host), zap.String("service", sName))
+						t.logger.Warn("subscribe", zap.String("event", "nmi"), zap.Error(err), zap.String("host", device.Host), zap.String("service", service))
 					} else {
-						t.logger.Warn("subscribe", zap.String("event", "grpc.terminate"), zap.String("host", device.Host), zap.String("service", sName))
+						t.logger.Warn("subscribe", zap.String("event", "grpc.terminate"), zap.String("host", device.Host), zap.String("service", service))
 					}
 				}
 
@@ -129,7 +134,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 					return
 				}
 			}
-		}(sName, sensors)
+		}(service, sensors)
 	}
 }
 
@@ -244,7 +249,7 @@ func (d *DeviceFilterOpts) getOpts() []DeviceFilterOpt {
 	return opts
 }
 
-func (t *Telemetry) getDialOpts(device *config.Device) ([]grpc.DialOption, error) {
+func (t *Telemetry) getDialOpts(device *config.Device, service string) ([]grpc.DialOption, error) {
 	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
@@ -259,6 +264,11 @@ func (t *Telemetry) getDialOpts(device *config.Device) ([]grpc.DialOption, error
 
 	} else {
 		opts = append(opts, grpc.WithInsecure())
+	}
+
+	if service == "cisco.mdt" {
+		creds := mdtCredentials{username: device.Username, password: device.Password}
+		opts = append(opts, grpc.WithPerRPCCredentials(creds))
 	}
 
 	return opts, nil
@@ -326,4 +336,15 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 	ctx = metadata.AppendToOutgoingContext(ctx, "username", username, "password", password)
 
 	return ctx, nil
+}
+
+func (m mdtCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {
+	return map[string]string{
+		"username": m.username,
+		"password": m.password,
+	}, nil
+}
+
+func (mdtCredentials) RequireTransportSecurity() bool {
+	return false
 }
