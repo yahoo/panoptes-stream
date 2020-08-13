@@ -15,6 +15,7 @@ import (
 type Metrics interface {
 	Dec()
 	Inc()
+	Get() uint64
 	Set(uint64)
 }
 
@@ -173,6 +174,10 @@ func (m *MetricCounter) Set(i uint64) {
 	// doesn't support
 }
 
+func (m *MetricCounter) Get() uint64 {
+	return atomic.LoadUint64(&m.Value)
+}
+
 func (m *MetricGauge) Inc() {
 	atomic.AddUint64(&m.Value, 1)
 }
@@ -183,4 +188,8 @@ func (m *MetricGauge) Dec() {
 
 func (m *MetricGauge) Set(i uint64) {
 	atomic.StoreUint64(&m.Value, i)
+}
+
+func (m *MetricGauge) Get() uint64 {
+	return atomic.LoadUint64(&m.Value)
 }
