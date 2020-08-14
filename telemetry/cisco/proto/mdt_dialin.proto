@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package IOSXRExtensibleManagabilityService;
+
+option go_package = ".;proto";
+
+service gRPCConfigOper {
+    rpc CreateSubs(SubscribeRequest) returns(stream SubscribeResponse) {};
+}
+
+message SubscribeRequest {
+     int64 RequestId = 1;
+     int64 encode = 2;
+     string subcriptionId = 3;
+     QOSMarking qos = 4;  
+     repeated string Subscriptions = 5;
+}
+
+message SubscribeResponse {
+    int64 RequestId = 1;
+    bytes data = 2;
+    string errors = 3;
+}
+
+message QOSMarking {
+  uint32 marking = 1;
+}
+
