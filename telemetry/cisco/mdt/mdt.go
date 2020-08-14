@@ -3,14 +3,14 @@ package mdt
 import (
 	"bytes"
 	"context"
-	"io"
 	"net"
 	"os"
 	"strconv"
 
 	mdt "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
-	mdtGRPC "github.com/ios-xr/telemetry-go-collector/mdt_grpc_dialin"
+
+	mdtGRPC "git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -70,8 +70,8 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 
 func (m *MDT) Start(ctx context.Context) error {
 
-	subsArgs := &mdtGRPC.CreateSubsArgs{
-		ReqId:         int64(os.Getpid()),
+	subsArgs := &mdtGRPC.SubscribeRequest{
+		RequestId:     int64(os.Getpid()),
 		Encode:        gpbkv,
 		Subscriptions: m.subscriptions,
 		Qos:           &mdtGRPC.QOSMarking{Marking: 10},
@@ -89,15 +89,19 @@ func (m *MDT) Start(ctx context.Context) error {
 
 	for {
 		reply, err := stream.Recv()
-		if err == io.EOF {
-			m.logger.Error("cisco.mdt", zap.Error(err))
-			break
+		// TODO handlei error io.EOF
+		if err != nil {
+			return err
+		}
+
+		if reply == nil {
+			m.logger.Error("cisco.mdt", zap.String("msg", "nil data"))
+			continue
 		}
 
 		m.dataChan <- reply.Data
 	}
 
-	return nil
 }
 
 func (m *MDT) worker(ctx context.Context) {
