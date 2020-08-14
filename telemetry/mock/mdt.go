@@ -1,6 +1,6 @@
 package mock
 
-import "github.com/ios-xr/telemetry-go-collector/telemetry"
+import telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 
 func MDTInterface() *telemetry.Telemetry {
 	return &telemetry.Telemetry{

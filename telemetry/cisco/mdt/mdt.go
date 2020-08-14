@@ -8,9 +8,9 @@ import (
 	"os"
 	"strconv"
 
+	mdt "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	mdtGRPC "github.com/ios-xr/telemetry-go-collector/mdt_grpc_dialin"
-	mdt "github.com/ios-xr/telemetry-go-collector/telemetry"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
@@ -54,7 +54,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		conn:       conn,
 		outChan:    outChan,
 		logger:     logger,
-		dataChan:   make(chan []byte, 100),
+		dataChan:   make(chan []byte, 1000),
 		pathOutput: make(map[string]string),
 	}
 
@@ -174,7 +174,7 @@ func (m *MDT) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 
 		kv := make(map[string]interface{})
 		for _, subFiled := range content.Fields {
-			m.getKey(buf, kv, subFiled)
+			getKey(buf, kv, subFiled)
 		}
 
 		for key, value := range kv {
@@ -202,7 +202,7 @@ func (m *MDT) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 	}
 }
 
-func (m *MDT) getKey(buf *bytes.Buffer, kv map[string]interface{}, field *mdt.TelemetryField) {
+func getKey(buf *bytes.Buffer, kv map[string]interface{}, field *mdt.TelemetryField) {
 	// TODO: NX-OS
 	if field.Fields != nil {
 		if buf.Len() > 0 {
@@ -211,7 +211,7 @@ func (m *MDT) getKey(buf *bytes.Buffer, kv map[string]interface{}, field *mdt.Te
 		buf.WriteString(field.Name)
 
 		for _, subFiled := range field.Fields {
-			m.getKey(buf, kv, subFiled)
+			getKey(buf, kv, subFiled)
 		}
 
 	} else {
