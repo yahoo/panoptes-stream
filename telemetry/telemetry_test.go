@@ -33,3 +33,50 @@ func TestUnsubscribe(t *testing.T) {
 
 	assert.Equal(t, uint64(0), tm.metrics["devicesCurrent"].Get())
 }
+
+func TestGetDevices(t *testing.T) {
+	devices := []config.Device{
+		{
+			DeviceConfig: config.DeviceConfig{
+				Host: "core1.lax",
+			},
+		},
+		{
+			DeviceConfig: config.DeviceConfig{
+				Host: "core1.lhr",
+			},
+		},
+	}
+
+	cfg := &config.MockConfig{MDevices: devices}
+	tm := Telemetry{
+		cfg:              cfg,
+		deviceFilterOpts: DeviceFilterOpts{filterOpts: make(map[string]DeviceFilterOpt)},
+	}
+
+	devicesActual := tm.GetDevices()
+	assert.Equal(t, devices, devicesActual)
+
+	tm = Telemetry{
+		cfg:              cfg,
+		deviceFilterOpts: DeviceFilterOpts{filterOpts: make(map[string]DeviceFilterOpt)},
+	}
+
+	tm.AddFilterOpt("filter1", func(d config.Device) bool {
+		if d.Host == "core1.lax" {
+			return false
+		}
+
+		return true
+	})
+
+	devicesActual = tm.GetDevices()
+	assert.Len(t, devicesActual, 1)
+	assert.Equal(t, "core1.lhr", devicesActual[0].Host)
+
+	tm.DelFilterOpt("filter1")
+	devicesActual = tm.GetDevices()
+	assert.Len(t, devicesActual, 2)
+	assert.Equal(t, devices, devicesActual)
+
+}
