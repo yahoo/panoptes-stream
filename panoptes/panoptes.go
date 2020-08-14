@@ -75,7 +75,6 @@ func main() {
 
 	// start demux
 	d := demux.New(ctx, cfg, producerRegistrar, databaseRegistrar, outChan)
-	d.Init()
 	d.Start()
 
 	// start telemetry
