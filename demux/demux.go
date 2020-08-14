@@ -47,7 +47,7 @@ func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *dat
 	}
 }
 
-func (d *Demux) Init() error {
+func (d *Demux) init() error {
 	// producer
 	for _, producer := range d.cfg.Producers() {
 		err := d.subscribeProducer(producer)
@@ -68,6 +68,8 @@ func (d *Demux) Init() error {
 }
 
 func (d *Demux) Start() {
+	d.init()
+
 	go func() {
 		d.start()
 	}()
