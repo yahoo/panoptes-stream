@@ -18,6 +18,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/register"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/dialout"
 	"go.uber.org/zap"
 )
 
@@ -82,6 +83,10 @@ func main() {
 	if !cfg.Global().Shard.Enabled {
 		t.Start()
 	}
+
+	// start telemetry dialout
+	do := dialout.New(ctx, cfg, outChan)
+	do.Start()
 
 	// status
 	if !cfg.Global().Status.Disabled {

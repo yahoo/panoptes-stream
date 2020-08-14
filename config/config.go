@@ -62,6 +62,7 @@ type Global struct {
 	WatcherDisabled bool          `yaml:"watcherDisabled"`
 	Version         string
 	Logger          map[string]interface{}
+	Dialout         Dialout
 }
 
 type TLSConfig struct {
@@ -95,4 +96,14 @@ type DeviceOptions struct {
 	TLSConfig TLSConfig `yaml:"tlsConfig"`
 	Username  string
 	Password  string
+}
+
+type Dialout struct {
+	TLSConfig     TLSConfig `yaml:"tlsConfig"`
+	Services      map[string]DialoutService
+	DefaultOutput string
+}
+
+type DialoutService struct {
+	Addr string
 }
