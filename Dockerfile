@@ -11,6 +11,3 @@ FROM alpine:latest
 COPY --from=builder /go/src/git.vzbuilders.com/marshadrad/panoptes/panoptes/panoptes /usr/bin/
 EXPOSE 8081
 ENTRYPOINT ["/usr/bin/panoptes"]
-
-
-# docker run -v $PWD/etc/:/etc panoptes -config /etc/config.yaml
