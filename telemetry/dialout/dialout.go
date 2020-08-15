@@ -18,7 +18,7 @@ func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *D
 	return &Dialout{
 		cfg:     cfg,
 		ctx:     ctx,
-		outChan: make(telemetry.ExtDSChan, 1000),
+		outChan: outChan,
 	}
 }
 
