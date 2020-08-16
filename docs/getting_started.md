@@ -5,10 +5,10 @@ Installing Panoptes is simple. Depends on your requirements there are diffrent a
 
 - Quick and simple
 - Setup with Consul
-- Installing with Etcd
-- Docker Compose 
-- Setup Kubernetes
-- Monitor with Prometheus 
+- Setup with Etcd
+- Docker compose 
+- Kubernetes
+- Monitor with prometheus 
 
 
 
