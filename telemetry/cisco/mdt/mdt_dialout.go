@@ -5,6 +5,7 @@ import (
 	"context"
 	"errors"
 	"net"
+	"sync"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
@@ -27,6 +28,8 @@ type MDTDialout struct {
 	logger     *zap.Logger
 	metrics    map[string]status.Metrics
 	pathOutput map[string]string
+
+	sync.RWMutex
 }
 
 func NewDialout(ctx context.Context, service string, cfg config.Config, outChan telemetry.ExtDSChan) *MDTDialout {
@@ -40,7 +43,9 @@ func NewDialout(ctx context.Context, service string, cfg config.Config, outChan 
 		pathOutput: make(map[string]string),
 	}
 
-	// TODO add outputs from sensors to pathoutput
+	for _, sensor := range cfg.Sensors() {
+		m.pathOutput[sensor.Subscription] = sensor.Output
+	}
 
 	return m
 }
@@ -67,6 +72,16 @@ func (m *MDTDialout) Start() error {
 	m.logger.Info(m.service+".dialout", zap.String("address", conf.Addr), zap.Bool("tls", m.cfg.Global().Dialout.TLSConfig.Enabled))
 
 	return nil
+}
+
+func (m *MDTDialout) Update() {
+	m.Lock()
+	defer m.Unlock()
+
+	m.pathOutput = make(map[string]string)
+	for _, sensor := range m.cfg.Sensors() {
+		m.pathOutput[sensor.Subscription] = sensor.Output
+	}
 }
 
 func (m *MDTDialout) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
@@ -206,6 +221,8 @@ func (m *MDTDialout) getOutput(sub string) (string, error) {
 		return m.cfg.Global().Dialout.DefaultOutput, nil
 	}
 
+	m.RLock()
+	defer m.RUnlock()
 	if output, ok := m.pathOutput[sub]; ok {
 		return output, nil
 	}
