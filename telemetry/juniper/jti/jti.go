@@ -3,18 +3,22 @@ package jti
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
+	"math/rand"
 	"regexp"
 	"strings"
 	"time"
 
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/authentication"
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 )
 
 var (
@@ -82,6 +86,10 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 func (j *JTI) Start(ctx context.Context) error {
 	defer status.Unregister(status.Labels{"host": j.conn.Target()}, j.metrics)
 
+	if err := j.auth(ctx); err != nil {
+		return err
+	}
+
 	j.client = jpb.NewOpenConfigTelemetryClient(j.conn)
 	subClient, err := j.client.TelemetrySubscribe(ctx,
 		&jpb.SubscriptionRequest{PathList: j.paths})
@@ -107,6 +115,37 @@ func (j *JTI) Start(ctx context.Context) error {
 		j.metrics["gRPCDataTotal"].Inc()
 	}
 
+}
+
+func (j *JTI) auth(ctx context.Context) error {
+	md, _ := metadata.FromOutgoingContext(ctx)
+	if len(md) < 1 {
+		return nil
+	}
+
+	if len(md["username"]) < 1 || len(md["password"]) < 1 {
+		return nil
+	}
+
+	rand.Seed(time.Now().UnixNano())
+	ID := fmt.Sprintf("panoptes-%d", rand.Intn(1000))
+
+	client := authentication.NewLoginClient(j.conn)
+	reply, err := client.LoginCheck(ctx, &authentication.LoginRequest{
+		UserName: md["username"][0],
+		Password: md["password"][0],
+		ClientId: ID,
+	})
+
+	if err != nil {
+		return err
+	}
+
+	if !reply.Result {
+		return errors.New("authentiocation failed")
+	}
+
+	return err
 }
 
 func (j *JTI) worker(ctx context.Context) {
