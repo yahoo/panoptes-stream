@@ -25,6 +25,7 @@ type etcd struct {
 	devices   []config.Device
 	producers []config.Producer
 	databases []config.Database
+	sensors   []config.Sensor
 	global    *config.Global
 
 	informer chan struct{}
@@ -109,6 +110,7 @@ func (e *etcd) getRemoteConfig() error {
 	e.devices = e.devices[:0]
 	e.producers = e.producers[:0]
 	e.databases = e.databases[:0]
+	e.sensors = e.sensors[:0]
 
 	if len(resp.Kvs) < 1 {
 		return errors.New("etcd is empty")
@@ -145,6 +147,7 @@ func (e *etcd) getRemoteConfig() error {
 				return err
 			}
 			sensors[k] = &sensor
+			e.sensors = append(e.sensors, sensor)
 		default:
 			if k == "global" {
 				err = json.Unmarshal(ev.Value, &e.global)
@@ -210,6 +213,10 @@ func (e *etcd) Producers() []config.Producer {
 
 func (e *etcd) Databases() []config.Database {
 	return e.databases
+}
+
+func (e *etcd) Sensors() []config.Sensor {
+	return e.sensors
 }
 
 func (e *etcd) Global() *config.Global {

@@ -17,6 +17,7 @@ type yaml struct {
 	devices   []config.Device
 	producers []config.Producer
 	databases []config.Database
+	sensors   []config.Sensor
 	global    *config.Global
 
 	informer chan struct{}
@@ -63,6 +64,7 @@ func New(filename string) (config.Config, error) {
 	y.devices = y.configDevices(yamlCfg)
 	y.producers = y.configProducers(yamlCfg.Producers)
 	y.databases = y.configDatabases(yamlCfg.Databases)
+	y.sensors = y.configSensors(yamlCfg.Sensors)
 	y.global = y.configGlobal(&yamlCfg.Global)
 
 	if !yamlCfg.Global.WatcherDisabled {
@@ -107,6 +109,10 @@ func (y *yaml) Producers() []config.Producer {
 
 func (y *yaml) Databases() []config.Database {
 	return y.databases
+}
+
+func (y *yaml) Sensors() []config.Sensor {
+	return y.sensors
 }
 
 func (y *yaml) Logger() *zap.Logger {
@@ -208,6 +214,15 @@ func (y *yaml) configDatabases(p map[string]database) []config.Database {
 	}
 
 	return databases
+}
+
+func (y *yaml) configSensors(s map[string]config.Sensor) []config.Sensor {
+	var sensors []config.Sensor
+	for _, sensor := range s {
+		sensors = append(sensors, sensor)
+	}
+
+	return sensors
 }
 
 func (y *yaml) configGlobal(g *config.Global) *config.Global {

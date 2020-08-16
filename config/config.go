@@ -6,6 +6,7 @@ type Config interface {
 	Devices() []Device
 	Producers() []Producer
 	Databases() []Database
+	Sensors() []Sensor
 	Global() *Global
 	Informer() chan struct{}
 	Logger() *zap.Logger
@@ -100,8 +101,8 @@ type DeviceOptions struct {
 
 type Dialout struct {
 	TLSConfig     TLSConfig `yaml:"tlsConfig"`
+	DefaultOutput string    `yaml:"defaultOutput"`
 	Services      map[string]DialoutService
-	DefaultOutput string
 }
 
 type DialoutService struct {

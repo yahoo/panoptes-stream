@@ -13,6 +13,7 @@ type MockConfig struct {
 	MDevices   []Device
 	MProducers []Producer
 	MDatabases []Database
+	MSensors   []Sensor
 	MGlobal    *Global
 
 	MInformer chan struct{}
@@ -33,6 +34,9 @@ func (m *MockConfig) Producers() []Producer {
 }
 func (m *MockConfig) Databases() []Database {
 	return m.MDatabases
+}
+func (m *MockConfig) Sensors() []Sensor {
+	return m.MSensors
 }
 func (m *MockConfig) Global() *Global {
 	return m.MGlobal

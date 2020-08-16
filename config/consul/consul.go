@@ -25,6 +25,7 @@ type Consul struct {
 	devices   []config.Device
 	producers []config.Producer
 	databases []config.Database
+	sensors   []config.Sensor
 	global    *config.Global
 
 	informer chan struct{}
@@ -112,6 +113,7 @@ func (c *Consul) getRemoteConfig() error {
 	c.devices = c.devices[:0]
 	c.producers = c.producers[:0]
 	c.databases = c.databases[:0]
+	c.sensors = c.sensors[:0]
 
 	for _, p := range pairs {
 		// skip folder and empty value
@@ -148,6 +150,7 @@ func (c *Consul) getRemoteConfig() error {
 				return err
 			}
 			sensors[k] = &sensor
+			c.sensors = append(c.sensors, sensor)
 		default:
 			if k == "global" {
 				err = json.Unmarshal(p.Value, &c.global)
@@ -213,6 +216,10 @@ func (c *Consul) Producers() []config.Producer {
 
 func (c *Consul) Databases() []config.Database {
 	return c.databases
+}
+
+func (c *Consul) Sensors() []config.Sensor {
+	return c.sensors
 }
 
 func (c *Consul) Global() *config.Global {
