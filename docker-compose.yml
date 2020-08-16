@@ -1,0 +1,22 @@
+version: "3"
+services:
+  panoptes:
+    build: .
+    image: panoptes-stream:latest
+    ports:
+      - "8081:8081"
+
+  grafana:
+    image: "grafana/grafana"
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=panoptes
+      - GF_SECURITY_ADMIN_PASSWORD=panoptes
+
+  influxdb:
+    image: "influxdb"
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=mydb
