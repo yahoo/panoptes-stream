@@ -12,6 +12,8 @@ type Dialout struct {
 	cfg     config.Config
 	ctx     context.Context
 	outChan telemetry.ExtDSChan
+
+	mdtHandler *mdt.MDTDialout
 }
 
 func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
@@ -25,8 +27,16 @@ func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *D
 func (d *Dialout) Start() {
 	for service := range d.cfg.Global().Dialout.Services {
 		if service == "cisco.mdt" {
-			m := mdt.NewDialout(d.ctx, service, d.cfg, d.outChan)
-			m.Start()
+			d.mdtHandler = mdt.NewDialout(d.ctx, service, d.cfg, d.outChan)
+			d.mdtHandler.Start()
+		}
+	}
+}
+
+func (d *Dialout) Update() {
+	for service := range d.cfg.Global().Dialout.Services {
+		if service == "cisco.mdt" {
+			d.mdtHandler.Update()
 		}
 	}
 }

@@ -84,8 +84,8 @@ func main() {
 	}
 
 	// start telemetry dialout
-	do := dialout.New(ctx, cfg, outChan)
-	do.Start()
+	i := dialout.New(ctx, cfg, outChan)
+	i.Start()
 
 	// status
 	if !cfg.Global().Status.Disabled {
@@ -93,7 +93,7 @@ func main() {
 		s.Start()
 	}
 
-	go updateLoop(cfg, t, d, updateRequest)
+	go updateLoop(cfg, t, d, i, updateRequest)
 
 	if cfg.Global().Shard.Enabled && discovery != nil {
 		shard := NewShard(cfg, t, discovery, updateRequest)
@@ -103,7 +103,7 @@ func main() {
 	<-signalCh
 }
 
-func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, updateRequest chan struct{}) {
+func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, i *dialout.Dialout, updateRequest chan struct{}) {
 	var informed bool
 
 	for {
@@ -128,6 +128,7 @@ func updateLoop(cfg config.Config, t *telemetry.Telemetry, d *demux.Demux, updat
 
 		d.Update()
 		t.Update()
+		i.Update()
 	}
 }
 
