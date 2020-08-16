@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 	"google.golang.org/grpc"
 )
 

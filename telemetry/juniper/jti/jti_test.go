@@ -13,7 +13,7 @@ import (
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/OCJuniper"
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
 )
 
