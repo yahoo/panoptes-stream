@@ -18,7 +18,7 @@ func TestStartErrors(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 	d := New(ctx, cfg, nil, nil, inChan)
 	d.chMap.add("test", outChan)
 	go d.Start()
@@ -58,7 +58,7 @@ func BenchmarkDemux(b *testing.B) {
 	)
 
 	ctx := context.Background()
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 	d := New(ctx, cfg, nil, nil, inChan)
 	d.chMap.add("test", outChan)
 	go d.Start()

@@ -103,13 +103,13 @@ func TestMetricsFunc(t *testing.T) {
 }
 
 func TestStart(t *testing.T) {
-	cfg := &config.MockConfig{
-		MGlobal: &config.Global{
-			Status: config.Status{
-				Addr: "127.0.0.1:8081",
-			},
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		Status: config.Status{
+			Addr: "127.0.0.1:8081",
 		},
 	}
+
 	s := New(cfg)
 	s.Start()
 	time.Sleep(time.Millisecond * 500)

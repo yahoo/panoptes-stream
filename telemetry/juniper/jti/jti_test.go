@@ -55,7 +55,7 @@ func JuniperLo0InterfaceSample(t *testing.T) {
 		prefix  string
 	)
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -120,7 +120,7 @@ func JuniperMix(t *testing.T) {
 		prefix  string
 	)
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
@@ -195,7 +195,7 @@ func JuniperBGPSample(t *testing.T) {
 		labels  map[string]string
 	)
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()

@@ -28,7 +28,7 @@ func TestJuniperCountersMock(t *testing.T) {
 	}
 	defer ln.Close()
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*500)
 
@@ -100,7 +100,7 @@ func TestJuniperCountersMock(t *testing.T) {
 
 func TestJuniperKeyLabel(t *testing.T) {
 	var (
-		cfg     = &config.MockConfig{}
+		cfg     = config.NewMockConfig()
 		buf     = &bytes.Buffer{}
 		metrics = make(map[string]status.Metrics)
 		ch      = make(telemetry.ExtDSChan, 1)
@@ -130,7 +130,7 @@ func TestJuniperKeyLabel(t *testing.T) {
 
 func TestJunipeDuplicateLabel(t *testing.T) {
 	var (
-		cfg     = &config.MockConfig{}
+		cfg     = config.NewMockConfig()
 		buf     = &bytes.Buffer{}
 		metrics = make(map[string]status.Metrics)
 		ch      = make(telemetry.ExtDSChan, 1)
@@ -159,7 +159,7 @@ func TestJunipeDuplicateLabel(t *testing.T) {
 }
 
 func BenchmarkDS(b *testing.B) {
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 	buf := &bytes.Buffer{}
 	metrics := make(map[string]status.Metrics)
 

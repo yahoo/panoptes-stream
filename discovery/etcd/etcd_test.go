@@ -20,13 +20,12 @@ func TestNewEtcdAndRegistration(t *testing.T) {
 
 	client := cluster.RandClient()
 
-	cfg := &config.MockConfig{
-		MGlobal: &config.Global{
-			Discovery: config.Discovery{
-				Config: map[string]interface{}{
-					"endpoints": []string{cluster.RandClient().Endpoints()[0]},
-					"prefix":    "/panoptes/",
-				},
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		Discovery: config.Discovery{
+			Config: map[string]interface{}{
+				"endpoints": []string{cluster.RandClient().Endpoints()[0]},
+				"prefix":    "/panoptes/",
 			},
 		},
 	}

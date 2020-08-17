@@ -19,11 +19,37 @@ type MockConfig struct {
 	MInformer chan struct{}
 
 	LogOutput *MemSink
+
+	logger *zap.Logger
 }
 
 // MemSink repesents memory destination for logging
 type MemSink struct {
 	*bytes.Buffer
+}
+
+func NewMockConfig() *MockConfig {
+	var (
+		err error
+		m   = &MockConfig{}
+	)
+
+	cfg := zap.NewDevelopmentConfig()
+	m.LogOutput = &MemSink{new(bytes.Buffer)}
+	zap.RegisterSink("memory", func(*url.URL) (zap.Sink, error) {
+		return m.LogOutput, nil
+	})
+
+	cfg.OutputPaths = []string{"memory://"}
+	cfg.DisableStacktrace = true
+	cfg.Encoding = "json"
+
+	m.logger, err = cfg.Build()
+	if err != nil {
+		panic(err)
+	}
+
+	return m
 }
 
 func (m *MockConfig) Devices() []Device {
@@ -48,21 +74,7 @@ func (m *MockConfig) Update() error {
 	return nil
 }
 func (m *MockConfig) Logger() *zap.Logger {
-	cfg := zap.NewDevelopmentConfig()
-	m.LogOutput = &MemSink{new(bytes.Buffer)}
-	zap.RegisterSink("memory", func(*url.URL) (zap.Sink, error) {
-		return m.LogOutput, nil
-	})
-
-	cfg.OutputPaths = []string{"memory://"}
-	cfg.DisableStacktrace = true
-	cfg.Encoding = "json"
-
-	logger, err := cfg.Build()
-	if err != nil {
-		panic(err)
-	}
-	return logger
+	return m.logger
 }
 
 func (s *MemSink) Close() error { return nil }

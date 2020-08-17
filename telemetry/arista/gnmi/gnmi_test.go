@@ -26,7 +26,7 @@ func TestAristaSimplePath(t *testing.T) {
 	}
 	defer ln.Close()
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
@@ -68,7 +68,7 @@ func TestAristaBGPSimplePath(t *testing.T) {
 	}
 	defer ln.Close()
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
@@ -113,7 +113,7 @@ func TestAristaKVPath(t *testing.T) {
 	}
 	defer ln.Close()
 
-	cfg := &config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	conn, err := grpc.Dial(addr, grpc.WithInsecure())
 	if err != nil {
@@ -144,7 +144,7 @@ func TestAristaKVPath(t *testing.T) {
 
 func BenchmarkDS(b *testing.B) {
 	var (
-		cfg     = &config.MockConfig{}
+		cfg     = config.NewMockConfig()
 		buf     = &bytes.Buffer{}
 		metrics = make(map[string]status.Metrics)
 	)

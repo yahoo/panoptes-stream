@@ -162,7 +162,7 @@ func TestWatcher(t *testing.T) {
 	defer os.Remove(cfgFile.Name())
 	cfgFile.WriteString("foo")
 
-	cfg := config.MockConfig{}
+	cfg := config.NewMockConfig()
 
 	y := &yaml{
 		filename: cfgFile.Name(),

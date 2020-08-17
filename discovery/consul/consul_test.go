@@ -21,13 +21,12 @@ func TestNewConsulAndRegistration(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 
-	cfg := &config.MockConfig{
-		MGlobal: &config.Global{
-			Discovery: config.Discovery{
-				Config: map[string]interface{}{
-					"address": srv.HTTPAddr,
-					"prefix":  "",
-				},
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		Discovery: config.Discovery{
+			Config: map[string]interface{}{
+				"address": srv.HTTPAddr,
+				"prefix":  "",
 			},
 		},
 	}
@@ -52,10 +51,9 @@ func TestSecondNodes(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 
-	cfg := &config.MockConfig{
-		MGlobal: &config.Global{
-			Shard: config.Shard{},
-		},
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		Shard: config.Shard{},
 	}
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = srv.HTTPAddr
@@ -89,13 +87,12 @@ func TestWatch(t *testing.T) {
 
 	time.Sleep(time.Second * 2)
 
-	cfg := &config.MockConfig{
-		MGlobal: &config.Global{
-			Discovery: config.Discovery{
-				Config: map[string]interface{}{
-					"address": srv.HTTPAddr,
-					"prefix":  "",
-				},
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		Discovery: config.Discovery{
+			Config: map[string]interface{}{
+				"address": srv.HTTPAddr,
+				"prefix":  "",
 			},
 		},
 	}
