@@ -3,8 +3,11 @@ package telemetry
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+	"go.uber.org/zap"
+	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
@@ -79,4 +82,52 @@ func TestGetDevices(t *testing.T) {
 	assert.Len(t, devicesActual, 2)
 	assert.Equal(t, devices, devicesActual)
 
+}
+
+type testGnmi struct{}
+
+func (testGnmi) Start(ctx context.Context) error {
+	select {
+	case <-time.After(time.Second * 5):
+	case <-ctx.Done():
+	}
+	return nil
+}
+func testGnmiNew(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan ExtDSChan) NMI {
+	return &testGnmi{}
+}
+
+func TestSubscribe(t *testing.T) {
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{}
+
+	outChan := make(ExtDSChan, 100)
+	telemetryRegistrar := NewRegistrar(cfg.Logger())
+	telemetryRegistrar.Register("test.gnmi", "0.0.0", testGnmiNew)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	tm := New(ctx, cfg, telemetryRegistrar, outChan)
+
+	device := config.Device{
+		DeviceConfig: config.DeviceConfig{
+			Host: "127.0.0.1",
+			Port: 50055,
+		},
+		Sensors: map[string][]*config.Sensor{
+			"test.gnmi": {},
+		},
+	}
+
+	tm.subscribe(device)
+	time.Sleep(time.Second * 1)
+	assert.Len(t, tm.devices, 1)
+	assert.Equal(t, device, tm.devices["127.0.0.1"])
+	assert.Contains(t, cfg.LogOutput.String(), "connect")
+	assert.Equal(t, uint64(1), tm.metrics["gRPConnCurrent"].Get())
+
+	cancel()
+	time.Sleep(time.Second * 1)
+
+	assert.Equal(t, uint64(0), tm.metrics["gRPConnCurrent"].Get())
+	assert.Contains(t, cfg.LogOutput.String(), "terminate")
 }
