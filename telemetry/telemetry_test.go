@@ -8,6 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/metadata"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
@@ -130,4 +131,44 @@ func TestSubscribe(t *testing.T) {
 
 	assert.Equal(t, uint64(0), tm.metrics["gRPConnCurrent"].Get())
 	assert.Contains(t, cfg.LogOutput.String(), "terminate")
+}
+
+func TestSetCredentials(t *testing.T) {
+	cfg := config.NewMockConfig()
+	cfg.MGlobal = &config.Global{
+		DeviceOptions: config.DeviceOptions{
+			Username: "test-g-u",
+			Password: "test-g-p",
+		},
+	}
+
+	tm := &Telemetry{cfg: cfg}
+	device := &config.Device{
+		DeviceConfig: config.DeviceConfig{
+			Host: "127.0.0.1",
+			Port: 50055,
+		},
+		Sensors: map[string][]*config.Sensor{
+			"test.gnmi": {},
+		},
+	}
+
+	ctx, err := tm.setCredentials(context.Background(), device)
+	assert.NoError(t, err)
+	md, _ := metadata.FromOutgoingContext(ctx)
+	assert.Len(t, md, 2)
+	assert.Equal(t, "test-g-u", md["username"][0])
+	assert.Equal(t, "test-g-p", md["password"][0])
+
+	device.Username = "test-u"
+	device.Password = "test-p"
+	ctx, err = tm.setCredentials(context.Background(), device)
+	md, _ = metadata.FromOutgoingContext(ctx)
+	assert.Len(t, md, 2)
+	assert.Equal(t, "test-u", md["username"][0])
+	assert.Equal(t, "test-p", md["password"][0])
+
+	device.Username = "__vault::/secrets/path"
+	_, err = tm.setCredentials(context.Background(), device)
+	assert.Error(t, err)
 }
