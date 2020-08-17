@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
+	"math/rand"
 	"net"
 	"reflect"
 	"strconv"
@@ -54,6 +55,42 @@ type mdtCredentials struct {
 	password string
 }
 
+type backoff struct {
+	d    time.Duration
+	last time.Time
+}
+
+func (b *backoff) reset() {
+	rand.Seed(time.Now().UnixNano())
+
+	b.last = time.Now()
+	b.d = time.Duration(20 + rand.Intn(30))
+}
+
+func (b *backoff) next() time.Duration {
+	// first call - bypass backoff
+	if b.d == 0 {
+		b.reset()
+		return 0
+	}
+
+	// reset back off
+	if time.Since(b.last).Seconds() > float64(30*60) {
+		b.reset()
+		return b.d
+	}
+
+	// limit backoff
+	if time.Since(b.last).Seconds() < float64(5*60) {
+		if b.d < time.Duration(5*60) {
+			b.d += b.d * 50 / 100
+			b.last = time.Now()
+		}
+	}
+
+	return b.d
+}
+
 // New creates a new telemetry
 func New(ctx context.Context, cfg config.Config, tr *Registrar, outChan ExtDSChan) *Telemetry {
 	var metrics = make(map[string]status.Metrics)
@@ -93,46 +130,51 @@ func (t *Telemetry) subscribe(device config.Device) {
 	for service, sensors := range device.Sensors {
 		go func(service string, sensors []*config.Sensor) {
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
+			backoff := backoff{}
 
 			for {
-				ctx, err := t.setCredentials(ctx, &device)
-				if err != nil {
-					t.logger.Error("subscribe", zap.String("event", "grpc.credentials"), zap.Error(err))
-				}
-
-				opts, err := t.getDialOpts(&device, service)
-				if err != nil {
-					t.logger.Error("subscribe", zap.String("event", "grpc.dialopts"), zap.Error(err))
-				}
-
-				conn, err := grpc.DialContext(ctx, addr, opts...)
-				if err != nil {
-					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.Error(err))
-				} else {
-					t.metrics["gRPConnCurrent"].Inc()
-					t.logger.Info("subscribe", zap.String("event", "grpc.connect"), zap.String("host", device.Host), zap.String("service", service))
-
-					new, _ := t.telemetryRegistrar.GetNMIFactory(service)
-					nmi := new(t.logger, conn, sensors, t.outChan)
-					err = nmi.Start(ctx)
-
-					conn.Close()
-					t.metrics["gRPConnCurrent"].Dec()
-
-					if err != nil {
-						t.logger.Warn("subscribe", zap.String("event", "nmi"), zap.Error(err), zap.String("host", device.Host), zap.String("service", service))
-					} else {
-						t.logger.Warn("subscribe", zap.String("event", "grpc.terminate"), zap.String("host", device.Host), zap.String("service", service))
-					}
-				}
-
 				select {
-				case <-time.After(time.Second * 30):
+				case <-time.After(time.Second * backoff.next()):
 					t.metrics["reconnectsTotal"].Inc()
 
 				case <-ctx.Done():
 					return
 				}
+
+				ctx, err := t.setCredentials(ctx, &device)
+				if err != nil {
+					t.logger.Error("subscribe", zap.String("event", "grpc.credentials"), zap.Error(err))
+					continue
+				}
+
+				opts, err := t.getDialOpts(&device, service)
+				if err != nil {
+					t.logger.Error("subscribe", zap.String("event", "grpc.dialopts"), zap.Error(err))
+					continue
+				}
+
+				conn, err := grpc.DialContext(ctx, addr, opts...)
+				if err != nil {
+					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.Error(err))
+					continue
+				}
+
+				t.metrics["gRPConnCurrent"].Inc()
+				t.logger.Info("subscribe", zap.String("event", "grpc.connect"), zap.String("host", device.Host), zap.String("service", service))
+
+				new, _ := t.telemetryRegistrar.GetNMIFactory(service)
+				nmi := new(t.logger, conn, sensors, t.outChan)
+				err = nmi.Start(ctx)
+
+				conn.Close()
+				t.metrics["gRPConnCurrent"].Dec()
+
+				if err != nil {
+					t.logger.Warn("subscribe", zap.String("event", "nmi"), zap.Error(err), zap.String("host", device.Host), zap.String("service", service))
+				} else {
+					t.logger.Warn("subscribe", zap.String("event", "grpc.terminate"), zap.String("host", device.Host), zap.String("service", service))
+				}
+
 			}
 		}(service, sensors)
 	}
