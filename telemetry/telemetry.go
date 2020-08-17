@@ -353,7 +353,7 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 	if device.Username != "" {
 		username, password = device.Username, device.Password
 	} else {
-		username, password = dOptions.Username, device.Password
+		username, password = dOptions.Username, dOptions.Password
 	}
 
 	// remote username and password
