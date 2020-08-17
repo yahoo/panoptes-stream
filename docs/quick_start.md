@@ -1,5 +1,5 @@
 ## .yaml Basic gNMI Configuration (dial-in mode)
-Here's a basic example with minimum requirements .yaml file that shows the required fields for collecting a sensor path from a device and showing the result on the console stdout every 10 seconds.
+Here's a basic example with minimum requirements .yaml file that shows the required fields for collecting a sensor path from a device and showing the result on the console stdout every 10 seconds. this example assumed that you already configured gNMI at your device. if you need help on configuration please read [device configuraion](device_config.md).
 
 #### Use Case
 - Trying the panoptes
@@ -7,8 +7,9 @@ Here's a basic example with minimum requirements .yaml file that shows the requi
 
 #### Create .yaml file 
 - Open a text editor and paste the below yaml and save it as config.yaml.
-- Edit IP address and Port. you can add username and password if needed.
+- Edit IP address and port. you can add username and password if needed.
 - Change the service name to other vendors (cisco.gnmi or juniper.gnmi) if needed.
+- In case you needed advance configuration please read [.yaml spec](yaml_spec.md).
 
 ```yaml
 devices:
@@ -30,6 +31,7 @@ sensors:
 ```
 panoptes -config config.yaml
 ```
+OR
 #### Execute panoptes by docker run
 ```
 docker run -d --name panoptes -v $PWD:/etc/panoptes panoptes-stream -config /etc/panoptes/config.yaml 
@@ -67,3 +69,8 @@ docker logs -f panoptes
   "value": 4695711345
 }
 ```
+
+#### Do you need troubleshooting?
+- check our [troubleshooting page](troubleshooting.md)
+- ask your questions at our [slack channel]()
+- If you're seeing a bug please [open an issue](https://git.vzbuilders.com/marshadrad/panoptes/issues)
