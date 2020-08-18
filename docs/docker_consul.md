@@ -13,7 +13,7 @@ The Panoptes configuration categories as follows at Consul key value store:
 The devices is a folder which included devices as key value. key can be any name and value is in json format.
 Example device configuration:
 
-Key: core1.lax
+Key: core1.lax  
 Value: 
 ```json
 { 
@@ -31,7 +31,7 @@ You can see all available device config keys at [configuration reference](config
 The sensors is a folder which included sensors as key value. key is the sensor name and value is in json format.
 Example sensor configuration:
 
-Key: sensor1
+Key: sensor1  
 Value:
 ```json
 { 
@@ -49,7 +49,7 @@ You can see all available sensor config keys at [configuration reference](config
 The producers is a folder which included producers as key value. key is the producer name and value is in json format.
 Example producer configuration:
 
-Key: kafka1
+Key: kafka1   
 Value:
 ```json
 {
@@ -68,7 +68,7 @@ You can see all available producers config keys at [configuration reference](con
 The databases is a folder which included databases as key value. key is the database name and value is in json format.
 Example database configuration:
 
-Key: influxdb1
+Key: influxdb1   
 Value:
 ```json
 {
@@ -125,7 +125,7 @@ Example discovery configuration:
 ```
 
 #### Dialout
-Panoptes supports gRPC [dial-out](glossary#dialout) mode for Cisco MDT at the moment. you can configure it to listen on a specific address and port that should be reachable from your dial-out mode devices. 
+Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the moment. you can configure it to listen on a specific address and port that should be reachable from your dial-out mode devices. 
 
 ```json
 "dialout": {
