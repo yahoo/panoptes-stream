@@ -12,6 +12,8 @@ import (
 	"go.uber.org/zap"
 )
 
+// Shard represents sharding service.
+// Panoptes shards devices for horizontal scaling and high availability.
 type Shard struct {
 	cfg               config.Config
 	id                string
@@ -23,6 +25,7 @@ type Shard struct {
 	updateRequest     chan struct{}
 }
 
+// NewShard constructs a shard service
 func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery discovery.Discovery, updateRequest chan struct{}) *Shard {
 	return &Shard{
 		cfg:               cfg,
@@ -36,8 +39,11 @@ func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery disco
 
 }
 
+// Start runs sharding service by watching service discovery,
+// create device filters and update the panoptes to referesh
+// the devices.
 func (s *Shard) Start() {
-	s.logger.Info("sharding has been started", zap.Int("configured.nodes", s.numberOfNodes))
+	s.logger.Info("shard", zap.Int("configured.nodes", s.numberOfNodes))
 
 	// discovery
 	notifyChan := make(chan struct{}, 1)
@@ -198,7 +204,7 @@ func (s *Shard) waitForDiscoveryRegister() {
 	panic("discovery registeration failed")
 }
 
-// waits for the initial shards to appear
+// waitForInitialShards waits for the configured initial shards to appear
 func (s *Shard) waitForInitialShards() {
 	for {
 		time.Sleep(time.Second * 10)
@@ -207,7 +213,7 @@ func (s *Shard) waitForInitialShards() {
 
 		instances, err := s.discovery.GetInstances()
 		if err != nil {
-			s.logger.Error("discovery shard failed", zap.Error(err))
+			s.logger.Error("shard", zap.String("event", "discovery shard failed"), zap.Error(err))
 			continue
 		}
 
@@ -221,7 +227,7 @@ func (s *Shard) waitForInitialShards() {
 		}
 
 		if currentAvailableNodes >= s.initializingShard {
-			s.logger.Info("initializing shards", zap.Int("available.nodes", currentAvailableNodes))
+			s.logger.Info("shard", zap.String("event", "initialized"), zap.Int("available.nodes", currentAvailableNodes))
 			break
 		}
 	}
