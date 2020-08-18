@@ -1,5 +1,5 @@
 ## Panoptes configuration with Consul.
-This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store. 
+This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store.   
 
 ### Configuration specs
 The Panoptes configuration categories as follows at Consul key value store:
@@ -127,6 +127,8 @@ Example discovery configuration:
 #### Dialout
 Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the moment. you can configure it to listen on a specific address and port that should be reachable from your dial-out mode devices. 
 
+Example Dial-Out mode configuration:
+
 ```json
 "dialout": {
     "services": {
@@ -138,7 +140,9 @@ Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the
 ```
 
 #### Shard
+By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes has been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
 
+Example Shard configuration:
 
 ```json
 "shard" : {
@@ -149,6 +153,9 @@ Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the
 ```
 
 #### Logger
+The level of logging to show and output destination after the Panoptes has started. the output can be file or console (stdout/stdin) 
+
+Example Logging configuration:
 
 ```json
 "logger": {
@@ -159,6 +166,9 @@ Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the
 ```
 
 #### Device Options
+The device options are shared configuration between all of devices. the device overlapped configuration is priority, it means a device configured options are preferred to global device options.
+
+Example Device Options configuration:
 
 ```json
 "deviceOptions": {
@@ -173,3 +183,16 @@ Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the
 }
 ```
 
+#### Initializing Consul
+
+```
+curl https://git.vzbuilders.com/marshadrad/panoptes/scripts/consul_init.json | consul kv import -
+```
+
+#### Backup and Restore Consul
+```
+consul kv export panoptes/config > panoptes.config.json
+```
+```
+consul kv import @panoptes.config.json
+```
