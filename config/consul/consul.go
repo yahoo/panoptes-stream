@@ -72,7 +72,7 @@ func New(filename string) (config.Config, error) {
 	if len(config.Prefix) > 0 {
 		consul.prefix = config.Prefix
 	} else {
-		consul.prefix = "config/"
+		consul.prefix = "panoptes/config/"
 	}
 
 	consul.client, err = api.NewClient(apiConfig)
