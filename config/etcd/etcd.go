@@ -45,9 +45,15 @@ func New(filename string) (config.Config, error) {
 	var (
 		err       error
 		tlsConfig *tls.Config
-		etcd      = &etcd{informer: make(chan struct{}, 1), global: &config.Global{}}
-		config    = &etcdConfig{}
 	)
+
+	etcd := &etcd{
+		informer: make(chan struct{}, 1),
+		global:   &config.Global{},
+		logger:   config.GetDefaultLogger(),
+	}
+
+	config := &etcdConfig{}
 
 	yaml.Read(filename, config)
 
@@ -146,6 +152,10 @@ func (e *etcd) getRemoteConfig() error {
 			if err := json.Unmarshal(ev.Value, &sensor); err != nil {
 				return err
 			}
+			if err := config.SensorValidation(sensor); err != nil {
+				e.logger.Error("etcd", zap.Error(err))
+				continue
+			}
 			sensors[k] = &sensor
 			e.sensors = append(e.sensors, sensor)
 		default:
@@ -164,10 +174,6 @@ func (e *etcd) getRemoteConfig() error {
 				e.logger = config.GetLogger(e.global.Logger)
 			}
 		}
-	}
-
-	if e.logger == nil {
-		e.logger = config.GetDefaultLogger()
 	}
 
 	for _, d := range devicesTpl {

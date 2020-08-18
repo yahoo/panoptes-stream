@@ -26,11 +26,11 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	var cfg zap.Config
 	b, err := json.Marshal(lcfg)
 	if err != nil {
-		return nil
+		return GetDefaultLogger()
 	}
 
 	if err := json.Unmarshal(b, &cfg); err != nil {
-		return nil
+		return GetDefaultLogger()
 	}
 
 	cfg.Encoding = "console"
@@ -42,7 +42,7 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 
 	logger, err := cfg.Build()
 	if err != nil {
-		return nil
+		return GetDefaultLogger()
 	}
 
 	return logger
@@ -81,6 +81,23 @@ func DeviceValidation(device Device) error {
 
 	if device.Port < 1 {
 		return fmt.Errorf("device: %s has invalid port", device.Host)
+	}
+
+	return nil
+}
+
+func SensorValidation(sensor Sensor) error {
+	availSensors := map[string]bool{
+		"arista.gnmi":       true,
+		"juniper.gnmi":      true,
+		"cisco.gnmi":        true,
+		"cisco.mdt":         true,
+		"cisco.mdt.dialout": true,
+		"juniper.jti":       true,
+	}
+
+	if _, ok := availSensors[sensor.Service]; !ok {
+		return fmt.Errorf("sensor:%s not available", sensor.Service)
 	}
 
 	return nil

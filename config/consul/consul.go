@@ -41,11 +41,15 @@ type consulConfig struct {
 }
 
 func New(filename string) (config.Config, error) {
-	var (
-		err    error
-		consul = &Consul{informer: make(chan struct{}, 1), global: &config.Global{}}
-		config = &consulConfig{}
-	)
+	var err error
+
+	consul := &Consul{
+		informer: make(chan struct{}, 1),
+		global:   &config.Global{},
+		logger:   config.GetDefaultLogger(),
+	}
+
+	config := &consulConfig{}
 
 	yaml.Read(filename, config)
 
@@ -149,6 +153,11 @@ func (c *Consul) getRemoteConfig() error {
 			if err := json.Unmarshal(p.Value, &sensor); err != nil {
 				return err
 			}
+
+			if err := config.SensorValidation(sensor); err != nil {
+				c.logger.Error("consul", zap.Error(err))
+				continue
+			}
 			sensors[k] = &sensor
 			c.sensors = append(c.sensors, sensor)
 		default:
@@ -167,10 +176,6 @@ func (c *Consul) getRemoteConfig() error {
 				c.logger = config.GetLogger(c.global.Logger)
 			}
 		}
-	}
-
-	if c.logger == nil {
-		c.logger = config.GetDefaultLogger()
 	}
 
 	for _, d := range devicesTpl {

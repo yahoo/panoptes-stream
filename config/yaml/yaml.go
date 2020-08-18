@@ -2,7 +2,6 @@ package yaml
 
 import (
 	"io/ioutil"
-	"log"
 	"os"
 
 	"github.com/fsnotify/fsnotify"
@@ -57,10 +56,6 @@ func New(filename string) (config.Config, error) {
 		informer: make(chan struct{}, 1),
 	}
 
-	if y.logger == nil {
-		y.logger = config.GetDefaultLogger()
-	}
-
 	y.devices = y.configDevices(yamlCfg)
 	y.producers = y.configProducers(yamlCfg.Producers)
 	y.databases = y.configDatabases(yamlCfg.Databases)
@@ -90,6 +85,7 @@ func (y *yaml) Update() error {
 	y.devices = y.configDevices(yamlCfg)
 	y.producers = y.configProducers(yamlCfg.Producers)
 	y.databases = y.configDatabases(yamlCfg.Databases)
+	y.sensors = y.configSensors(yamlCfg.Sensors)
 	y.global = &yamlCfg.Global
 
 	return nil
@@ -122,6 +118,11 @@ func (y *yaml) Logger() *zap.Logger {
 func (y *yaml) configDevices(cfg *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
 	for name, sensor := range cfg.Sensors {
+		if err := config.SensorValidation(sensor); err != nil {
+			y.logger.Error("yaml", zap.Error(err))
+			continue
+		}
+
 		sensor := sensor
 		sensors[name] = &sensor
 	}
@@ -135,7 +136,8 @@ func (y *yaml) configDevices(cfg *yamlConfig) []config.Device {
 		for _, s := range d.Sensors {
 			sensor, ok := sensors[s]
 			if !ok {
-				log.Fatal("sensor not exist ", s)
+				y.logger.Error("yaml", zap.String("msg", "sensor not exist"), zap.String("sensor", s))
+				continue
 			}
 
 			if !sensor.Disabled {
@@ -176,7 +178,8 @@ func (y *yaml) configProducers(p map[string]producer) []config.Producer {
 
 	for name, pConfig := range p {
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			log.Fatal(pConfig.ConfigFile, err)
+			y.logger.Error("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
+			os.Exit(1)
 		}
 
 		producers = append(producers, config.Producer{
@@ -203,7 +206,8 @@ func (y *yaml) configDatabases(p map[string]database) []config.Database {
 
 	for name, pConfig := range p {
 		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			log.Fatal(pConfig.ConfigFile, err)
+			y.logger.Error("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
+			os.Exit(1)
 		}
 
 		databases = append(databases, config.Database{
@@ -219,6 +223,10 @@ func (y *yaml) configDatabases(p map[string]database) []config.Database {
 func (y *yaml) configSensors(s map[string]config.Sensor) []config.Sensor {
 	var sensors []config.Sensor
 	for _, sensor := range s {
+		if err := config.SensorValidation(sensor); err != nil {
+			continue
+		}
+
 		sensors = append(sensors, sensor)
 	}
 
@@ -230,7 +238,8 @@ func (y *yaml) configGlobal(g *config.Global) *config.Global {
 
 	if g.Discovery.ConfigFile != "" {
 		if err := Read(g.Discovery.ConfigFile, &config); err != nil {
-			log.Fatal(err)
+			y.logger.Error("yaml", zap.Error(err), zap.String("file", g.Discovery.ConfigFile))
+			os.Exit(1)
 		}
 
 		g.Discovery.Config = config
