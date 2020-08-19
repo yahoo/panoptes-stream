@@ -25,7 +25,7 @@ type Shard struct {
 	updateRequest     chan struct{}
 }
 
-// NewShard constructs a shard service
+// NewShard constructs a shard service.
 func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery discovery.Discovery, updateRequest chan struct{}) *Shard {
 	return &Shard{
 		cfg:               cfg,
@@ -97,11 +97,7 @@ func (s *Shard) Start() {
 func mainShard(myID string, shardSize int) telemetry.DeviceFilterOpt {
 	whoami, _ := strconv.Atoi(myID)
 	return func(d config.Device) bool {
-		if getGroupID(d)%shardSize == whoami {
-			return true
-		}
-
-		return false
+		return getGroupID(d)%shardSize == whoami
 	}
 }
 
@@ -160,11 +156,7 @@ func isAllNodesRunning(shardSize int, instances []discovery.Instance) bool {
 		}
 	}
 
-	if passing == shardSize {
-		return true
-	}
-
-	return false
+	return passing == shardSize
 }
 
 func getGroupID(d config.Device) int {
@@ -204,7 +196,7 @@ func (s *Shard) waitForDiscoveryRegister() {
 	panic("discovery registeration failed")
 }
 
-// waitForInitialShards waits for the configured initial shards to appear
+// waitForInitialShards waits for the configured initial shards to appear.
 func (s *Shard) waitForInitialShards() {
 	for {
 		time.Sleep(time.Second * 10)
