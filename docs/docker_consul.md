@@ -9,6 +9,9 @@ The Panoptes configuration categories as follows at Consul key value store:
 - [Databases](#databases)
 - [Global](#global)
 
+The below picture shows how the configurations link together. 
+![panoptes config](imgs/link-config.png)
+
 #### Devices 
 The devices is a folder which included devices as key value. key can be any name and value is in json format.
 Example device configuration:
@@ -46,8 +49,9 @@ Value:
 You can see all available sensor config keys at [configuration reference](config_reference.md#sensors). 
 
 #### Producers
-The producers is a folder which included producers as key value. key is the producer name and value is in json format.
-Example producer configuration:
+The producers is a folder which included producers configurations as key value. key is the producer name and value is in json format.  
+
+Example [Kafka](https://kafka.apache.org/) producer configuration:
 
 Key: kafka1   
 Value:
@@ -56,17 +60,20 @@ Value:
     "service": "kafka",
     "config" : {
         "brokers": ["127.0.0.1:9092"],
-        "batchSize" : 1000, 
-        "topics":["interface","bgp"]
+         "topics":["interface","bgp"],
+        "batchSize" : 1000
     }
 }
 ```
+The key and topics will assigne to the sensor's output like: "output": "kafka1::interface" or "output": "kafka1::bgp"
+Kafka output syntax: KEY::TOPIC 
 
 You can see all available producers config keys at [configuration reference](config_reference.md#producers). 
 
 #### Databases
 The databases is a folder which included databases as key value. key is the database name and value is in json format.
-Example database configuration:
+
+Example [Influxdb database](https://www.influxdata.com/) configuration:
 
 Key: influxdb1   
 Value:
@@ -79,6 +86,8 @@ Value:
     } 
 }
 ```
+The key and a measurement name related to sensor will assigne to the sensor's output like: "output": "influxdb1::ifcounters" or "output": "influxdb1::bgp"
+Influxdb output syntax: KEY::MEASUREMENT
 
 You can see all available databases config keys at [configuration reference](config_reference.md#database). 
 
@@ -92,6 +101,22 @@ The global is a key not a folder and it's quite different than other configurati
 - [Logger](#logger)
 - [DeviceOptions](#deviceoptions)
 
+They are all optional and depends on what you need. for instance if you want to have sharding, you need to enable and configure Status and Discovery or if you want to change the logging level, you can configure logger.
+
+![panoptes global config](imgs/global-config.png)
+
+Key: global  
+Value:
+```json
+{
+  "status": {},
+  "shard": {},
+  "discovery": {},
+  "dialout": {},
+  "logger": {},
+  "deviceOptions": {},
+}
+```
 
 #### Status
 Panoptes has built-in self monitoring and healthcheck that they expose through HTTP or HTTPS. the Panoptes metrics are readable by Prometheus server.
@@ -140,7 +165,7 @@ Example Dial-Out mode configuration:
 ```
 
 #### Shard
-By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes has been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
+By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
 
 Example Shard configuration:
 
