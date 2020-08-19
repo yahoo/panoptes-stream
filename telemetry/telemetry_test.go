@@ -67,11 +67,7 @@ func TestGetDevices(t *testing.T) {
 	}
 
 	tm.AddFilterOpt("filter1", func(d config.Device) bool {
-		if d.Host == "core1.lax" {
-			return false
-		}
-
-		return true
+		return d.Host != "core1.lax"
 	})
 
 	devicesActual = tm.GetDevices()
@@ -162,7 +158,7 @@ func TestSetCredentials(t *testing.T) {
 
 	device.Username = "test-u"
 	device.Password = "test-p"
-	ctx, err = tm.setCredentials(context.Background(), device)
+	ctx, _ = tm.setCredentials(context.Background(), device)
 	md, _ = metadata.FromOutgoingContext(ctx)
 	assert.Len(t, md, 2)
 	assert.Equal(t, "test-u", md["username"][0])

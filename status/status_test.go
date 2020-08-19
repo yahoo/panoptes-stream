@@ -119,6 +119,7 @@ func TestStart(t *testing.T) {
 	defer resp.Body.Close()
 	assert.Equal(t, 200, resp.StatusCode)
 	body, err := ioutil.ReadAll(resp.Body)
+	assert.NoError(t, err)
 	assert.Equal(t, "panoptes alive and reachable", string(body))
 
 	resp, err = http.Get("http://localhost:8081/metrics")
