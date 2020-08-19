@@ -41,6 +41,7 @@ func TestNewEtcdAndRegistration(t *testing.T) {
 	defer cancel()
 	kv := clientv3.NewKV(client)
 	resp, err := kv.Get(ctx, "/panoptes/services/", clientv3.WithPrefix())
+	assert.NoError(t, err)
 	assert.Len(t, resp.Kvs, 1)
 	assert.Equal(t, "/panoptes/services/0", string(resp.Kvs[0].Key))
 
