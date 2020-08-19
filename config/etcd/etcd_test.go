@@ -77,7 +77,6 @@ func TestEmptyConfig(t *testing.T) {
 	kv := clientv3.NewKV(client)
 	kv.Put(ctx, "config/", "")
 
-	cfg, err := New("")
-	assert.Equal(t, nil, err)
-	assert.NotEqual(t, nil, cfg.Logger())
+	_, err := New("")
+	assert.Error(t, err)
 }

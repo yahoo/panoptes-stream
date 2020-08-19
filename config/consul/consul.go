@@ -127,6 +127,10 @@ func (c *Consul) getRemoteConfig() error {
 		key := strings.TrimPrefix(string(p.Key), c.prefix)
 		folder, k := path.Split(key)
 
+		if !json.Valid(p.Value) {
+			return fmt.Errorf("invalid JSON encoding - %s", key)
+		}
+
 		switch folder {
 		case "producers/":
 			producer := config.Producer{}

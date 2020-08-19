@@ -4,7 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"errors"
+	"fmt"
 	"path"
 	"strings"
 	"time"
@@ -119,12 +119,20 @@ func (e *etcd) getRemoteConfig() error {
 	e.sensors = e.sensors[:0]
 
 	if len(resp.Kvs) < 1 {
-		return errors.New("etcd is empty")
+		return fmt.Errorf("etcd config is not exist , prefix=%s", e.prefix)
 	}
 
 	for _, ev := range resp.Kvs {
 		key := strings.TrimPrefix(string(ev.Key), e.prefix)
 		folder, k := path.Split(key)
+
+		if len(key) < 1 {
+			return fmt.Errorf("etcd is empty, prefix=%s", e.prefix)
+		}
+
+		if !json.Valid(ev.Value) {
+			return fmt.Errorf("invalid JSON encoding - %s", key)
+		}
 
 		switch folder {
 		case "producers/":
