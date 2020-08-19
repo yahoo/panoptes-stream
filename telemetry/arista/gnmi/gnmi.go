@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"math"
 	"net"
-	"strings"
 	"time"
 
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
@@ -22,7 +21,7 @@ import (
 
 var gnmiVersion = "0.0.1"
 
-// GNMI represents a GNMI.
+// GNMI represents a gNMI for Arista EOS telemetry.
 type GNMI struct {
 	conn          *grpc.ClientConn
 	subscriptions []*gpb.Subscription
@@ -36,7 +35,7 @@ type GNMI struct {
 	pathOutput map[string]string
 }
 
-// New creates a GNMI.
+// New creates a gNMI and register proper metrics.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var metrics = make(map[string]status.Metrics)
 
@@ -58,7 +57,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	}
 }
 
-// Start starts to get stream and fan-out to workers
+// Start starts to get stream and fan-out to workers.
 func (g *GNMI) Start(ctx context.Context) error {
 	defer status.Unregister(status.Labels{"host": g.conn.Target()}, g.metrics)
 
@@ -282,22 +281,7 @@ func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 	return list, nil
 }
 
-func sanitizePath(path string) string {
-	if !strings.HasSuffix(path, "/") {
-		path = fmt.Sprintf("%s/", path)
-	}
-
-	if !strings.HasPrefix(path, "/") {
-		path = fmt.Sprintf("/%s", path)
-	}
-
-	return path
-}
-
-func isRawRequested(output string) bool {
-	return strings.HasSuffix(output, "::raw")
-}
-
+// Version returns the current package version.
 func Version() string {
 	return gnmiVersion
 }

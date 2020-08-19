@@ -13,6 +13,7 @@ import (
 	"github.com/openconfig/ygot/ygot"
 )
 
+// GetKey returns telemetry key and extracted labels
 func GetKey(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string) {
 	labels := make(map[string]string)
 
@@ -36,6 +37,7 @@ func GetKey(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string)
 	return buf.String(), labels
 }
 
+// GetValue returns telemetry value
 func GetValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
@@ -78,6 +80,7 @@ func GetValue(tv *gpb.TypedValue) (interface{}, error) {
 	return value, err
 }
 
+// GetGNMISubscriptions return gNMI subscription based on the sensors
 func GetGNMISubscriptions(sensors []*config.Sensor) []*gpb.Subscription {
 	var subscriptions []*gpb.Subscription
 
@@ -100,6 +103,7 @@ func GetGNMISubscriptions(sensors []*config.Sensor) []*gpb.Subscription {
 	return subscriptions
 }
 
+// GetPathOutput returns path to output map
 func GetPathOutput(sensors []*config.Sensor) map[string]string {
 	var pathOutput = make(map[string]string)
 
@@ -127,18 +131,7 @@ func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 	return list, nil
 }
 
-func SanitizePath(path string) string {
-	if !strings.HasSuffix(path, "/") {
-		path = fmt.Sprintf("%s/", path)
-	}
-
-	if !strings.HasPrefix(path, "/") {
-		path = fmt.Sprintf("/%s", path)
-	}
-
-	return path
-}
-
+// MergeLabels merges key labels with prefix labes
 func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[string]string {
 	if len(keyLabels) > 0 {
 		for k, v := range prefixLabels {
