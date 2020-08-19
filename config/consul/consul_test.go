@@ -19,11 +19,11 @@ func TestNewConsul(t *testing.T) {
 	defer srv.Stop()
 
 	config := map[string][]byte{
-		"config/devices/core1.bur": []byte(`{"host": "core1.lhr", "port": 50051,  "sensors" : ["sensor1"]}`),
-		"config/sensors/sensor1":   []byte(`{"service": "juniper.jti", "path": "/interfaces/", "mode": "sample", "sampleInterval": 10, "output":"console::stdout"}`),
-		"config/databases/db1":     []byte(`{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`),
-		"config/producers/kafka1":  []byte(`{"service": "kafka", "config" : {"brokers": ["127.0.0.1:9092"], "topics":["bgp"]}}`),
-		"config/global":            []byte(`{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8081"}}`),
+		"panoptes/config/devices/core1.bur": []byte(`{"host": "core1.lhr", "port": 50051,  "sensors" : ["sensor1"]}`),
+		"panoptes/config/sensors/sensor1":   []byte(`{"service": "juniper.jti", "path": "/interfaces/", "mode": "sample", "sampleInterval": 10, "output":"console::stdout"}`),
+		"panoptes/config/databases/db1":     []byte(`{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`),
+		"panoptes/config/producers/kafka1":  []byte(`{"service": "kafka", "config" : {"brokers": ["127.0.0.1:9092"], "topics":["bgp"]}}`),
+		"panoptes/config/global":            []byte(`{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8081"}}`),
 	}
 
 	srv.PopulateKV(t, config)
@@ -50,7 +50,7 @@ func TestNewConsul(t *testing.T) {
 	_, ok := devices[0].Sensors["juniper.jti"]
 	assert.Equal(t, true, ok)
 
-	srv.SetKV(t, "config/global", []byte(`{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8082"}}`))
+	srv.SetKV(t, "panoptes/config/global", []byte(`{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8082"}}`))
 	cfg.Update()
 	assert.Equal(t, "127.0.0.2:8082", cfg.Global().Status.Addr)
 }
@@ -84,7 +84,7 @@ func TestEmptyConfig(t *testing.T) {
 
 	os.Setenv("PANOPTES_CONFIG_CONSUL_ADDRESS", srv.HTTPAddr)
 
-	config := map[string][]byte{"config/": []byte("")}
+	config := map[string][]byte{"panoptes/config/": []byte("")}
 	srv.PopulateKV(t, config)
 
 	_, err = New("-")
