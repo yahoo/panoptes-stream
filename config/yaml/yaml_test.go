@@ -150,7 +150,7 @@ func TestConfigDevices(t *testing.T) {
 	y := &yaml{}
 	yamlCfg := &yamlConfig{}
 	yml.Unmarshal([]byte(yamlContent), yamlCfg)
-	devices := y.configDevices(yamlCfg)
+	devices := y.getDevices(yamlCfg)
 	if len(devices) < 1 {
 		t.Error("expect to have a device but return ", len(devices))
 	}

@@ -17,8 +17,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// Consul represents the Consul distributed key-value storage
-type Consul struct {
+// consul represents the consul distributed key-value storage
+type consul struct {
 	client *api.Client
 
 	prefix    string
@@ -40,10 +40,11 @@ type consulConfig struct {
 	TLSConfig config.TLSConfig
 }
 
+// New constructs consul configuration management
 func New(filename string) (config.Config, error) {
 	var err error
 
-	consul := &Consul{
+	c := &consul{
 		informer: make(chan struct{}, 1),
 		global:   &config.Global{},
 		logger:   config.GetDefaultLogger(),
@@ -70,34 +71,34 @@ func New(filename string) (config.Config, error) {
 	}
 
 	if len(config.Prefix) > 0 {
-		consul.prefix = config.Prefix
+		c.prefix = config.Prefix
 	} else {
-		consul.prefix = "panoptes/config/"
+		c.prefix = "panoptes/config/"
 	}
 
-	consul.client, err = api.NewClient(apiConfig)
+	c.client, err = api.NewClient(apiConfig)
 	if err != nil {
 		return nil, err
 	}
 
-	if err = consul.getRemoteConfig(); err != nil {
+	if err = c.getRemoteConfig(); err != nil {
 		return nil, err
 	}
 
-	if !consul.global.WatcherDisabled {
+	if !c.global.WatcherDisabled {
 		go func() {
-			err := consul.watch(config.Address)
+			err := c.watch(config.Address)
 			if err != nil {
-				consul.logger.Error("consul.watcher", zap.Error(err))
+				c.logger.Error("consul.watcher", zap.Error(err))
 				os.Exit(1)
 			}
 		}()
 	}
 
-	return consul, nil
+	return c, nil
 }
 
-func (c *Consul) getRemoteConfig() error {
+func (c *consul) getRemoteConfig() error {
 	var (
 		err        error
 		devicesTpl = make(map[string]config.DeviceTemplate)
@@ -215,39 +216,47 @@ func (c *Consul) getRemoteConfig() error {
 	return nil
 }
 
-func (c *Consul) Devices() []config.Device {
+// Devices returns configured devices
+func (c *consul) Devices() []config.Device {
 	return c.devices
 }
 
-func (c *Consul) Producers() []config.Producer {
+// Producers returns configured producers
+func (c *consul) Producers() []config.Producer {
 	return c.producers
 }
 
-func (c *Consul) Databases() []config.Database {
+// Databases returns configured databases
+func (c *consul) Databases() []config.Database {
 	return c.databases
 }
 
-func (c *Consul) Sensors() []config.Sensor {
+// Sensors returns configured sensors
+func (c *consul) Sensors() []config.Sensor {
 	return c.sensors
 }
 
-func (c *Consul) Global() *config.Global {
+// Global returns global configuration
+func (c *consul) Global() *config.Global {
 	return c.global
 }
 
-func (c *Consul) Informer() chan struct{} {
+// Informer returns informer channel
+func (c *consul) Informer() chan struct{} {
 	return c.informer
 }
 
-func (c *Consul) Logger() *zap.Logger {
+// Logger returns logging handler
+func (c *consul) Logger() *zap.Logger {
 	return c.logger
 }
 
-func (c *Consul) Update() error {
+// Update gets configuration from consul key value store
+func (c *consul) Update() error {
 	return c.getRemoteConfig()
 }
 
-func (c *Consul) watch(addr string) error {
+func (c *consul) watch(addr string) error {
 	params := map[string]interface{}{
 		"type":   "keyprefix",
 		"prefix": c.prefix,

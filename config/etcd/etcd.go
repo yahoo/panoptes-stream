@@ -18,6 +18,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
+// etcd represents etcd configuration management
 type etcd struct {
 	client *clientv3.Client
 
@@ -40,7 +41,7 @@ type etcdConfig struct {
 	TLSConfig config.TLSConfig
 }
 
-// New creates an etcd configuration
+// New constructs etcd configuration management
 func New(filename string) (config.Config, error) {
 	var (
 		err       error
@@ -217,34 +218,42 @@ func (e *etcd) getRemoteConfig() error {
 	return nil
 }
 
+// Devices returns configured devices
 func (e *etcd) Devices() []config.Device {
 	return e.devices
 }
 
+// Producers returns configured producers
 func (e *etcd) Producers() []config.Producer {
 	return e.producers
 }
 
+// Databases returns configured databases
 func (e *etcd) Databases() []config.Database {
 	return e.databases
 }
 
+// Sensors returns configured sensors
 func (e *etcd) Sensors() []config.Sensor {
 	return e.sensors
 }
 
+// Global returns global configuration
 func (e *etcd) Global() *config.Global {
 	return e.global
 }
 
+// Informer returns informer channel
 func (e *etcd) Informer() chan struct{} {
 	return e.informer
 }
 
+// Logger returns logging handler
 func (e *etcd) Logger() *zap.Logger {
 	return e.logger
 }
 
+// Update gets configuration from etcd key value store
 func (e *etcd) Update() error {
 	return e.getRemoteConfig()
 }

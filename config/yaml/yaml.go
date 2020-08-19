@@ -11,6 +11,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
+// yaml represents yaml configuration management
 type yaml struct {
 	filename  string
 	devices   []config.Device
@@ -43,7 +44,7 @@ type yamlConfig struct {
 	config.Global `yaml:",inline"`
 }
 
-// New constructs new yaml config
+// New constructs yaml configuration management
 func New(filename string) (config.Config, error) {
 	yamlCfg := &yamlConfig{}
 	if err := Read(filename, yamlCfg); err != nil {
@@ -56,11 +57,11 @@ func New(filename string) (config.Config, error) {
 		informer: make(chan struct{}, 1),
 	}
 
-	y.devices = y.configDevices(yamlCfg)
-	y.producers = y.configProducers(yamlCfg.Producers)
-	y.databases = y.configDatabases(yamlCfg.Databases)
-	y.sensors = y.configSensors(yamlCfg.Sensors)
-	y.global = y.configGlobal(&yamlCfg.Global)
+	y.devices = y.getDevices(yamlCfg)
+	y.producers = y.getProducers(yamlCfg.Producers)
+	y.databases = y.getDatabases(yamlCfg.Databases)
+	y.sensors = y.getSensors(yamlCfg.Sensors)
+	y.global = y.getGlobal(&yamlCfg.Global)
 
 	if !yamlCfg.Global.WatcherDisabled {
 		go func() {
@@ -75,6 +76,7 @@ func New(filename string) (config.Config, error) {
 	return y, nil
 }
 
+// Update reads yaml file
 func (y *yaml) Update() error {
 	yamlCfg := &yamlConfig{}
 
@@ -82,40 +84,46 @@ func (y *yaml) Update() error {
 		return err
 	}
 
-	y.devices = y.configDevices(yamlCfg)
-	y.producers = y.configProducers(yamlCfg.Producers)
-	y.databases = y.configDatabases(yamlCfg.Databases)
-	y.sensors = y.configSensors(yamlCfg.Sensors)
+	y.devices = y.getDevices(yamlCfg)
+	y.producers = y.getProducers(yamlCfg.Producers)
+	y.databases = y.getDatabases(yamlCfg.Databases)
+	y.sensors = y.getSensors(yamlCfg.Sensors)
 	y.global = &yamlCfg.Global
 
 	return nil
 }
 
+// Devices returns configured devices
 func (y *yaml) Devices() []config.Device {
 	return y.devices
 }
 
+// Global returns global configuration
 func (y *yaml) Global() *config.Global {
 	return y.global
 }
 
+// Producers returns configured producers
 func (y *yaml) Producers() []config.Producer {
 	return y.producers
 }
 
+// Databases returns configured databases
 func (y *yaml) Databases() []config.Database {
 	return y.databases
 }
 
+// Sensors returns configured sensors
 func (y *yaml) Sensors() []config.Sensor {
 	return y.sensors
 }
 
+// Logger returns logging handler
 func (y *yaml) Logger() *zap.Logger {
 	return y.logger
 }
 
-func (y *yaml) configDevices(cfg *yamlConfig) []config.Device {
+func (y *yaml) getDevices(cfg *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
 	for name, sensor := range cfg.Sensors {
 		if err := config.SensorValidation(sensor); err != nil {
@@ -156,6 +164,7 @@ func (y *yaml) configDevices(cfg *yamlConfig) []config.Device {
 	return devices
 }
 
+// Read reads a file and deserialization data
 func Read(filename string, c interface{}) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
@@ -170,7 +179,7 @@ func Read(filename string, c interface{}) error {
 	return nil
 }
 
-func (y *yaml) configProducers(p map[string]producer) []config.Producer {
+func (y *yaml) getProducers(p map[string]producer) []config.Producer {
 	var (
 		producers []config.Producer
 		cfg       interface{}
@@ -198,7 +207,7 @@ func (y *yaml) configProducers(p map[string]producer) []config.Producer {
 	return producers
 }
 
-func (y *yaml) configDatabases(p map[string]database) []config.Database {
+func (y *yaml) getDatabases(p map[string]database) []config.Database {
 	var (
 		databases []config.Database
 		cfg       interface{}
@@ -220,7 +229,7 @@ func (y *yaml) configDatabases(p map[string]database) []config.Database {
 	return databases
 }
 
-func (y *yaml) configSensors(s map[string]config.Sensor) []config.Sensor {
+func (y *yaml) getSensors(s map[string]config.Sensor) []config.Sensor {
 	var sensors []config.Sensor
 	for _, sensor := range s {
 		if err := config.SensorValidation(sensor); err != nil {
@@ -233,7 +242,7 @@ func (y *yaml) configSensors(s map[string]config.Sensor) []config.Sensor {
 	return sensors
 }
 
-func (y *yaml) configGlobal(g *config.Global) *config.Global {
+func (y *yaml) getGlobal(g *config.Global) *config.Global {
 	var config = make(map[string]interface{})
 
 	if g.Discovery.ConfigFile != "" {
