@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Metrics represents counter and gauge metrics.
 type Metrics interface {
 	Dec()
 	Inc()
@@ -19,26 +20,31 @@ type Metrics interface {
 	Set(uint64)
 }
 
+// Status represents Panoptes status and healthcheck
 type Status struct {
 	cfg    config.Config
 	logger *zap.Logger
 }
 
+// Metric represents a metric
 type Metric struct {
 	Name string
 	Help string
 }
 
+// MetricCounter represents counter metric
 type MetricCounter struct {
 	Metric
 	Value uint64
 }
 
+// MetricGauge represents gauge metric
 type MetricGauge struct {
 	Metric
 	Value uint64
 }
 
+// Labels represents prometheus labels
 type Labels = prometheus.Labels
 
 type healthcheck struct{}
@@ -47,6 +53,7 @@ func (h *healthcheck) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	fmt.Fprint(w, "panoptes alive and reachable")
 }
 
+// New constructs a new status
 func New(cfg config.Config) *Status {
 	return &Status{
 		cfg:    cfg,
@@ -54,6 +61,8 @@ func New(cfg config.Config) *Status {
 	}
 }
 
+// Start starts status web service and exposes
+// panoptes metrics and healthcheck
 func (s *Status) Start() {
 	go func() {
 		if err := s.start(); err != nil {
@@ -91,6 +100,7 @@ func (s *Status) start() error {
 	return srv.ListenAndServeTLS("", "")
 }
 
+// Register registers a metric to prometheus
 func Register(labels Labels, metrics map[string]Metrics) {
 	prefix := "panoptes_"
 
@@ -118,6 +128,7 @@ func Register(labels Labels, metrics map[string]Metrics) {
 	}
 }
 
+// Unregister unregisters a metric from prometheus
 func Unregister(labels Labels, metrics map[string]Metrics) {
 	prefix := "panoptes_"
 
@@ -144,6 +155,7 @@ func Unregister(labels Labels, metrics map[string]Metrics) {
 
 }
 
+// NewCounter creates a counter metric
 func NewCounter(name, help string) *MetricCounter {
 	return &MetricCounter{
 		Metric: Metric{
@@ -153,6 +165,7 @@ func NewCounter(name, help string) *MetricCounter {
 	}
 }
 
+// NewGauge creates a gauge metric
 func NewGauge(name, help string) *MetricGauge {
 	return &MetricGauge{
 		Metric: Metric{
@@ -162,34 +175,42 @@ func NewGauge(name, help string) *MetricGauge {
 	}
 }
 
+// Inc increases one unit counter metric
 func (m *MetricCounter) Inc() {
 	atomic.AddUint64(&m.Value, 1)
 }
 
+// Dec is not available for counter metric
 func (m *MetricCounter) Dec() {
 	// doesn't support
 }
 
+// Set is not available for counter metric
 func (m *MetricCounter) Set(i uint64) {
 	// doesn't support
 }
 
+// Get returns counter metric value
 func (m *MetricCounter) Get() uint64 {
 	return atomic.LoadUint64(&m.Value)
 }
 
+// Inc increases one unit to gauge metric
 func (m *MetricGauge) Inc() {
 	atomic.AddUint64(&m.Value, 1)
 }
 
+// Dec decreases one unit from gauge metric
 func (m *MetricGauge) Dec() {
 	atomic.AddUint64(&m.Value, ^uint64(0))
 }
 
+// Set sets gauge metric value
 func (m *MetricGauge) Set(i uint64) {
 	atomic.StoreUint64(&m.Value, i)
 }
 
+// Get returns gauge metric value
 func (m *MetricGauge) Get() uint64 {
 	return atomic.LoadUint64(&m.Value)
 }

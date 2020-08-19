@@ -46,7 +46,7 @@ func TestNewEtcdAndRegistration(t *testing.T) {
 	assert.Equal(t, "/panoptes/services/0", string(resp.Kvs[0].Key))
 
 	// register second panoptes
-	disc2 := &Etcd{
+	disc2 := &etcd{
 		cfg:    cfg,
 		prefix: "/panoptes/",
 		logger: cfg.Logger(),

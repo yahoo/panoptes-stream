@@ -17,8 +17,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// Consul represents the consul service discovery
-type Consul struct {
+// consul represents the Consul service discovery
+type consul struct {
 	id          string
 	cfg         config.Config
 	config      *consulConfig
@@ -67,7 +67,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		config.Prefix = "/panoptes/"
 	}
 
-	return &Consul{
+	return &consul{
 		cfg:    cfg,
 		config: config,
 		client: client,
@@ -76,7 +76,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 }
 
 // Register registers the panoptes at consul
-func (c *Consul) Register() error {
+func (c *consul) Register() error {
 	key := path.Join(c.config.Prefix, "global_lock")[1:]
 	_, err := c.lock(key, nil)
 	if err != nil {
@@ -128,7 +128,7 @@ func (c *Consul) Register() error {
 	return nil
 }
 
-func (c *Consul) register(id, hostname string, meta map[string]string) error {
+func (c *consul) register(id, hostname string, meta map[string]string) error {
 	reg := &api.AgentServiceRegistration{
 		ID:      id,
 		Name:    "panoptes",
@@ -146,7 +146,7 @@ func (c *Consul) register(id, hostname string, meta map[string]string) error {
 }
 
 // GetInstances returns all registered instances
-func (c *Consul) GetInstances() ([]discovery.Instance, error) {
+func (c *consul) GetInstances() ([]discovery.Instance, error) {
 	var instances []discovery.Instance
 	_, checksInfo, err := c.client.Agent().AgentHealthServiceByName("panoptes")
 	if err != nil {
@@ -165,11 +165,11 @@ func (c *Consul) GetInstances() ([]discovery.Instance, error) {
 }
 
 // Deregister deregisters the panoptes at consul
-func (c *Consul) Deregister() error {
+func (c *consul) Deregister() error {
 	return c.client.Agent().ServiceDeregister(c.id)
 }
 
-func (c *Consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, error) {
+func (c *consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, error) {
 	var err error
 	opts := &api.LockOptions{
 		Key:        key,
@@ -183,7 +183,7 @@ func (c *Consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, erro
 	return c.lockHandler.Lock(stopChan)
 }
 
-func (c *Consul) ulock() {
+func (c *consul) ulock() {
 	if err := c.lockHandler.Unlock(); err != nil {
 		c.logger.Error("consul.unlock", zap.Error(err))
 	}
@@ -220,7 +220,7 @@ func getID(ids []int) string {
 
 // Watch monitors for updates at consul panoptes service
 // and notify through the channel.
-func (c *Consul) Watch(ch chan<- struct{}) {
+func (c *consul) Watch(ch chan<- struct{}) {
 	params := make(map[string]interface{})
 	params["type"] = "service"
 	params["service"] = "panoptes"
@@ -295,7 +295,7 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 	}, nil
 }
 
-func (c *Consul) getHealthcheckURL() string {
+func (c *consul) getHealthcheckURL() string {
 	if len(c.config.HealthcheckURL) > 0 {
 		return c.config.HealthcheckURL
 	}

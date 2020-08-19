@@ -60,7 +60,7 @@ func TestSecondNodes(t *testing.T) {
 	client, err := api.NewClient(apiConfig)
 	assert.Equal(t, nil, err)
 
-	c := &Consul{
+	c := &consul{
 		client: client,
 		cfg:    cfg,
 		config: &consulConfig{},

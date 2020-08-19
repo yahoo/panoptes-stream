@@ -20,7 +20,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-type Etcd struct {
+// etcd represents the etcd as service discovery
+type etcd struct {
 	id          string
 	prefix      string
 	cfg         config.Config
@@ -37,10 +38,11 @@ type etcdConfig struct {
 	TLSConfig config.TLSConfig
 }
 
+// New constructs etcd service discovery
 func New(cfg config.Config) (discovery.Discovery, error) {
 	var (
 		tlsConfig *tls.Config
-		etcd      = &Etcd{
+		e         = &etcd{
 			cfg:    cfg,
 			logger: cfg.Logger(),
 		}
@@ -65,16 +67,16 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 	}
 
 	if len(config.Prefix) > 0 {
-		etcd.prefix = config.Prefix
+		e.prefix = config.Prefix
 	} else {
-		etcd.prefix = "/panoptes/"
+		e.prefix = "/panoptes/"
 	}
 
 	if len(config.Endpoints) < 1 {
 		config.Endpoints = []string{"127.0.0.1:2379"}
 	}
 
-	etcd.client, err = clientv3.New(clientv3.Config{
+	e.client, err = clientv3.New(clientv3.Config{
 		Endpoints: config.Endpoints,
 		TLS:       tlsConfig,
 	})
@@ -82,10 +84,11 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	return etcd, nil
+	return e, nil
 }
 
-func (e *Etcd) Register() error {
+// Register registers panoptes at etcd
+func (e *etcd) Register() error {
 	e.lock()
 	defer e.unlock()
 
@@ -131,11 +134,13 @@ func (e *Etcd) Register() error {
 	return nil
 }
 
-func (e *Etcd) Deregister() error {
+// Deregister doesn't do anything as the panoptes
+// deregister once the TTL is expired.
+func (e *etcd) Deregister() error {
 	return nil
 }
 
-func (e *Etcd) Watch(ch chan<- struct{}) {
+func (e *etcd) Watch(ch chan<- struct{}) {
 	prefix := path.Join(e.prefix, "services")
 	rch := e.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
 	for wresp := range rch {
@@ -150,7 +155,7 @@ func (e *Etcd) Watch(ch chan<- struct{}) {
 	}
 }
 
-func (e *Etcd) hearthBeat(leaseID clientv3.LeaseID) {
+func (e *etcd) hearthBeat(leaseID clientv3.LeaseID) {
 	ch, err := e.client.KeepAlive(context.Background(), leaseID)
 	if err != nil {
 		panic(err)
@@ -168,7 +173,7 @@ func (e *Etcd) hearthBeat(leaseID clientv3.LeaseID) {
 	}()
 }
 
-func (e *Etcd) register(id, hostname string, meta map[string]string) error {
+func (e *etcd) register(id, hostname string, meta map[string]string) error {
 	reg := discovery.Instance{
 		ID:      id,
 		Meta:    meta,
@@ -202,7 +207,8 @@ func (e *Etcd) register(id, hostname string, meta map[string]string) error {
 	return err
 }
 
-func (e *Etcd) GetInstances() ([]discovery.Instance, error) {
+// GetInstances returns all registered instances
+func (e *etcd) GetInstances() ([]discovery.Instance, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
 	prefix := path.Join(e.prefix, "services")
 	resp, err := e.client.Get(ctx, prefix, clientv3.WithPrefix())
@@ -224,7 +230,7 @@ func (e *Etcd) GetInstances() ([]discovery.Instance, error) {
 	return instances, nil
 }
 
-func (e *Etcd) lock() error {
+func (e *etcd) lock() error {
 	var err error
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
@@ -243,7 +249,7 @@ func (e *Etcd) lock() error {
 	return e.lockHandler.Lock(ctx)
 }
 
-func (e *Etcd) unlock() error {
+func (e *etcd) unlock() error {
 	defer e.session.Close()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
