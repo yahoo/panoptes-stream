@@ -8,12 +8,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-type DeviceTemplate struct {
-	DeviceConfig `yaml:",inline"`
-
-	Sensors []string
-}
-
+// ConvDeviceTemplate transforms devicetemplate to device
 func ConvDeviceTemplate(d DeviceTemplate) Device {
 	device := Device{}
 	b, _ := json.Marshal(&d)
@@ -22,6 +17,7 @@ func ConvDeviceTemplate(d DeviceTemplate) Device {
 	return device
 }
 
+// GetLogger tries to create a zap logger based on the user configuration
 func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	var cfg zap.Config
 	b, err := json.Marshal(lcfg)
@@ -35,7 +31,6 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 
 	cfg.Encoding = "console"
 	cfg.EncoderConfig = zap.NewProductionEncoderConfig()
-	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.EncoderConfig.EncodeCaller = nil
 	cfg.DisableStacktrace = true
@@ -48,6 +43,7 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	return logger
 }
 
+// GetDefaultLogger creates default zap logger
 func GetDefaultLogger() *zap.Logger {
 	var cfg = zap.Config{
 		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
@@ -57,7 +53,6 @@ func GetDefaultLogger() *zap.Logger {
 		ErrorOutputPaths: []string{"stderr"},
 	}
 
-	cfg.EncoderConfig.EncodeLevel = zapcore.CapitalColorLevelEncoder
 	cfg.EncoderConfig.EncodeTime = zapcore.ISO8601TimeEncoder
 	cfg.EncoderConfig.EncodeCaller = nil
 	cfg.DisableStacktrace = true
@@ -70,6 +65,7 @@ func GetDefaultLogger() *zap.Logger {
 	return logger
 }
 
+// DeviceValidation validates configured device
 func DeviceValidation(device Device) error {
 	if len(device.Sensors) < 1 {
 		return fmt.Errorf("device: %s doesn't have any sensors", device.Host)
@@ -86,6 +82,7 @@ func DeviceValidation(device Device) error {
 	return nil
 }
 
+// SensorValidation validates configured sensor
 func SensorValidation(sensor Sensor) error {
 	availSensors := map[string]bool{
 		"arista.gnmi":       true,
