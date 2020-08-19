@@ -17,7 +17,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// Consul represents the consul
+// Consul represents the consul service discovery
 type Consul struct {
 	id          string
 	cfg         config.Config
@@ -35,6 +35,7 @@ type consulConfig struct {
 	TLSConfig config.TLSConfig
 }
 
+// New constructs consul service discovery
 func New(cfg config.Config) (discovery.Discovery, error) {
 	config, err := getConfig(cfg)
 	if err != nil {
@@ -52,6 +53,9 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 
 	if config.TLSConfig.Enabled {
 		apiConfig.TLSConfig, err = getTLSConfig(config)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	client, err := api.NewClient(apiConfig)
@@ -214,6 +218,8 @@ func getID(ids []int) string {
 	return idStr
 }
 
+// Watch monitors for updates at consul panoptes service
+// and notify through the channel.
 func (c *Consul) Watch(ch chan<- struct{}) {
 	params := make(map[string]interface{})
 	params["type"] = "service"
