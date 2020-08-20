@@ -1,0 +1,2 @@
+server: http://influxdb:8086
+bucket: mydb

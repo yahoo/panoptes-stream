@@ -1,0 +1,20 @@
+devices:
+  - host: 192.168.59.3
+    port: 50051
+    username: admin
+    password: admin
+    sensors:
+      - sensor1
+
+sensors:
+  sensor1:
+    path: /interfaces/interface/state/counters
+    mode: sample
+    sampleInterval: 10
+    service: arista.gnmi
+    output: influxdb1::ifcounters
+
+databases:
+  influxdb1:
+    service: influxdb
+    configFile: /etc/panoptes/influxdb.yml
