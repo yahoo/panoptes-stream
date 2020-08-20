@@ -3,11 +3,16 @@ services:
   panoptes:
     build: .
     image: panoptes-stream:latest
+    volumes:
+      - ./scripts/demo/influxdb:/etc/panoptes
+    command: ["-config", "/etc/panoptes/panoptes.yml"]
     ports:
       - "8081:8081"
 
   grafana:
     image: "grafana/grafana"
+    volumes:
+      - ./scripts/demo/influxdb:/etc/grafana/provisioning/datasources
     ports:
       - "3000:3000"
     environment:
