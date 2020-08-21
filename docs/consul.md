@@ -211,7 +211,8 @@ Example Device Options configuration:
 #### Initializing Consul
 
 ```
-curl https://git.vzbuilders.com/marshadrad/panoptes/scripts/consul_init.json | consul kv import -
+curl https://git.vzbuilders.com/marshadrad/panoptes/blob/master/scripts/consul/init_config.json | consul kv import -
+
 ```
 
 #### Backup and Restore Consul
