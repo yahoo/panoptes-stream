@@ -1,5 +1,5 @@
 devices:
-  - host: 192.168.59.3
+  - host: simulator
     port: 50051
     username: admin
     password: admin
@@ -10,8 +10,8 @@ sensors:
   sensor1:
     path: /interfaces/interface/state/counters
     mode: sample
-    sampleInterval: 10
-    service: arista.gnmi
+    sampleInterval: 1
+    service: juniper.gnmi
     output: influxdb1::ifcounters
 
 databases:

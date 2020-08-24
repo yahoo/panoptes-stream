@@ -1,0 +1,10 @@
+apiVersion: 1
+
+providers:
+  - name: Panoptes
+    type: file
+    updateIntervalSeconds: 5
+    allowUiUpdates: true
+    options:
+      path: /etc/grafana/provisioning/dashboards/dashboard.json
+      foldersFromFilesStructure: true
