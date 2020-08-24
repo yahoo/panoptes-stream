@@ -14,6 +14,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Demux represents demux
 type Demux struct {
 	ctx       context.Context
 	cfg       config.Config
@@ -22,6 +23,7 @@ type Demux struct {
 	chMap     *extDSChanMap
 	pr        *producer.Registrar
 	db        *database.Registrar
+	mq        *MQ
 	register  map[string]context.CancelFunc
 	producers map[string]config.Producer
 	databases map[string]config.Database
@@ -32,6 +34,7 @@ type extDSChanMap struct {
 	eDSChan map[string]telemetry.ExtDSChan
 }
 
+// New constructs new demux
 func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		ctx:       ctx,
@@ -67,8 +70,14 @@ func (d *Demux) init() error {
 	return nil
 }
 
+// Start starts demux
 func (d *Demux) Start() {
 	d.init()
+
+	d.mq, _ = NewMQ(d.ctx, d.logger, d.chMap)
+	if d.mq != nil {
+		d.logger.Info("demux", zap.String("event", "NSQ enabled"))
+	}
 
 	go func() {
 		d.start()
@@ -103,6 +112,11 @@ func (d *Demux) start() {
 			return
 
 		default:
+			if d.mq != nil {
+				d.mq.publish(extDS, output[0])
+				continue
+			}
+
 			d.logger.Warn("demux", zap.String("error", "dataset drop"), zap.String("name", output[0]))
 		}
 	}
@@ -119,7 +133,7 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 	// register producer
 	d.producers[producer.Name] = producer
 	// make channel
-	ch := make(telemetry.ExtDSChan, 1000)
+	ch := make(telemetry.ExtDSChan, d.cfg.Global().OutputBufferSize)
 	// register channel
 	d.chMap.add(producer.Name, ch)
 	// register cancelFunnc
@@ -144,7 +158,7 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 	// register database
 	d.databases[database.Name] = database
 	// make a channel
-	ch := make(telemetry.ExtDSChan, 1000)
+	ch := make(telemetry.ExtDSChan, d.cfg.Global().OutputBufferSize)
 	// register channel
 	d.chMap.add(database.Name, ch)
 	// register cancelFunnc
@@ -171,9 +185,14 @@ func (d *Demux) unsubscribeDatabase(database config.Database) {
 	d.chMap.del(database.Name)
 }
 
+// Update updates databases and producers
 func (d *Demux) Update() {
 	d.updateProducer()
 	d.updateDatabase()
+
+	if d.mq != nil {
+		d.mq.update()
+	}
 }
 
 func (d *Demux) updateDatabase() {
@@ -275,4 +294,15 @@ func (e *extDSChanMap) del(key string) {
 	e.Lock()
 	defer e.Unlock()
 	delete(e.eDSChan, key)
+}
+
+func (e *extDSChanMap) list() []string {
+	var r []string
+	e.RLock()
+	defer e.RUnlock()
+	for k := range e.eDSChan {
+		r = append(r, k)
+	}
+
+	return r
 }
