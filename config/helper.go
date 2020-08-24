@@ -99,3 +99,16 @@ func SensorValidation(sensor Sensor) error {
 
 	return nil
 }
+
+// SetDefaultGlobal set global default value
+func SetDefaultGlobal(g *Global) {
+	g.Version = "0.0.1"
+
+	if g.BufferSize == 0 {
+		g.BufferSize = 20000
+	}
+
+	if g.OutputBufferSize == 0 {
+		g.OutputBufferSize = 10000
+	}
+}

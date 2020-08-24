@@ -180,6 +180,8 @@ func (e *etcd) getRemoteConfig() error {
 					return err
 				}
 
+				config.SetDefaultGlobal(e.global)
+
 				e.logger = config.GetLogger(e.global.Logger)
 			}
 		}

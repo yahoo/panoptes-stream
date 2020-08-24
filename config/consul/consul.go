@@ -178,6 +178,8 @@ func (c *consul) getRemoteConfig() error {
 					return err
 				}
 
+				config.SetDefaultGlobal(c.global)
+
 				c.logger = config.GetLogger(c.global.Logger)
 			}
 		}

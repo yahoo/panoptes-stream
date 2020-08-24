@@ -63,14 +63,16 @@ type Database struct {
 
 // Global represents global configuration
 type Global struct {
-	Discovery       Discovery
-	Status          Status
-	Shard           Shard
-	DeviceOptions   DeviceOptions `yaml:"deviceOptions"`
-	WatcherDisabled bool          `yaml:"watcherDisabled"`
-	Version         string
-	Logger          map[string]interface{}
-	Dialout         Dialout
+	Discovery        Discovery
+	Status           Status
+	Shard            Shard
+	DeviceOptions    DeviceOptions `yaml:"deviceOptions"`
+	WatcherDisabled  bool          `yaml:"watcherDisabled"`
+	BufferSize       int           `yaml:"bufferSize"`
+	OutputBufferSize int           `yaml:"outputBufferSize"`
+	Version          string
+	Logger           map[string]interface{}
+	Dialout          Dialout
 }
 
 // TLSConfig represents TLS client configuration

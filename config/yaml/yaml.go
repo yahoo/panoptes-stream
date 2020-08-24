@@ -88,7 +88,7 @@ func (y *yaml) Update() error {
 	y.producers = y.getProducers(yamlCfg.Producers)
 	y.databases = y.getDatabases(yamlCfg.Databases)
 	y.sensors = y.getSensors(yamlCfg.Sensors)
-	y.global = &yamlCfg.Global
+	y.global = y.getGlobal(&yamlCfg.Global)
 
 	return nil
 }
@@ -243,16 +243,18 @@ func (y *yaml) getSensors(s map[string]config.Sensor) []config.Sensor {
 }
 
 func (y *yaml) getGlobal(g *config.Global) *config.Global {
-	var config = make(map[string]interface{})
+	var conf = make(map[string]interface{})
 
 	if g.Discovery.ConfigFile != "" {
-		if err := Read(g.Discovery.ConfigFile, &config); err != nil {
+		if err := Read(g.Discovery.ConfigFile, &conf); err != nil {
 			y.logger.Error("yaml", zap.Error(err), zap.String("file", g.Discovery.ConfigFile))
 			os.Exit(1)
 		}
 
-		g.Discovery.Config = config
+		g.Discovery.Config = conf
 	}
+
+	config.SetDefaultGlobal(g)
 
 	return g
 }
