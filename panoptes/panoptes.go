@@ -33,7 +33,6 @@ func main() {
 		discovery     discovery.Discovery
 		signalCh      = make(chan os.Signal, 1)
 		updateRequest = make(chan struct{}, 1)
-		outChan       = make(telemetry.ExtDSChan, 10000)
 		ctx           = context.Background()
 	)
 
@@ -47,6 +46,8 @@ func main() {
 
 	logger := cfg.Logger()
 	defer logger.Sync()
+
+	outChan := make(telemetry.ExtDSChan, cfg.Global().BufferSize)
 
 	logger.Info("starting ...")
 
