@@ -1,6 +1,7 @@
 package main
 
 import (
+	"flag"
 	"log"
 	"math/rand"
 	"net"
@@ -15,7 +16,12 @@ import (
 )
 
 func main() {
+	var interval int
+
 	rand.Seed(time.Now().UnixNano())
+
+	flag.IntVar(&interval, "interval", 5, "update interval in seconds")
+	flag.Parse()
 
 	ln, err := net.Listen("tcp", ":50051")
 	if err != nil {
@@ -24,7 +30,7 @@ func main() {
 	}
 
 	gServer := grpc.NewServer()
-	juniperGnmiUpdate := juniper.New()
+	juniperGnmiUpdate := juniper.New(interval)
 	mockServer := &mock.GNMIServer{Resp: juniperGnmiUpdate}
 	gnmi.RegisterGNMIServer(gServer, mockServer)
 

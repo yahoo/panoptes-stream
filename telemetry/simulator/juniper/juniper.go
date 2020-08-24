@@ -22,6 +22,7 @@ type ifce struct {
 // Update represents gNMI notification / update
 type Update struct {
 	Notification *gnmi.Notification
+	interval     time.Duration
 }
 
 func (i *ifce) update() {
@@ -32,8 +33,10 @@ func (i *ifce) update() {
 }
 
 // New constructs juniper simpulator update
-func New() *Update {
-	return &Update{}
+func New(i int) *Update {
+	return &Update{
+		interval: time.Duration(i),
+	}
 }
 
 // Run sends gNMI updates
@@ -62,7 +65,7 @@ func (u Update) Run(server gnmi.GNMI_SubscribeServer) error {
 			}
 		}
 
-		time.Sleep(5 * time.Second)
+		time.Sleep(u.interval * time.Second)
 	}
 }
 
