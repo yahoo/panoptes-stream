@@ -10,7 +10,7 @@ sensors:
   sensor1:
     path: /interfaces/interface/state/counters
     mode: sample
-    sampleInterval: 1
+    sampleInterval: 5
     service: juniper.gnmi
     output: influxdb1::ifcounters
 
