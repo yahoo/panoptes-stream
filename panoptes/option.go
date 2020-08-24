@@ -42,8 +42,6 @@ func getConfig() (config.Config, error) {
 		}
 	}
 
-	cfg.Global().Version = "0.0.1"
-
 	return cfg, nil
 }
 
