@@ -21,7 +21,9 @@ func TestStartErrors(t *testing.T) {
 	cfg := config.NewMockConfig()
 	d := New(ctx, cfg, nil, nil, inChan)
 	d.chMap.add("test", outChan)
-	go d.Start()
+	d.Start()
+
+	cfg.LogOutput.Reset()
 
 	inChan <- telemetry.ExtDataStore{Output: "test1::test"}
 
