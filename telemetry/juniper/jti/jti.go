@@ -21,11 +21,7 @@ import (
 	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 )
 
-var (
-	jtiVersion = "1.0"
-
-	labelsRegex = regexp.MustCompile(`(\/[^\/]*)\[([A-Za-z0-9\-\/]*\=[^\[]*)\]`)
-)
+var jtiVersion = "1.0"
 
 // JTI represents Junos Telemetry Interface.
 type JTI struct {

@@ -35,9 +35,7 @@ func TestWithJTIServer(t *testing.T) {
 	var addr = "127.0.0.1:50500"
 
 	ln, err := mock.StartJTIServer(addr, &Update{})
-	if err != nil {
-
-	}
+	assert.NoError(t, err)
 	defer ln.Close()
 
 	t.Run("JuniperLo0InterfaceSample", JuniperLo0InterfaceSample)
