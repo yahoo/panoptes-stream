@@ -12,7 +12,6 @@ add_data()
       {
          "host": "simulate-device$i",
          "port": 50051,
-         "service" : "juniper.gnmi",
          "sensors":["simulate-sensor"]
       }
 EOF
