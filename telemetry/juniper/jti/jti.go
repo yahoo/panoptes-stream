@@ -257,6 +257,7 @@ func getValue(v *jpb.KeyValue) interface{} {
 	return value
 }
 
+// Version returns version
 func Version() string {
 	return jtiVersion
 }
