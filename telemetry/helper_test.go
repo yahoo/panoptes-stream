@@ -24,3 +24,31 @@ func TestGetPathOutput(t *testing.T) {
 	assert.Equal(t, "console::stdout", po["/tests/test/"])
 	assert.Equal(t, "console::stderr", po["/interfaces/interface/"])
 }
+
+func TestGetSensors(t *testing.T) {
+	s := []*config.Sensor{
+		{
+			Path:   "/interfaces/interface/state/counters",
+			Output: "console::stdout",
+		},
+		{
+			Path:   "/interfaces/interface[name=lo]/state/counters",
+			Output: "console::stderr",
+		},
+		{
+			Path:   "/interfaces/interface[name=Ethernet1]/state/counters",
+			Output: "console::stderr",
+		},
+		{
+			Path:   "/network-instances/network-instance",
+			Output: "console::stderr",
+		},
+	}
+
+	deviceSensors := map[string][]*config.Sensor{"arista.gnmi": s}
+	newSensors := getSensors(deviceSensors)
+	assert.Len(t, newSensors, 3)
+	assert.Len(t, newSensors["arista.gnmi"], 2)
+	assert.Contains(t, newSensors, "arista.gnmi::ext0")
+	assert.Contains(t, newSensors, "arista.gnmi::ext1")
+}
