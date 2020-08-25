@@ -83,3 +83,10 @@
 |username           |
 |password           |
 |tlsConfig          |
+
+#### Global
+| key               | description                                          |
+|-------------------|------------------------------------------------------| 
+|watcherDisabled    |disable watcher (not recommended)                     |
+|bufferSize         |shared buffer between telemetries                     |
+|outputBufferSize   |output buffer (per producer or database)              |

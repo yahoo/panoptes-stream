@@ -1,7 +1,8 @@
 
 - [Getting Started](getting_started.md)
 - Architecture
-- Glossary
+- [Glossary](glossary.md)
+- [Demo](demo.md)
 - FAQ
 
 
