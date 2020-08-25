@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/fsnotify/fsnotify"
+	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 	yml "gopkg.in/yaml.v3"
 
@@ -253,6 +254,8 @@ func (y *yaml) getGlobal(g *config.Global) *config.Global {
 
 		g.Discovery.Config = conf
 	}
+
+	envconfig.Process("panoptes", g)
 
 	config.SetDefaultGlobal(g)
 
