@@ -146,3 +146,54 @@ func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[s
 
 	return prefixLabels
 }
+
+// getPathWOKey returns path string without key/value
+func getPathWithoutKey(path string) string {
+	var buf bytes.Buffer
+
+	p, _ := ygot.StringToPath(path, ygot.StructuredPath, ygot.StringSlicePath)
+
+	for _, elem := range p.Elem {
+		if len(elem.Name) > 0 {
+			buf.WriteRune('/')
+			buf.WriteString(elem.Name)
+		}
+
+	}
+
+	return buf.String()
+}
+
+// getSensors splits sensors if they have overlap with each other.
+// arista.gnmi and cisco.gnmi can not distinguish between overlapped
+// sensors once the metrics returned from devices (multi path use case)
+// the only way to distinguish them is split them to different grpc connections.
+func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.Sensor {
+	var (
+		i        = 0
+		rSensors = map[string][]*config.Sensor{}
+	)
+
+	for service, sensors := range deviceSensors {
+		paths := map[string]bool{}
+
+		if service == "arista.gnmi" || service == "cisco.gnmi" {
+			for _, sensor := range sensors {
+				ps := getPathWithoutKey(sensor.Path)
+				if _, ok := paths[ps]; ok {
+					serviceName := fmt.Sprintf("%s::ext%d", service, i)
+					rSensors[serviceName] = append(rSensors[serviceName], sensor)
+					i++
+				} else {
+					rSensors[service] = append(rSensors[service], sensor)
+				}
+
+				paths[ps] = true
+			}
+		} else {
+			rSensors[service] = append(rSensors[service], sensors...)
+		}
+	}
+
+	return rSensors
+}

@@ -127,7 +127,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 	ctx, t.register[device.Host] = context.WithCancel(t.ctx)
 	t.metrics["devicesCurrent"].Inc()
 
-	for service, sensors := range device.Sensors {
+	for service, sensors := range getSensors(device.Sensors) {
 		go func(service string, sensors []*config.Sensor) {
 			addr := net.JoinHostPort(device.Host, strconv.Itoa(device.Port))
 			backoff := backoff{}

@@ -1,6 +1,7 @@
 package telemetry
 
 import (
+	"strings"
 	"sync"
 
 	"go.uber.org/zap"
@@ -25,7 +26,13 @@ func (tr *Registrar) Register(name, version string, tf NMIFactory) {
 }
 
 func (tr *Registrar) GetNMIFactory(name string) (NMIFactory, bool) {
-	return tr.get(name)
+	// name convention: service[::ext%d] example: cisco.gnmi or cisco.gnmi::ext1
+	service := strings.Split(name, "::")
+	if len(service) < 1 {
+		return nil, false
+	}
+
+	return tr.get(service[0])
 }
 
 func (tr *Registrar) set(name string, nf NMIFactory) {
