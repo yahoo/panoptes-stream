@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/kelseyhightower/envconfig"
 	"github.com/nsqio/go-nsq"
 	"go.uber.org/zap"
 
@@ -19,12 +20,19 @@ type MQ struct {
 
 	ctx           context.Context
 	logger        *zap.Logger
+	addr          string
 	chMap         *extDSChanMap
 	producer      *nsq.Producer
 	batchSize     int
 	drainInterval time.Duration
 	batch         map[string][][]byte
 	consumers     map[string]context.CancelFunc
+}
+
+type mqConfig struct {
+	Addr          string
+	BatchSize     int
+	DrainInterval int
 }
 
 type messageHandler struct {
@@ -37,8 +45,18 @@ type noLogger struct{}
 // NewMQ constructs MQ
 func NewMQ(ctx context.Context, lg *zap.Logger, chMap *extDSChanMap) (*MQ, error) {
 	// producer
+	mqConfig := &mqConfig{
+		Addr:          "127.0.0.1:4150",
+		BatchSize:     100,
+		DrainInterval: 30,
+	}
+
+	err := envconfig.Process("panoptes_nsq", mqConfig)
+	if err != nil {
+		return nil, err
+	}
 	config := nsq.NewConfig()
-	producer, _ := nsq.NewProducer("127.0.0.1:4150", config)
+	producer, _ := nsq.NewProducer(mqConfig.Addr, config)
 	producer.SetLogger(&noLogger{}, 0)
 
 	if err := producer.Ping(); err != nil {
@@ -50,13 +68,14 @@ func NewMQ(ctx context.Context, lg *zap.Logger, chMap *extDSChanMap) (*MQ, error
 		logger:        lg,
 		chMap:         chMap,
 		producer:      producer,
-		batchSize:     100,
-		drainInterval: time.Duration(30),
+		addr:          mqConfig.Addr,
+		batchSize:     mqConfig.BatchSize,
+		drainInterval: time.Duration(mqConfig.DrainInterval),
 		batch:         make(map[string][][]byte),
 		consumers:     make(map[string]context.CancelFunc),
 	}
 
-	// bach drainer
+	// batch drainer
 	m.drainer()
 
 	// consumers
@@ -167,7 +186,7 @@ func (m *MQ) consumer(ctx context.Context, topic string) {
 	}
 
 	consumer.AddConcurrentHandlers(handler, 2)
-	consumer.ConnectToNSQD("127.0.0.1:4150")
+	consumer.ConnectToNSQD(m.addr)
 
 	<-ctx.Done()
 }
