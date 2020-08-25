@@ -2,6 +2,7 @@ package demux
 
 import (
 	"context"
+	"os"
 	"os/exec"
 	"testing"
 	"time"
@@ -12,6 +13,8 @@ import (
 )
 
 func TestMQ(t *testing.T) {
+	os.Setenv("PANOPTES_NSQ_ADDR", "127.0.0.1:4155")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	nsqServer(ctx, t)
@@ -25,9 +28,9 @@ func TestMQ(t *testing.T) {
 	chMap.add("test", testChan)
 
 	mq, err := NewMQ(ctx, cfg.Logger(), chMap)
+	assert.NoError(t, err)
 	mq.batchSize = 0
 	mq.drainInterval = time.Duration(10)
-	assert.NoError(t, err)
 
 	ds := telemetry.ExtDataStore{
 		Output: "test::test",
@@ -47,6 +50,8 @@ func TestMQ(t *testing.T) {
 }
 
 func TestBatchDrainer(t *testing.T) {
+	os.Setenv("PANOPTES_NSQ_ADDR", "127.0.0.1:4155")
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	nsqServer(ctx, t)
@@ -60,9 +65,9 @@ func TestBatchDrainer(t *testing.T) {
 	chMap.add("test", testChan)
 
 	mq, err := NewMQ(ctx, cfg.Logger(), chMap)
+	assert.NoError(t, err)
 	mq.batchSize = 10
 	mq.drainInterval = time.Duration(1)
-	assert.NoError(t, err)
 
 	ds := telemetry.ExtDataStore{
 		Output: "test::test",
@@ -83,7 +88,8 @@ func TestBatchDrainer(t *testing.T) {
 
 func nsqServer(ctx context.Context, t *testing.T) {
 	go func() {
-		cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp")
+		addr := os.Getenv("PANOPTES_NSQ_ADDR")
+		cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp", "-tcp-address", addr)
 		t.Log(cmd.Run())
 	}()
 }
