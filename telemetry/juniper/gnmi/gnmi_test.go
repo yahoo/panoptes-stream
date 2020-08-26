@@ -30,7 +30,8 @@ func TestJuniperCountersMock(t *testing.T) {
 
 	cfg := config.NewMockConfig()
 
-	ctx, _ := context.WithTimeout(context.Background(), time.Millisecond*500)
+	ctx, cancel := context.WithTimeout(context.Background(), time.Millisecond*500)
+	defer cancel()
 
 	conn, err := grpc.DialContext(ctx, addr, grpc.WithInsecure())
 	if err != nil {

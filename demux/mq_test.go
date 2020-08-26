@@ -92,4 +92,6 @@ func nsqServer(ctx context.Context, t *testing.T) {
 		cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp", "-tcp-address", addr)
 		t.Log(cmd.Run())
 	}()
+
+	time.Sleep(200 * time.Millisecond)
 }
