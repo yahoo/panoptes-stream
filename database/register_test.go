@@ -9,7 +9,7 @@ import (
 )
 
 func TestRegister(t *testing.T) {
-	var df DatabaseFactory
+	var df Factory
 
 	cfg := config.NewMockConfig()
 	r := NewRegistrar(cfg.Logger())

@@ -9,8 +9,10 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-type ProducerFactory func(context.Context, config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
+// Factory is a function that returns a new instance of producer
+type Factory func(context.Context, config.Producer, *zap.Logger, telemetry.ExtDSChan) Producer
 
+// Producer represents a producer
 type Producer interface {
 	Start()
 }

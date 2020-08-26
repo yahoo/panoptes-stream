@@ -12,15 +12,19 @@ import (
 	"go.uber.org/zap"
 )
 
+// Console represents console
+// It's just print pretty metrics on the stdout or stderr for testing purpose
 type Console struct {
 	ch telemetry.ExtDSChan
 	lg *zap.Logger
 }
 
+// New returns a new console instance
 func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
 	return &Console{ch: inChan}
 }
 
+// Start starts printing available metric
 func (c *Console) Start() {
 	for {
 		v, ok := <-c.ch
@@ -38,6 +42,7 @@ func (c *Console) Start() {
 	}
 }
 
+// PrettyPrint prints metrics on the stdout or stderr in pretty format
 func PrettyPrint(ds telemetry.DataStore, fdType string) error {
 	b, err := json.MarshalIndent(ds, "", "  ")
 	if err != nil {
@@ -52,6 +57,7 @@ func PrettyPrint(ds telemetry.DataStore, fdType string) error {
 	return nil
 }
 
+// Register registers console as a producer at producer registrar
 func Register(producerRegistrar *producer.Registrar) {
 	producerRegistrar.Register("console", "-", New)
 }

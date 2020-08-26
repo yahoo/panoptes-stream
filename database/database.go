@@ -8,8 +8,10 @@ import (
 	"go.uber.org/zap"
 )
 
-type DatabaseFactory func(context.Context, config.Database, *zap.Logger, telemetry.ExtDSChan) Database
+// Factory is a function that returns a new instance of database
+type Factory func(context.Context, config.Database, *zap.Logger, telemetry.ExtDSChan) Database
 
+// Database represents a database
 type Database interface {
 	Start()
 }

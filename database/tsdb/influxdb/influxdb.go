@@ -20,6 +20,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
+// InfluxDB represents InfluxDB
 type InfluxDB struct {
 	ctx    context.Context
 	ch     telemetry.ExtDSChan
@@ -39,6 +40,7 @@ type influxDBConfig struct {
 	TLSConfig config.TLSConfig
 }
 
+// New returns a new influxdb instance
 func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan telemetry.ExtDSChan) database.Database {
 	return &InfluxDB{
 		ctx:    ctx,
@@ -48,6 +50,7 @@ func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan teleme
 	}
 }
 
+// Start starts influxdb ingestion
 func (i *InfluxDB) Start() {
 	config, err := i.getConfig()
 	if err != nil {
@@ -61,7 +64,7 @@ func (i *InfluxDB) Start() {
 		os.Exit(1)
 	}
 
-	writeApi := client.WriteApi(config.Org, config.Bucket)
+	writeAPI := client.WriteApi(config.Org, config.Bucket)
 
 	i.logger.Info("influxdb", zap.String("name", i.cfg.Name), zap.String("server", config.Server), zap.String("bucket", config.Bucket))
 
@@ -79,7 +82,7 @@ func (i *InfluxDB) Start() {
 				i.logger.Error("influxdb", zap.Error(err), zap.String("output", v.Output))
 			}
 
-			writeApi.WriteRecord(line)
+			writeAPI.WriteRecord(line)
 
 		case <-i.ctx.Done():
 			i.logger.Info("influxdb", zap.String("msg", "database has been terminated"), zap.String("name", i.cfg.Name))

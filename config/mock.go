@@ -23,7 +23,7 @@ type MockConfig struct {
 	logger *zap.Logger
 }
 
-// MemSink repesents memory destination for logging
+// MemSink represents memory destination for logging
 type MemSink struct {
 	*bytes.Buffer
 }
@@ -84,16 +84,23 @@ func (m *MockConfig) Informer() chan struct{} {
 	return m.MInformer
 }
 
-// Update doesn't do anything
+// Update is mock update
 func (m *MockConfig) Update() error {
 	return nil
 }
+
+// Logger returns zap logger pointer
 func (m *MockConfig) Logger() *zap.Logger {
 	return m.logger
 }
 
+// Close is required method for sink interface
 func (s *MemSink) Close() error { return nil }
-func (s *MemSink) Sync() error  { return nil }
+
+// Sync is required method for sink interface
+func (s *MemSink) Sync() error { return nil }
+
+// Unmarshal returns decoded data as key value and reset the buffer
 func (s *MemSink) Unmarshal() map[string]string {
 	defer s.Reset()
 	v := make(map[string]string)

@@ -6,35 +6,41 @@ import (
 	"go.uber.org/zap"
 )
 
+// Registrar represents producer factory registration.
 type Registrar struct {
-	p      map[string]ProducerFactory
+	p      map[string]Factory
 	logger *zap.Logger
 	sync.RWMutex
 }
 
+// NewRegistrar creates new registrar.
 func NewRegistrar(logger *zap.Logger) *Registrar {
 	return &Registrar{
-		p:      make(map[string]ProducerFactory),
+		p:      make(map[string]Factory),
 		logger: logger,
 	}
 }
 
-func (pr *Registrar) Register(name, vendor string, pf ProducerFactory) {
+// Register adds new producer factory
+func (pr *Registrar) Register(name, vendor string, pf Factory) {
 	pr.logger.Info("producer/register", zap.String("name", name), zap.String("vendor", vendor))
 	pr.set(name, pf)
 }
 
-func (pr *Registrar) GetProducerFactory(name string) (ProducerFactory, bool) {
+// GetProducerFactory returns requested producer factory.
+func (pr *Registrar) GetProducerFactory(name string) (Factory, bool) {
 	return pr.get(name)
 }
 
-func (pr *Registrar) set(name string, m ProducerFactory) {
+// set registers a producer factory.
+func (pr *Registrar) set(name string, m Factory) {
 	pr.Lock()
 	defer pr.Unlock()
 	pr.p[name] = m
 }
 
-func (pr *Registrar) get(name string) (ProducerFactory, bool) {
+// get returns requested producer factory.
+func (pr *Registrar) get(name string) (Factory, bool) {
 	pr.RLock()
 	defer pr.RUnlock()
 	v, ok := pr.p[name]
