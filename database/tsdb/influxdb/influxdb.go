@@ -103,6 +103,7 @@ func getLineProtocol(buf *bytes.Buffer, v telemetry.ExtDataStore) (string, error
 	buf.WriteString("system_id=" + v.DS["system_id"].(string))
 	for k, v := range v.DS["labels"].(map[string]string) {
 		buf.WriteRune(',')
+		v = strings.Replace(v, " ", "_", -1)
 		buf.WriteString(escape.String(k) + "=" + v)
 	}
 	buf.WriteRune(' ')
