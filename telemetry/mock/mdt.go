@@ -2,6 +2,7 @@ package mock
 
 import telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 
+// MDTInterface returns Cisco MDT mock data included two recursive sets
 func MDTInterface() *telemetry.Telemetry {
 	return &telemetry.Telemetry{
 		NodeId:              &telemetry.Telemetry_NodeIdStr{NodeIdStr: "ios"},
@@ -91,6 +92,7 @@ func MDTInterface() *telemetry.Telemetry {
 
 }
 
+// MDTInterfaceII returns Cisco MDT mock data included two recursive sets (interface counters)
 func MDTInterfaceII() *telemetry.Telemetry {
 	return &telemetry.Telemetry{
 		NodeId:              &telemetry.Telemetry_NodeIdStr{NodeIdStr: "ios"},

@@ -9,32 +9,44 @@ import (
 	"google.golang.org/protobuf/types/known/anypb"
 )
 
+// Response represents gNMI response
 type Response interface {
 	Run(gnmi.GNMI_SubscribeServer) error
 }
 
+// GNMIServer represents gNMI server
 type GNMIServer struct {
 	Resp Response
 }
 
+// Update represents gNMI update
 type Update struct {
 	Notification *gnmi.Notification
 	Attempt      int
 }
 
+// Capabilities is a capabilities mock method
 func (*GNMIServer) Capabilities(context.Context, *gnmi.CapabilityRequest) (*gnmi.CapabilityResponse, error) {
 	return nil, nil
 }
+
+// Get is a get mock method
 func (*GNMIServer) Get(context.Context, *gnmi.GetRequest) (*gnmi.GetResponse, error) {
 	return nil, nil
 }
+
+// Set is a set mock method
 func (*GNMIServer) Set(context.Context, *gnmi.SetRequest) (*gnmi.SetResponse, error) {
 	return nil, nil
 }
+
+// Subscribe is a mock subscribe method which it returns the notifications to the targets.
+// it doesn't go through subscription procedures instead it returns the configured responses.
 func (g *GNMIServer) Subscribe(server gnmi.GNMI_SubscribeServer) error {
 	return g.Resp.Run(server)
 }
 
+// Run is gNMI server loop to return mock responses to the targets.
 func (u Update) Run(server gnmi.GNMI_SubscribeServer) error {
 	for i := 0; i < u.Attempt; i++ {
 		err := server.Send(&gnmi.SubscribeResponse{
@@ -49,6 +61,7 @@ func (u Update) Run(server gnmi.GNMI_SubscribeServer) error {
 	return nil
 }
 
+// StartGNMIServer starts gNMI mock server
 func StartGNMIServer(addr string, resp Response) (net.Listener, error) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -65,6 +78,7 @@ func StartGNMIServer(addr string, resp Response) (net.Listener, error) {
 	return ln, nil
 }
 
+// AristaUpdate returns gNMI notification included an Arista interface update
 func AristaUpdate() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595363593437180059,
@@ -86,6 +100,7 @@ func AristaUpdate() *gnmi.Notification {
 	}
 }
 
+// AristaBGPUpdate return gNMI notification included an Arista BGP update
 func AristaBGPUpdate() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595363593413814979,
@@ -112,6 +127,7 @@ func AristaBGPUpdate() *gnmi.Notification {
 	}
 }
 
+// CiscoXRInterface return a gNMI notification included a Cisco XR interface update
 func CiscoXRInterface() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1596928627212000000,
@@ -181,6 +197,7 @@ func CiscoXRInterface() *gnmi.Notification {
 	}
 }
 
+// JuniperUpdate returns a gNMI notification included a Juniper interface update
 func JuniperUpdate() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595951912880990837,
@@ -218,6 +235,7 @@ func JuniperUpdate() *gnmi.Notification {
 	}
 }
 
+// JuniperFakeKeyLabel returns gNMI update included a Juniper fake update
 func JuniperFakeKeyLabel() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595951912880990837,
@@ -239,6 +257,7 @@ func JuniperFakeKeyLabel() *gnmi.Notification {
 	}
 }
 
+// JuniperFakeDuplicateLabel returns gNMI update included a Juniper fake update
 func JuniperFakeDuplicateLabel() *gnmi.Notification {
 	return &gnmi.Notification{
 		Timestamp: 1595951912880990837,

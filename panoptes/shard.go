@@ -39,9 +39,9 @@ func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery disco
 
 }
 
-// Start runs sharding service by watching service discovery,
-// create device filters and update the panoptes to referesh
-// the devices.
+// Start runs sharding service.
+// it watches other nodes through service discovery and it creates
+// proper device filters then refresh the devices.
 func (s *Shard) Start() {
 	s.logger.Info("shard", zap.Int("configured.nodes", s.numberOfNodes))
 
@@ -193,7 +193,7 @@ func (s *Shard) waitForDiscoveryRegister() {
 		time.Sleep(time.Second * 1)
 	}
 
-	panic("discovery registeration failed")
+	panic("discovery registration failed")
 }
 
 // waitForInitialShards waits for the configured initial shards to appear.

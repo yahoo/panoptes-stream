@@ -8,34 +8,42 @@ import (
 	"google.golang.org/grpc"
 )
 
+// JTIResponse represents mock JTI response
 type JTIResponse interface {
 	Run(*jpb.SubscriptionRequest, jpb.OpenConfigTelemetry_TelemetrySubscribeServer) error
 }
 
+// OpenConfigTelemetryServer represents OpenConfigTelemetry mock Server
 type OpenConfigTelemetryServer struct {
 	Resp JTIResponse
 }
 
+// TelemetrySubscribe is mock TelemetrySubscribe method
 func (oc *OpenConfigTelemetryServer) TelemetrySubscribe(subReq *jpb.SubscriptionRequest, subServer jpb.OpenConfigTelemetry_TelemetrySubscribeServer) error {
 	return oc.Resp.Run(subReq, subServer)
 }
 
+// CancelTelemetrySubscription is mock CancelTelemetrySubscription method
 func (*OpenConfigTelemetryServer) CancelTelemetrySubscription(context.Context, *jpb.CancelSubscriptionRequest) (*jpb.CancelSubscriptionReply, error) {
 	return nil, nil
 }
 
+// GetTelemetrySubscriptions is mock GetTelemetrySubscriptions method
 func (*OpenConfigTelemetryServer) GetTelemetrySubscriptions(context.Context, *jpb.GetSubscriptionsRequest) (*jpb.GetSubscriptionsReply, error) {
 	return nil, nil
 }
 
+// GetTelemetryOperationalState is mock GetTelemetryOperationalState method
 func (*OpenConfigTelemetryServer) GetTelemetryOperationalState(context.Context, *jpb.GetOperationalStateRequest) (*jpb.GetOperationalStateReply, error) {
 	return nil, nil
 }
 
+// GetDataEncodings is mock GetDataEncodings method
 func (*OpenConfigTelemetryServer) GetDataEncodings(context.Context, *jpb.DataEncodingRequest) (*jpb.DataEncodingReply, error) {
 	return nil, nil
 }
 
+// StartJTIServer starts JTI mock server
 func StartJTIServer(addr string, resp JTIResponse) (net.Listener, error) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
@@ -52,6 +60,7 @@ func StartJTIServer(addr string, resp JTIResponse) (net.Listener, error) {
 	return ln, nil
 }
 
+// JuniperJTILo0InterfaceSample returns JTI mock data included an interface metrics
 func JuniperJTILo0InterfaceSample() *jpb.OpenConfigData {
 	return &jpb.OpenConfigData{
 		SystemId:       "core1.lax",
@@ -73,6 +82,7 @@ func JuniperJTILo0InterfaceSample() *jpb.OpenConfigData {
 	}
 }
 
+// JuniperJTIMix returns JTI mock data included fake metrics
 func JuniperJTIMix() *jpb.OpenConfigData {
 	return &jpb.OpenConfigData{
 		SystemId:       "core1.lax",
@@ -91,6 +101,7 @@ func JuniperJTIMix() *jpb.OpenConfigData {
 	}
 }
 
+// JuniperBGPSample returns JTI mock data included BGP metrics
 func JuniperBGPSample() *jpb.OpenConfigData {
 	return &jpb.OpenConfigData{
 		SystemId:       "core1.lax",
