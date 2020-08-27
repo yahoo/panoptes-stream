@@ -1,0 +1,72 @@
+[
+	{
+		"key": "panoptes/config/",
+		"flags": 0,
+		"value": ""
+	},
+	{
+		"key": "panoptes/config/databases/",
+		"flags": 0,
+		"value": ""
+	},
+	{
+		"key": "panoptes/config/databases/influxdb1",
+		"flags": 0,
+		"value": "eyAic2VydmljZSI6ICJpbmZsdXhkYiIsICJjb25maWciOiB7ICJzZXJ2ZXIiOiAiaHR0cDovL2luZmx1eGRiOjgwODYiLCAiYnVja2V0IjoibXlidWNrZXQiIH0gfQ=="
+	},
+	{
+		"key": "panoptes/config/devices/",
+		"flags": 0,
+		"value": ""
+	},
+	{
+		"key": "panoptes/config/devices/device1.lax",
+		"flags": 0,
+		"value": "eyAiaG9zdCI6ICJkZXZpY2UxLmxheCIsICJwb3J0IjogNTAwNTEsICJzZW5zb3JzIiA6IFsic2Vuc29yMSJdfQ=="
+	},
+	{
+		"key": "panoptes/config/devices/device2.lax",
+		"flags": 0,
+		"value": "eyAiaG9zdCI6ICJkZXZpY2UyLmxheCIsICJwb3J0IjogNTAwNTEsICJzZW5zb3JzIiA6IFsic2Vuc29yMSJdfQ=="
+	},
+	{
+		"key": "panoptes/config/devices/device3.lax",
+		"flags": 0,
+		"value": "eyAiaG9zdCI6ICJkZXZpY2UzLmxheCIsICJwb3J0IjogNTAwNTEsICJzZW5zb3JzIiA6IFsic2Vuc29yMSJdfQ=="
+	},
+	{
+		"key": "panoptes/config/devices/device4.lax",
+		"flags": 0,
+		"value": "eyAiaG9zdCI6ICJkZXZpY2U0LmxheCIsICJwb3J0IjogNTAwNTEsICJzZW5zb3JzIiA6IFsic2Vuc29yMSJdfQ=="
+	},
+	{
+		"key": "panoptes/config/devices/device5.lax",
+		"flags": 0,
+		"value": "eyAiaG9zdCI6ICJkZXZpY2U1LmxheCIsICJwb3J0IjogNTAwNTEsICJzZW5zb3JzIiA6IFsic2Vuc29yMSJdfQ=="
+	},
+	{
+		"key": "panoptes/config/global",
+		"flags": 0,
+		"value": "eyAibG9nZ2VyIjogeyAibGV2ZWwiOiJkZWJ1ZyIsICJvdXRwdXRQYXRocyI6IFsic3Rkb3V0Il0sICJlcnJvck91dHB1dFBhdGhzIjpbInN0ZGVyciJdIH0sICJzdGF0dXMiOiB7ICJhZGRyIjogIjAuMC4wLjA6ODA4MSIgfSwgImRpc2NvdmVyeSI6IHsgInNlcnZpY2UiOiAiY29uc3VsIiB9LCAic2hhcmQiIDogeyAiZW5hYmxlZCI6IHRydWUsICJudW1iZXJPZk5vZGVzIjogMiwgIkluaXRpYWxpemluZ1NoYXJkIiA6IDEgfSB9"
+	},
+	{
+		"key": "panoptes/config/producers/",
+		"flags": 0,
+		"value": ""
+	},
+	{
+		"key": "panoptes/config/sensors/",
+		"flags": 0,
+		"value": ""
+	},
+	{
+		"key": "panoptes/config/sensors/sensor1",
+		"flags": 0,
+		"value": "eyAic2VydmljZSI6ICJqdW5pcGVyLmdubWkiLCAicGF0aCI6ICIvaW50ZXJmYWNlcy9pbnRlcmZhY2Uvc3RhdGUvY291bnRlcnMiLCAibW9kZSI6ICJzYW1wbGUiLCAic2FtcGxlSW50ZXJ2YWwiOiA1LCAib3V0cHV0IjoiaW5mbHV4ZGIxOjppZmNvdW50ZXJzIiB9"
+	},
+	{
+		"key": "panoptes/global_lock",
+		"flags": 3304740253564472344,
+		"value": ""
+	}
+]

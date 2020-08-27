@@ -1,0 +1,11 @@
+apiVersion: 1
+
+datasources:
+  - name: panoptes-influxdb
+    type: influxdb
+    url: http://influxdb:8086
+    database: mybucket
+
+  - name: panoptes-prometheus
+    type: prometheus
+    url: http://prometheus:9090

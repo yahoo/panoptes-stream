@@ -1,0 +1,17 @@
+global:
+  scrape_interval: 5s
+  external_labels:
+    monitor: "panoptes-stream"
+
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+
+  - job_name: "node1"
+    static_configs:
+      - targets: ["panoptes-node1:8081"]
+
+  - job_name: "node2"
+    static_configs:
+      - targets: ["panoptes-node2:8081"]
