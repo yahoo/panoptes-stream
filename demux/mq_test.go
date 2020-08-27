@@ -81,7 +81,7 @@ func TestBatchDrainer(t *testing.T) {
 	select {
 	case dsQ := <-testChan:
 		assert.Contains(t, dsQ.DS, "metric")
-	case <-time.After(2 * time.Second):
+	case <-time.After(5 * time.Second):
 		assert.Fail(t, "timeout")
 	}
 }
