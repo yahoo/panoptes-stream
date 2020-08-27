@@ -14,7 +14,7 @@
 
 | key              | description                                                                                             |
 |------------------|---------------------------------------------------------------------------------------------------------|
-|service           |telemetry name based on the vendor. currect supported [services](#services).                             |
+|service           |telemetry name based on the vendor. current supported [services](#services).                             |
 |output            |the output can be a producer or a database that you already configured.                                  |
 |path              |The sensor path describes a YANG path or a subset of data definitions in a YANG model with a container.  |
 |mode              |streaming subscription mode: sample or on_change.                                                        |

@@ -8,7 +8,7 @@
 
 #### .yaml format (dial-in mode)
 
-Here's an basic example .yaml file that shows the required fields and object spec for collecting a sensor path from a device and injest the data to influxdb every 10 seconds.
+Here's an basic example .yaml file that shows the required fields and object spec for collecting a sensor path from a device and ingest the data to influxdb every 10 seconds.
 
 ```yaml
 devices:
@@ -44,7 +44,7 @@ bucket: mybucket
 ```
 #### execute panoptes docker
 
-#### execure panoptes docker-compose
+#### execute panoptes docker-compose
 
 
 

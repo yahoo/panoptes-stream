@@ -65,7 +65,7 @@ Value:
     }
 }
 ```
-The key and topics will assigne to the sensor's output like: "output": "kafka1::interface" or "output": "kafka1::bgp"
+The key and topics will assign to the sensor's output like: "output": "kafka1::interface" or "output": "kafka1::bgp"
 Kafka output syntax: KEY::TOPIC 
 
 You can see all available producers config keys at [configuration reference](config_reference.md#producers). 
@@ -86,7 +86,7 @@ Value:
     } 
 }
 ```
-The key and a measurement name related to sensor will assigne to the sensor's output like: "output": "influxdb1::ifcounters" or "output": "influxdb1::bgp"
+The key and a measurement name related to sensor will assign to the sensor's output like: "output": "influxdb1::ifcounters" or "output": "influxdb1::bgp"
 Influxdb output syntax: KEY::MEASUREMENT
 
 You can see all available databases config keys at [configuration reference](config_reference.md#database). 
