@@ -52,6 +52,10 @@ func (s *Shard) Start() {
 
 	s.waitForInitialShards()
 
+	// in case of recovery it has to wait until other nodes
+	// disconnected from targets that this node is responsible.
+	time.Sleep(35 * time.Second)
+
 	s.telemetry.AddFilterOpt("mainShard", mainShard(s.id, s.numberOfNodes))
 	s.updateRequest <- struct{}{}
 
