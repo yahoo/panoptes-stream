@@ -7,9 +7,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/assert"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"github.com/stretchr/testify/assert"
 )
 
 func TestMQ(t *testing.T) {
@@ -93,5 +94,5 @@ func nsqServer(ctx context.Context, t *testing.T) {
 		t.Log(cmd.Run())
 	}()
 
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(1 * time.Second)
 }
