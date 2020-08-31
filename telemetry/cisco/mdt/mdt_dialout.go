@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package mdt
 
 import (
@@ -19,7 +22,8 @@ import (
 	"go.uber.org/zap"
 )
 
-type MDTDialout struct {
+// Dialout represents MDT dial-out
+type Dialout struct {
 	ctx        context.Context
 	cfg        config.Config
 	service    string
@@ -32,8 +36,9 @@ type MDTDialout struct {
 	sync.RWMutex
 }
 
-func NewDialout(ctx context.Context, service string, cfg config.Config, outChan telemetry.ExtDSChan) *MDTDialout {
-	m := &MDTDialout{
+// NewDialout returns a new instance of MDT dial-out
+func NewDialout(ctx context.Context, service string, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
+	m := &Dialout{
 		ctx:        ctx,
 		cfg:        cfg,
 		service:    service,
@@ -50,7 +55,8 @@ func NewDialout(ctx context.Context, service string, cfg config.Config, outChan 
 	return m
 }
 
-func (m *MDTDialout) Start() error {
+// Start creates workers and starts gRPC server
+func (m *Dialout) Start() error {
 	conf := m.cfg.Global().Dialout.Services[m.service]
 	if conf.Addr == "" {
 		return errors.New("address is empty")
@@ -74,7 +80,8 @@ func (m *MDTDialout) Start() error {
 	return nil
 }
 
-func (m *MDTDialout) Update() {
+// Update updates path to output once the configuration changed
+func (m *Dialout) Update() {
 	m.Lock()
 	defer m.Unlock()
 
@@ -84,7 +91,8 @@ func (m *MDTDialout) Update() {
 	}
 }
 
-func (m *MDTDialout) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
+// MdtDialout gets stream metrics and fan-out to workers
+func (m *Dialout) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
 	var buf *bytes.Buffer
 
 	p, ok := peer.FromContext(stream.Context())
@@ -114,7 +122,7 @@ func (m *MDTDialout) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) 
 	}
 }
 
-func (m *MDTDialout) worker() {
+func (m *Dialout) worker() {
 	var buf = new(bytes.Buffer)
 	for {
 		select {
@@ -133,7 +141,7 @@ func (m *MDTDialout) worker() {
 	}
 }
 
-func (m *MDTDialout) datastore(buf *bytes.Buffer, data []byte) error {
+func (m *Dialout) datastore(buf *bytes.Buffer, data []byte) error {
 	tm := &mdt.Telemetry{}
 	err := proto.Unmarshal(data, tm)
 	if err != nil {
@@ -145,7 +153,7 @@ func (m *MDTDialout) datastore(buf *bytes.Buffer, data []byte) error {
 	return nil
 }
 
-func (m *MDTDialout) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
+func (m *Dialout) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 	var (
 		prefix, output string
 		timestamp      uint64
@@ -216,7 +224,7 @@ func (m *MDTDialout) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 	}
 }
 
-func (m *MDTDialout) getOutput(sub string) (string, error) {
+func (m *Dialout) getOutput(sub string) (string, error) {
 	if m.cfg.Global().Dialout.DefaultOutput != "" {
 		return m.cfg.Global().Dialout.DefaultOutput, nil
 	}

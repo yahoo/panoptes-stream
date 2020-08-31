@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package mdt
 
 import (
@@ -9,14 +12,13 @@ import (
 
 	mdt "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
-
-	mdtGRPC "git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/proto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	mdtGRPC "git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/proto"
 )
 
 const (
@@ -27,6 +29,7 @@ const (
 
 var mdtVersion = "0.0.1"
 
+// MDT represents Model-Driven Telemetry
 type MDT struct {
 	conn          *grpc.ClientConn
 	subscriptions []string
@@ -40,6 +43,7 @@ type MDT struct {
 	pathOutput map[string]string
 }
 
+// New returns new instance of NMI
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var metrics = make(map[string]status.Metrics)
 
@@ -68,6 +72,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	return m
 }
 
+// Start gets stream metrics and fan-out to workers
 func (m *MDT) Start(ctx context.Context) error {
 
 	subsArgs := &mdtGRPC.SubscribeRequest{
@@ -89,7 +94,7 @@ func (m *MDT) Start(ctx context.Context) error {
 
 	for {
 		reply, err := stream.Recv()
-		// TODO handlei error io.EOF
+		// TODO handle error io.EOF
 		if err != nil {
 			return err
 		}
@@ -294,6 +299,7 @@ func getKeyValue(field *mdt.TelemetryField) interface{} {
 	return nil
 }
 
+// Version returns version
 func Version() string {
 	return mdtVersion
 }

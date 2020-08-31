@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package gnmi
 
 import (
@@ -337,6 +340,7 @@ func getAnyVal(anyMsg *anypb.Any) (interface{}, error) {
 	return nil, fmt.Errorf("proto any unknown msg type")
 }
 
+// Version returns version
 func Version() string {
 	return gnmiVersion
 }

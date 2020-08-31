@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package gnmi
 
 import (
@@ -54,7 +57,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	}
 }
 
-// Start starts to get stream and fan-out to workers
+// Start gets stream metrics and fan-out to workers
 func (g *GNMI) Start(ctx context.Context) error {
 	defer status.Unregister(status.Labels{"host": g.conn.Target()}, g.metrics)
 
@@ -224,6 +227,7 @@ func respValidation(resp *gpb.SubscribeResponse_Update) error {
 	return nil
 }
 
+// Version returns version
 func Version() string {
 	return gnmiVersion
 }

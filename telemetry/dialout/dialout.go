@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package dialout
 
 import (
@@ -8,14 +11,16 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/mdt"
 )
 
+// Dialout represents dial-out mode for all telemetries.
 type Dialout struct {
 	cfg     config.Config
 	ctx     context.Context
 	outChan telemetry.ExtDSChan
 
-	mdtHandler *mdt.MDTDialout
+	mdtHandler *mdt.Dialout
 }
 
+// New creates a new dialout instance.
 func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
 	return &Dialout{
 		cfg:     cfg,
@@ -24,6 +29,7 @@ func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *D
 	}
 }
 
+// Start starts available dialout telemetries.
 func (d *Dialout) Start() {
 	for service := range d.cfg.Global().Dialout.Services {
 		if service == "cisco.mdt" {
@@ -33,6 +39,7 @@ func (d *Dialout) Start() {
 	}
 }
 
+// Update updates dialout telemetries once configuration changed.
 func (d *Dialout) Update() {
 	for service := range d.cfg.Global().Dialout.Services {
 		if service == "cisco.mdt" {
