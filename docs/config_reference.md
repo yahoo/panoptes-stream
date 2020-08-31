@@ -1,5 +1,6 @@
+### Configuration Keys
 
-### Device 
+#### Device 
 
 | key          | description                                             |
 |--------------|---------------------------------------------------------|
@@ -10,7 +11,7 @@
 |tlsConfig     | TLS configuration parameters. check [TLS config](#tls). |
 
 
-### Sensor  
+#### Sensor  
 
 | key              | description                                                                                             |
 |------------------|---------------------------------------------------------------------------------------------------------|
@@ -54,13 +55,13 @@
 |addr               | status ip address and port (ip:port)              |
 |tlsConfig          | TLS configuration                                 |
 
-#### Shard keys
+#### Shards keys
 
 | key               | description                                       |
 |-------------------|---------------------------------------------------|
-|enabled            | 
-|initializingShard  |
-|numberOfNodes      |
+|enabled            |enable shard (sharding of network devices)         |
+|initializingShards |minimum number of available nodes required to start|
+|numberOfNodes      |maximum number of nodes                            |
 
 #### Discovery
 | key               | description                                          |
@@ -70,19 +71,19 @@
 | config            | it's valid once configuration management is not yaml |
 
 #### Dialout
-| key               | description                                          |
-|-------------------|------------------------------------------------------|
-|services           |
-|defaultOutput      |
-|tlsConfig          |
+| key               | description                                           |
+|-------------------|-------------------------------------------------------|
+|services           |dial-out service configuration                         |
+|defaultOutput      |default output                                         |
+|tlsConfig          |TLS configuration parameters. check [TLS config](#tls).|
 
 
 #### Device Options
-| key               | description                                          |
-|-------------------|------------------------------------------------------|
-|username           |
-|password           |
-|tlsConfig          |
+| key               | description                                           |
+|-------------------|-------------------------------------------------------|
+|username           |username if authentication is enabled at device.       |
+|password           |password if authentication is enabled at device.       |
+|tlsConfig          |TLS configuration parameters. check [TLS config](#tls).|
 
 #### Global
 | key               | description                                          |
