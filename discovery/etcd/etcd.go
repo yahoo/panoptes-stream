@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package etcd
 
 import (
@@ -116,7 +119,7 @@ func (e *etcd) Register() error {
 				return err
 			}
 
-			e.logger.Info("consul service registery recovered", zap.String("id", instance.ID))
+			e.logger.Info("consul", zap.String("event", "register.recover"), zap.String("id", instance.ID))
 
 			e.id = instance.ID
 
@@ -130,6 +133,8 @@ func (e *etcd) Register() error {
 	// TODO check lease id > 0
 
 	go e.Watch(nil)
+
+	e.logger.Info("etcd", zap.String("event", "register"), zap.String("id", e.id))
 
 	return nil
 }
@@ -145,11 +150,11 @@ func (e *etcd) Watch(ch chan<- struct{}) {
 	rch := e.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
 	for wresp := range rch {
 		for _, ev := range wresp.Events {
-			e.logger.Info("etcd watcher triggered", zap.ByteString("key", ev.Kv.Key))
+			e.logger.Info("etcd", zap.String("event", "watcher.trigger"), zap.ByteString("key", ev.Kv.Key))
 			select {
 			case ch <- struct{}{}:
 			default:
-				e.logger.Info("etcd watcher response dropped")
+				e.logger.Info("etcd", zap.String("event", "watcher.response.drop"))
 			}
 		}
 	}

@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package kafka
 
 import (
@@ -126,7 +129,7 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 
 	w := kafka.NewWriter(cfg)
 
-	k.logger.Info("kafka", zap.String("brokers", strings.Join(config.Brokers, ",")), zap.String("topic", topic))
+	k.logger.Info("kafka", zap.String("name", k.cfg.Name), zap.String("brokers", strings.Join(config.Brokers, ",")), zap.String("topic", topic))
 
 	for {
 		select {

@@ -27,7 +27,7 @@ func NewRegistrar(lg *zap.Logger) *Registrar {
 
 // Register adds new NMI factory
 func (tr *Registrar) Register(name, version string, tf NMIFactory) {
-	tr.lg.Info("telemetry.register", zap.String("name", name), zap.String("version", version))
+	tr.lg.Info("telemetry", zap.String("event", "register"), zap.String("name", name), zap.String("version", version))
 	tr.set(name, tf)
 }
 

@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package consul
 
 import (
@@ -102,7 +105,7 @@ func (c *consul) Register() error {
 	for _, instance := range instances {
 		id, err := strconv.Atoi(instance.ID)
 		if err != nil {
-			c.logger.Warn("consul.register", zap.Error(err))
+			c.logger.Warn("consul", zap.String("event", "register"), zap.Error(err))
 			continue
 		}
 		ids = append(ids, id)
@@ -112,7 +115,7 @@ func (c *consul) Register() error {
 				return err
 			}
 
-			c.logger.Info("consul service registery recovered", zap.String("id", instance.ID))
+			c.logger.Info("consul", zap.String("event", "register.recover"), zap.String("id", instance.ID))
 
 			c.id = instance.ID
 
@@ -121,13 +124,13 @@ func (c *consul) Register() error {
 	}
 
 	// new register node
-	// TODO: if id > numbber_of_nodes then it needs clean up!
+	// TODO: if id > number_of_nodes then it needs clean up!
 	c.id = getID(ids)
 	if err := c.register(c.id, hostname(), meta); err != nil {
 		return err
 	}
 
-	c.logger.Info("consul service registered", zap.String("id", c.id))
+	c.logger.Info("consul", zap.String("event", "register"), zap.String("id", c.id))
 
 	return nil
 }
@@ -192,7 +195,7 @@ func (c *consul) lock(key string) error {
 		Session: c.sessionID,
 	}
 
-	c.logger.Info("consul.lock", zap.String("event", "attempting lock acquisition"))
+	c.logger.Info("consul", zap.String("event", "lock.acquisition"))
 
 	for {
 		ok, _, err := c.client.KV().Acquire(kv, nil)
@@ -214,7 +217,7 @@ func (c *consul) ulock() {
 	_, err := c.client.Session().Destroy(c.sessionID, nil)
 
 	if err != nil {
-		c.logger.Error("consul.unlock", zap.Error(err))
+		c.logger.Error("consul", zap.String("event", "unlock"), zap.Error(err))
 	}
 }
 
@@ -262,10 +265,11 @@ func (c *consul) Watch(ch chan<- struct{}) {
 	lastIdx := uint64(0)
 	wp.Handler = func(idx uint64, data interface{}) {
 		if lastIdx != 0 {
-			c.logger.Info("consul watcher triggered")
+			c.logger.Info("consul", zap.String("event", "watcher.trigger"))
 			select {
 			case ch <- struct{}{}:
 			default:
+				c.logger.Info("consul", zap.String("event", "watcher.response.drop"))
 			}
 		}
 		lastIdx = idx

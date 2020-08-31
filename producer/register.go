@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package producer
 
 import (
@@ -23,7 +26,7 @@ func NewRegistrar(logger *zap.Logger) *Registrar {
 
 // Register adds new producer factory
 func (pr *Registrar) Register(name, vendor string, pf Factory) {
-	pr.logger.Info("producer/register", zap.String("name", name), zap.String("vendor", vendor))
+	pr.logger.Info("producer", zap.String("event", "register"), zap.String("name", name), zap.String("vendor", vendor))
 	pr.set(name, pf)
 }
 

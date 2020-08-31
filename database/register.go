@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package database
 
 import (
@@ -23,7 +26,7 @@ func NewRegistrar(lg *zap.Logger) *Registrar {
 
 // Register adds new database factory.
 func (r *Registrar) Register(name, vendor string, df Factory) {
-	r.lg.Info("database/register", zap.String("name", name), zap.String("vendor", vendor))
+	r.lg.Info("database", zap.String("event", "register"), zap.String("name", name), zap.String("vendor", vendor))
 	r.set(name, df)
 }
 
