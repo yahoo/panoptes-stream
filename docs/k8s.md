@@ -3,7 +3,7 @@
 
 #### Minikube
 
-- Install (Minikube)[https://kubernetes.io/docs/tasks/tools/install-minikube/] 
+- Install [Minikube](https://kubernetes.io/docs/tasks/tools/install-minikube/)
 - Install Consul
 ```
 helm repo add hashicorp https://helm.releases.hashicorp.com

@@ -47,7 +47,7 @@
 	{
 		"key": "panoptes/config/global",
 		"flags": 0,
-		"value": "eyAibG9nZ2VyIjogeyAibGV2ZWwiOiJkZWJ1ZyIsICJvdXRwdXRQYXRocyI6IFsic3Rkb3V0Il0sICJlcnJvck91dHB1dFBhdGhzIjpbInN0ZGVyciJdIH0sICJzdGF0dXMiOiB7ICJhZGRyIjogIjAuMC4wLjA6ODA4MSIgfSwgImRpc2NvdmVyeSI6IHsgInNlcnZpY2UiOiAiY29uc3VsIiB9LCAic2hhcmQiIDogeyAiZW5hYmxlZCI6IHRydWUsICJudW1iZXJPZk5vZGVzIjogMiwgIkluaXRpYWxpemluZ1NoYXJkIiA6IDEgfSB9"
+		"value": "eyAibG9nZ2VyIjogeyAibGV2ZWwiOiJkZWJ1ZyIsICJvdXRwdXRQYXRocyI6IFsic3Rkb3V0Il0sICJlcnJvck91dHB1dFBhdGhzIjpbInN0ZGVyciJdIH0sICJzdGF0dXMiOiB7ICJhZGRyIjogIjAuMC4wLjA6ODA4MSIgfSwgImRpc2NvdmVyeSI6IHsgInNlcnZpY2UiOiAiY29uc3VsIiB9LCAic2hhcmRzIiA6IHsgImVuYWJsZWQiOiB0cnVlLCAibnVtYmVyT2ZOb2RlcyI6IDIsICJJbml0aWFsaXppbmdTaGFyZHMiIDogMSB9IH0="
 	},
 	{
 		"key": "panoptes/config/producers/",
@@ -63,10 +63,5 @@
 		"key": "panoptes/config/sensors/sensor1",
 		"flags": 0,
 		"value": "eyAic2VydmljZSI6ICJqdW5pcGVyLmdubWkiLCAicGF0aCI6ICIvaW50ZXJmYWNlcy9pbnRlcmZhY2Uvc3RhdGUvY291bnRlcnMiLCAibW9kZSI6ICJzYW1wbGUiLCAic2FtcGxlSW50ZXJ2YWwiOiA1LCAib3V0cHV0IjoiaW5mbHV4ZGIxOjppZmNvdW50ZXJzIiB9"
-	},
-	{
-		"key": "panoptes/global_lock",
-		"flags": 3304740253564472344,
-		"value": ""
 	}
 ]
