@@ -1,11 +1,15 @@
 package consul
 
 import (
+	"bytes"
 	"encoding/json"
 	"os"
 	"path"
 	"sort"
 	"strconv"
+	"strings"
+	"text/template"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
@@ -19,12 +23,12 @@ import (
 
 // consul represents the Consul service discovery
 type consul struct {
-	id          string
-	cfg         config.Config
-	config      *consulConfig
-	logger      *zap.Logger
-	client      *api.Client
-	lockHandler *api.Lock
+	id        string
+	cfg       config.Config
+	config    *consulConfig
+	logger    *zap.Logger
+	client    *api.Client
+	sessionID string
 }
 
 type consulConfig struct {
@@ -78,15 +82,15 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 // Register registers the panoptes at consul
 func (c *consul) Register() error {
 	key := path.Join(c.config.Prefix, "global_lock")[1:]
-	_, err := c.lock(key, nil)
+	err := c.lock(key)
 	if err != nil {
 		return err
 	}
 	defer c.ulock()
 
 	meta := make(map[string]string)
-	meta["shard_enabled"] = strconv.FormatBool(c.cfg.Global().Shard.Enabled)
-	meta["shard_nodes"] = strconv.Itoa(c.cfg.Global().Shard.NumberOfNodes)
+	meta["shards_enabled"] = strconv.FormatBool(c.cfg.Global().Shards.Enabled)
+	meta["shards_nodes"] = strconv.Itoa(c.cfg.Global().Shards.NumberOfNodes)
 	meta["version"] = c.cfg.Global().Version
 
 	ids := []int{}
@@ -145,22 +149,23 @@ func (c *consul) register(id, hostname string, meta map[string]string) error {
 	return c.client.Agent().ServiceRegister(reg)
 }
 
-// GetInstances returns all registered instances
 func (c *consul) GetInstances() ([]discovery.Instance, error) {
 	var instances []discovery.Instance
-	_, checksInfo, err := c.client.Agent().AgentHealthServiceByName("panoptes")
+
+	catalogServices, _, err := c.client.Catalog().Service("panoptes", "", nil)
 	if err != nil {
 		return nil, err
 	}
 
-	for _, info := range checksInfo {
+	for _, catalogService := range catalogServices {
 		instances = append(instances, discovery.Instance{
-			ID:      info.Service.ID,
-			Meta:    info.Service.Meta,
-			Address: info.Service.Address,
-			Status:  info.Checks.AggregatedStatus(),
+			ID:      catalogService.ServiceID,
+			Meta:    catalogService.ServiceMeta,
+			Address: catalogService.ServiceAddress,
+			Status:  catalogService.Checks.AggregatedStatus(),
 		})
 	}
+
 	return instances, nil
 }
 
@@ -169,22 +174,46 @@ func (c *consul) Deregister() error {
 	return c.client.Agent().ServiceDeregister(c.id)
 }
 
-func (c *consul) lock(key string, stopChan chan struct{}) (<-chan struct{}, error) {
+func (c *consul) lock(key string) error {
 	var err error
-	opts := &api.LockOptions{
-		Key:        key,
-		SessionTTL: "10s",
+
+	sessionEntry := &api.SessionEntry{
+		TTL:       "10s",
+		Behavior:  "delete",
+		LockDelay: 2 * time.Second,
 	}
-	c.lockHandler, err = c.client.LockOpts(opts)
+	c.sessionID, _, err = c.client.Session().Create(sessionEntry, nil)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	return c.lockHandler.Lock(stopChan)
+	kv := &api.KVPair{
+		Key:     "panoptes/global_lock",
+		Session: c.sessionID,
+	}
+
+	c.logger.Info("consul.lock", zap.String("event", "attempting lock acquisition"))
+
+	for {
+		ok, _, err := c.client.KV().Acquire(kv, nil)
+		if err != nil {
+			return err
+		}
+
+		if ok {
+			break
+		}
+
+		time.Sleep(2 * time.Second)
+	}
+
+	return nil
 }
 
 func (c *consul) ulock() {
-	if err := c.lockHandler.Unlock(); err != nil {
+	_, err := c.client.Session().Destroy(c.sessionID, nil)
+
+	if err != nil {
 		c.logger.Error("consul.unlock", zap.Error(err))
 	}
 }
@@ -296,12 +325,15 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 }
 
 func (c *consul) getHealthcheckURL() string {
+	// replace env vars with the proper values
+	c.config.HealthcheckURL = envReplace(c.config.HealthcheckURL)
+
 	if len(c.config.HealthcheckURL) > 0 {
 		return c.config.HealthcheckURL
 	}
 
-	// TODO: if status binded to all and there is
-	// one ip address, assign it to hc
+	// TODO: if status configured to 0.0.0.0 or :port# and there is
+	// one ip address on the interface, hc should assign to it
 
 	if len(c.cfg.Global().Status.Addr) > 0 {
 		hc := path.Join(c.cfg.Global().Status.Addr, "healthcheck")
@@ -313,4 +345,21 @@ func (c *consul) getHealthcheckURL() string {
 	}
 
 	return "http://127.0.0.1:8081"
+}
+
+func envReplace(url string) string {
+	var (
+		buf  = new(bytes.Buffer)
+		envs = make(map[string]string)
+	)
+
+	for _, v := range os.Environ() {
+		kv := strings.Split(v, "=")
+		envs[kv[0]] = kv[1]
+	}
+
+	t := template.Must(template.New("url").Parse(url))
+	t.Execute(buf, envs)
+
+	return buf.String()
 }
