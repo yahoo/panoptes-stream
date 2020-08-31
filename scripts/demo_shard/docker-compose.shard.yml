@@ -1,5 +1,27 @@
 version: "3"
 services:
+  consul:
+    image: consul:latest
+    container_name: consul
+    command: ["agent", "-dev", "-client=0.0.0.0"]
+    ports:
+      - "8500:8500"
+    networks:
+      - demo-net
+
+  consul-init:
+    image: consul:latest
+    container_name: consul-init
+    volumes:
+      - ./:/tmp/consul
+    environment:
+      - CONSUL_HTTP_ADDR=consul:8500
+    depends_on:
+      - consul
+    entrypoint: '/bin/sh -c "cat /tmp/consul/consul_kv_export.json | consul kv import -"'
+    networks:
+      - demo-net
+
   panoptes-node1:
     image: panoptes-stream:latest
     container_name: panoptes-node1
@@ -44,28 +66,6 @@ services:
           - device3.lax
           - device4.lax
           - device5.lax
-
-  consul:
-    image: consul:latest
-    container_name: consul
-    command: ["agent", "-dev", "-client=0.0.0.0"]
-    ports:
-      - "8500:8500"
-    networks:
-      - demo-net
-
-  consul-init:
-    image: consul:latest
-    container_name: consul-init
-    volumes:
-      - ./:/tmp/consul
-    environment:
-      - CONSUL_HTTP_ADDR=consul:8500
-    depends_on:
-      - consul
-    entrypoint: '/bin/sh -c "cat /tmp/consul/consul_kv_export.json | consul kv import -"'
-    networks:
-      - demo-net
 
   grafana:
     image: "grafana/grafana"
