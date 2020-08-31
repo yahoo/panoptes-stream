@@ -1,0 +1,47 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: panoptes-stream
+spec:
+  selector:
+    matchLabels:
+      app: panoptes-stream
+  replicas: {{ .Values.replicaCount}}
+  template:
+    metadata:
+      labels:
+        app: panoptes-stream
+    spec:
+      containers:
+        - name: panoptes
+          image: panoptes-stream
+          imagePullPolicy: Never
+          args:
+            - "-consul"
+            - "-"
+          env:
+          - name: HOST_IP
+            valueFrom:
+                fieldRef:
+                  fieldPath: status.hostIP
+          - name: POD_IP
+            valueFrom:
+                fieldRef:
+                  fieldPath: status.podIP          
+          - name: CONSUL_HTTP_ADDR 
+            value: "$(HOST_IP):8500"         
+          resources:
+            requests:
+              memory: "64Mi"
+              cpu: "250m"
+            limits:
+              memory: "128Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /healthcheck
+              port: {{ .Values.statusPort}}
+              scheme: HTTP    
+          ports:
+            - containerPort: {{ .Values.statusPort}}
+              name: metrics 

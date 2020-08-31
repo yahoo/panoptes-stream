@@ -1,0 +1,25 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: panoptes
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "0"
+data:
+  global.json: |-
+    {
+      "status": {
+        "addr": ":{{ .Values.statusPort}}"
+      },
+      "discovery": {
+       "service": "consul",
+       "config": {
+        "healthcheckURL": "http://{{`{{ .POD_IP}}`}}:{{ .Values.statusPort}}/healthcheck"
+       }
+      },
+      "shards" : {
+        "enabled": true,
+        "numberOfNodes": {{ .Values.replicaCount}},
+        "InitializingShards" : {{ .Values.initializingShards}}
+      }
+    } 
