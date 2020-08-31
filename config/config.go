@@ -65,7 +65,7 @@ type Database struct {
 type Global struct {
 	Discovery        Discovery
 	Status           Status
-	Shard            Shard
+	Shards           Shards
 	DeviceOptions    DeviceOptions `yaml:"deviceOptions"`
 	WatcherDisabled  bool          `yaml:"watcherDisabled"`
 	BufferSize       int           `yaml:"bufferSize"`
@@ -92,11 +92,11 @@ type Status struct {
 	TLSConfig TLSConfig `yaml:"tlsConfig"`
 }
 
-// Shard represents shard service configuration
-type Shard struct {
-	Enabled           bool
-	InitializingShard int `yaml:"initializingShard"`
-	NumberOfNodes     int `yaml:"numberOfNodes"`
+// Shards represents shard service configuration
+type Shards struct {
+	Enabled            bool
+	InitializingShards int `yaml:"initializingShards"`
+	NumberOfNodes      int `yaml:"numberOfNodes"`
 }
 
 // Discovery represents discovery service

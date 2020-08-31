@@ -43,7 +43,7 @@ logger:
   encoding: console
 status:
   addr: 0.0.0.0:8081
-shard:
+shards:
   enabled: true
 deviceOptions:
   username: juniper       
@@ -139,7 +139,7 @@ func TestNewYaml(t *testing.T) {
 		// global
 		assert.Equal(t, "0.0.0.0:8081", cfg.Global().Status.Addr)
 		assert.Equal(t, "debug", cfg.Global().Logger["level"])
-		assert.Equal(t, true, cfg.Global().Shard.Enabled)
+		assert.Equal(t, true, cfg.Global().Shards.Enabled)
 		assert.Equal(t, "juniper", cfg.Global().DeviceOptions.Username)
 
 		cfg.Update()

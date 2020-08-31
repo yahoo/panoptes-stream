@@ -22,17 +22,17 @@ func TestShardThreeNodes(t *testing.T) {
 	instances = append(instances, discovery.Instance{
 		ID:     "0",
 		Status: "passing",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 	instances = append(instances, discovery.Instance{
 		ID:     "1",
 		Status: "critical",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 	instances = append(instances, discovery.Instance{
 		ID:     "2",
 		Status: "passing",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 
 	shardSize := 3
@@ -44,9 +44,9 @@ func TestShardThreeNodes(t *testing.T) {
 	}
 
 	r = []bool{true, false, false, true, false, false}
-	f = extraShard("0", shardSize, instances)
+	f = extraShards("0", shardSize, instances)
 	for i, d := range devices {
-		assert.Equal(t, r[i], f(d), "extraShard 0 failed")
+		assert.Equal(t, r[i], f(d), "extraShards 0 failed")
 	}
 
 	r = []bool{false, true, false, false, false, true}
@@ -56,9 +56,9 @@ func TestShardThreeNodes(t *testing.T) {
 	}
 
 	r = []bool{false, false, false, false, false, false}
-	f = extraShard("2", shardSize, instances)
+	f = extraShards("2", shardSize, instances)
 	for i, d := range devices {
-		assert.Equal(t, r[i], f(d), "extraShard 2 failed")
+		assert.Equal(t, r[i], f(d), "extraShards 2 failed")
 	}
 
 }
@@ -78,7 +78,7 @@ func TestShard2(t *testing.T) {
 	instances = append(instances, discovery.Instance{
 		ID:     "0",
 		Status: "passing",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 
 	shardSize := 2
@@ -89,9 +89,9 @@ func TestShard2(t *testing.T) {
 	}
 
 	r = []bool{true, false, true, true, false, true}
-	f = extraShard("0", shardSize, instances)
+	f = extraShards("0", shardSize, instances)
 	for i, d := range devices {
-		assert.Equal(t, r[i], f(d), "extraShard failed")
+		assert.Equal(t, r[i], f(d), "extraShards failed")
 	}
 }
 
@@ -110,17 +110,17 @@ func TestShard3(t *testing.T) {
 	instances = append(instances, discovery.Instance{
 		ID:     "0",
 		Status: "critical",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 	instances = append(instances, discovery.Instance{
 		ID:     "1",
 		Status: "passing",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 	instances = append(instances, discovery.Instance{
 		ID:     "2",
 		Status: "critical",
-		Meta:   map[string]string{"shard_enabled": "true"},
+		Meta:   map[string]string{"shards_enabled": "true"},
 	})
 
 	shardSize := 3
@@ -131,9 +131,9 @@ func TestShard3(t *testing.T) {
 	}
 
 	r = []bool{true, true, true, true, true, true}
-	f = extraShard("1", shardSize, instances)
+	f = extraShards("1", shardSize, instances)
 	for i, d := range devices {
-		assert.Equal(t, r[i], f(d), "extraShard failed")
+		assert.Equal(t, r[i], f(d), "extraShards failed")
 	}
 
 }

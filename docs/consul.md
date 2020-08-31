@@ -170,10 +170,10 @@ By enabling sharding, Panoptes's nodes try to auto sharding of network devices a
 Example Shard configuration:
 
 ```json
-"shard" : {
+"shards" : {
    "enabled": true,
    "numberOfNodes": 3,
-   "InitializingShard" : 1
+   "InitializingShards" : 1
  }
 ```
 
@@ -217,7 +217,7 @@ curl https://git.vzbuilders.com/marshadrad/panoptes/blob/master/scripts/consul/i
 
 #### Backup and Restore Consul
 ```
-consul kv export panoptes/config > panoptes.config.json
+consul kv export > panoptes.config.json
 ```
 ```
 consul kv import @panoptes.config.json

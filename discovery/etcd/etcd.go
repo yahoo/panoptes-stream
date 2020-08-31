@@ -93,8 +93,8 @@ func (e *etcd) Register() error {
 	defer e.unlock()
 
 	meta := make(map[string]string)
-	meta["shard_enabled"] = strconv.FormatBool(e.cfg.Global().Shard.Enabled)
-	meta["shard_nodes"] = strconv.Itoa(e.cfg.Global().Shard.NumberOfNodes)
+	meta["shards_enabled"] = strconv.FormatBool(e.cfg.Global().Shards.Enabled)
+	meta["shards_nodes"] = strconv.Itoa(e.cfg.Global().Shards.NumberOfNodes)
 	meta["version"] = e.cfg.Global().Version
 
 	ids := []int{}

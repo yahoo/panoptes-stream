@@ -17,7 +17,7 @@
 	{
 		"key": "panoptes/config/global",
 		"flags": 0,
-		"value": "eyAKwqAibG9nZ2VyIjogewogICJsZXZlbCI6ImRlYnVnIiwgCsKgICJvdXRwdXRQYXRocyI6IFsic3Rkb3V0Il0sIArCoCAiZXJyb3JPdXRwdXRQYXRocyI6WyJzdGRlcnIiXQrCoH0sCiAgInN0YXR1cyI6IHsKICAgICJhZGRyIjogIjAuMC4wLjA6ODA4MSIKICB9Cn0="
+		"value": "eyAibG9nZ2VyIjogeyAibGV2ZWwiOiJkZWJ1ZyIsICJvdXRwdXRQYXRocyI6IFsic3Rkb3V0Il0sICJlcnJvck91dHB1dFBhdGhzIjpbInN0ZGVyciJdIH0sICJzdGF0dXMiOiB7ICJhZGRyIjogIjAuMC4wLjA6ODA4MSIgfSB9"
 	},
 	{
 		"key": "panoptes/config/producers/",

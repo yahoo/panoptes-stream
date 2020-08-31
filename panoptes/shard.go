@@ -12,29 +12,29 @@ import (
 	"go.uber.org/zap"
 )
 
-// Shard represents sharding service.
+// Shards represents sharding service.
 // Panoptes shards devices for horizontal scaling and high availability.
-type Shard struct {
-	cfg               config.Config
-	id                string
-	logger            *zap.Logger
-	discovery         discovery.Discovery
-	telemetry         *telemetry.Telemetry
-	numberOfNodes     int
-	initializingShard int
-	updateRequest     chan struct{}
+type Shards struct {
+	cfg                config.Config
+	id                 string
+	logger             *zap.Logger
+	discovery          discovery.Discovery
+	telemetry          *telemetry.Telemetry
+	numberOfNodes      int
+	initializingShards int
+	updateRequest      chan struct{}
 }
 
-// NewShard constructs a shard service.
-func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery discovery.Discovery, updateRequest chan struct{}) *Shard {
-	return &Shard{
-		cfg:               cfg,
-		discovery:         discovery,
-		telemetry:         telemetry,
-		updateRequest:     updateRequest,
-		logger:            cfg.Logger(),
-		numberOfNodes:     cfg.Global().Shard.NumberOfNodes,
-		initializingShard: cfg.Global().Shard.InitializingShard,
+// NewShards constructs a shard service.
+func NewShards(cfg config.Config, telemetry *telemetry.Telemetry, discovery discovery.Discovery, updateRequest chan struct{}) *Shards {
+	return &Shards{
+		cfg:                cfg,
+		discovery:          discovery,
+		telemetry:          telemetry,
+		updateRequest:      updateRequest,
+		logger:             cfg.Logger(),
+		numberOfNodes:      cfg.Global().Shards.NumberOfNodes,
+		initializingShards: cfg.Global().Shards.InitializingShards,
 	}
 
 }
@@ -42,8 +42,8 @@ func NewShard(cfg config.Config, telemetry *telemetry.Telemetry, discovery disco
 // Start runs sharding service.
 // it watches other nodes through service discovery and it creates
 // proper device filters then refresh the devices.
-func (s *Shard) Start() {
-	s.logger.Info("shard", zap.Int("configured.nodes", s.numberOfNodes))
+func (s *Shards) Start() {
+	s.logger.Info("shards", zap.Int("configured.nodes", s.numberOfNodes))
 
 	// discovery
 	notifyChan := make(chan struct{}, 1)
@@ -64,12 +64,12 @@ func (s *Shard) Start() {
 		<-time.After(time.Second * 35)
 		instances, err := s.discovery.GetInstances()
 		if err != nil {
-			s.logger.Error("discovery shard failed", zap.Error(err))
+			s.logger.Error("discovery shards failed", zap.Error(err))
 			return
 		}
 
 		if !isAllNodesRunning(s.numberOfNodes, instances) {
-			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, instances))
+			s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
 			s.updateRequest <- struct{}{}
 		}
 	}()
@@ -87,10 +87,10 @@ func (s *Shard) Start() {
 			serviceChanged = false
 			instances, err := s.discovery.GetInstances()
 			if err != nil {
-				s.logger.Error("discovery shard failed", zap.Error(err))
+				s.logger.Error("discovery shards failed", zap.Error(err))
 				continue
 			}
-			s.telemetry.AddFilterOpt("extraShard", extraShard(s.id, s.numberOfNodes, instances))
+			s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
 			s.updateRequest <- struct{}{}
 		}
 
@@ -105,7 +105,7 @@ func mainShard(myID string, shardSize int) telemetry.DeviceFilterOpt {
 	}
 }
 
-func extraShard(myID string, shardSize int, instances []discovery.Instance) telemetry.DeviceFilterOpt {
+func extraShards(myID string, shardSize int, instances []discovery.Instance) telemetry.DeviceFilterOpt {
 	var id int
 	failed := []int{}
 	mapIndex := make(map[int]int)
@@ -113,7 +113,7 @@ func extraShard(myID string, shardSize int, instances []discovery.Instance) tele
 
 	for _, instance := range instances {
 		instance := instance
-		if _, ok := instance.Meta["shard_enabled"]; !ok {
+		if _, ok := instance.Meta["shards_enabled"]; !ok {
 			continue
 		}
 
@@ -178,12 +178,12 @@ func getHash(key string) int {
 	return int(hSum32)
 }
 
-func (s *Shard) waitForDiscoveryRegister() {
+func (s *Shards) waitForDiscoveryRegister() {
 	hostname, _ := os.Hostname()
 	for i := 0; i < 15; i++ {
 		instances, err := s.discovery.GetInstances()
 		if err != nil {
-			s.logger.Error("discovery shard failed", zap.Error(err))
+			s.logger.Error("discovery shards failed", zap.Error(err))
 			continue
 		}
 
@@ -201,7 +201,7 @@ func (s *Shard) waitForDiscoveryRegister() {
 }
 
 // waitForInitialShards waits for the configured initial shards to appear.
-func (s *Shard) waitForInitialShards() {
+func (s *Shards) waitForInitialShards() {
 	for {
 		time.Sleep(time.Second * 10)
 
@@ -209,12 +209,12 @@ func (s *Shard) waitForInitialShards() {
 
 		instances, err := s.discovery.GetInstances()
 		if err != nil {
-			s.logger.Error("shard", zap.String("event", "discovery shard failed"), zap.Error(err))
+			s.logger.Error("shard", zap.String("event", "discovery shards failed"), zap.Error(err))
 			continue
 		}
 
 		for _, instance := range instances {
-			if _, ok := instance.Meta["shard_enabled"]; !ok {
+			if _, ok := instance.Meta["shards_enabled"]; !ok {
 				continue
 			}
 			if instance.Status == "passing" {
@@ -222,7 +222,7 @@ func (s *Shard) waitForInitialShards() {
 			}
 		}
 
-		if currentAvailableNodes >= s.initializingShard {
+		if currentAvailableNodes >= s.initializingShards {
 			s.logger.Info("shard", zap.String("event", "initialized"), zap.Int("available.nodes", currentAvailableNodes))
 			break
 		}

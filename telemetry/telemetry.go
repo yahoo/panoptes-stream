@@ -197,7 +197,7 @@ func (t *Telemetry) Start() {
 // Update updates device subscriptions
 // subscribe/unsubscribe/resubscribe devices
 func (t *Telemetry) Update() {
-	if t.cfg.Global().Shard.Enabled && len(t.deviceFilterOpts.getOpts()) < 1 {
+	if t.cfg.Global().Shards.Enabled && len(t.deviceFilterOpts.getOpts()) < 1 {
 		return
 	}
 

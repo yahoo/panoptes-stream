@@ -53,7 +53,7 @@ func TestSecondNodes(t *testing.T) {
 
 	cfg := config.NewMockConfig()
 	cfg.MGlobal = &config.Global{
-		Shard: config.Shard{},
+		Shards: config.Shards{},
 	}
 	apiConfig := api.DefaultConfig()
 	apiConfig.Address = srv.HTTPAddr

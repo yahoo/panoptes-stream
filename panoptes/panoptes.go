@@ -80,7 +80,7 @@ func main() {
 
 	// start telemetry
 	t := telemetry.New(ctx, cfg, telemetryRegistrar, outChan)
-	if !cfg.Global().Shard.Enabled {
+	if !cfg.Global().Shards.Enabled {
 		t.Start()
 	}
 
@@ -96,9 +96,9 @@ func main() {
 
 	go updateLoop(cfg, t, d, i, updateRequest)
 
-	if cfg.Global().Shard.Enabled && discovery != nil {
-		shard := NewShard(cfg, t, discovery, updateRequest)
-		go shard.Start()
+	if cfg.Global().Shards.Enabled && discovery != nil {
+		shards := NewShards(cfg, t, discovery, updateRequest)
+		go shards.Start()
 	}
 
 	<-signalCh
