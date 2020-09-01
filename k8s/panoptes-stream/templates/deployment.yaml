@@ -12,6 +12,21 @@ spec:
       labels:
         app: panoptes-stream
     spec:
+      {{- if .Values.affinity }}
+      affinity:
+        podAntiAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                  app: panoptes-stream
+            topologyKey: kubernetes.io/hostname
+        podAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+          - labelSelector:
+              matchLabels:
+                  app: consul
+            topologyKey: kubernetes.io/hostname
+      {{- end }}
       containers:
         - name: panoptes
           image: panoptes-stream

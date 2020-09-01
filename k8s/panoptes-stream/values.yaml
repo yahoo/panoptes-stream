@@ -1,3 +1,4 @@
 replicaCount: 3
 initializingShards: 1
 statusPort: 8081
+affinity: false
