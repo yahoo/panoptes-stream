@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package influxdb
 
 import (
@@ -27,7 +30,7 @@ func TestLineProtocol(t *testing.T) {
 
 	l, err := getLineProtocol(buf, data)
 	require.Equal(t, err, nil)
-	assert.Equal(t, l, "ifcounters,prefix=/interfaces/interface/state/counters/,system_id=core1.bur,name=Ethernet3 out-octets=5587651 1595768623436661269")
+	assert.Equal(t, l, "ifcounters,_prefix_=/interfaces/interface/state/counters/,_host_=core1.bur,name=Ethernet3 out-octets=5587651 1595768623436661269")
 }
 
 func BenchmarkLineProtocol(b *testing.B) {
