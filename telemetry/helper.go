@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package telemetry
 
 import (
@@ -86,6 +89,7 @@ func GetGNMISubscriptions(sensors []*config.Sensor) []*gpb.Subscription {
 
 	for _, sensor := range sensors {
 		path, _ := ygot.StringToPath(sensor.Path, ygot.StructuredPath, ygot.StringSlicePath)
+		path.Origin = sensor.Origin
 
 		mode := gpb.SubscriptionMode_value[strings.ToUpper(sensor.Mode)]
 		sampleInterval := time.Duration(sensor.SampleInterval) * time.Second
@@ -196,4 +200,20 @@ func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.
 	}
 
 	return rSensors
+}
+
+func GetDefaultOutput(sensors []*config.Sensor) string {
+	var output = make(map[string]bool)
+
+	for _, sensor := range sensors {
+		output[sensor.Output] = true
+	}
+
+	if len(output) == 1 {
+		for k := range output {
+			return k
+		}
+	}
+
+	return ""
 }

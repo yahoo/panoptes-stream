@@ -32,7 +32,8 @@ type GNMI struct {
 
 	metrics map[string]status.Metrics
 
-	pathOutput map[string]string
+	pathOutput    map[string]string
+	defaultOutput string
 }
 
 // New creates a GNMI.
@@ -53,6 +54,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
 		pathOutput:    telemetry.GetPathOutput(sensors),
+		defaultOutput: telemetry.GetDefaultOutput(sensors),
 		metrics:       metrics,
 	}
 }
@@ -147,7 +149,10 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, systemID string
 	var labels map[string]string
 
 	prefix, prefixLabels, output := g.getPrefix(buf, n.Prefix)
-	if output == "" {
+
+	if g.defaultOutput != "" {
+		output = g.defaultOutput
+	} else if output == "" {
 		return errors.New("output not found")
 	}
 

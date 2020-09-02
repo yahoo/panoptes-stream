@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package gnmi
 
 import (
@@ -32,7 +35,8 @@ type GNMI struct {
 
 	metrics map[string]status.Metrics
 
-	pathOutput map[string]string
+	pathOutput    map[string]string
+	defaultOutput string
 }
 
 // New creates a gNMI and register proper metrics.
@@ -51,6 +55,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		conn:          conn,
 		subscriptions: telemetry.GetGNMISubscriptions(sensors),
 		pathOutput:    telemetry.GetPathOutput(sensors),
+		defaultOutput: telemetry.GetDefaultOutput(sensors),
 		dataChan:      make(chan *gpb.SubscribeResponse, 100),
 		outChan:       outChan,
 		metrics:       metrics,
@@ -195,7 +200,9 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, update *gpb.Upd
 		}
 	}
 
-	if output == "" {
+	if g.defaultOutput != "" {
+		output = g.defaultOutput
+	} else if output == "" {
 		return errors.New("output not found")
 	}
 
