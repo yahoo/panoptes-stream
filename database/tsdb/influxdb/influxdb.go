@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package influxdb
 
 import (
@@ -101,9 +104,9 @@ func getLineProtocol(buf *bytes.Buffer, v telemetry.ExtDataStore) (string, error
 	buf.Reset()
 	buf.WriteString(out[1])
 	buf.WriteRune(',')
-	buf.WriteString("prefix=" + v.DS["prefix"].(string))
+	buf.WriteString("_prefix_=" + v.DS["prefix"].(string))
 	buf.WriteRune(',')
-	buf.WriteString("system_id=" + v.DS["system_id"].(string))
+	buf.WriteString("_host_=" + v.DS["system_id"].(string))
 	for k, v := range v.DS["labels"].(map[string]string) {
 		buf.WriteRune(',')
 		v = strings.Replace(v, " ", "_", -1)
@@ -200,6 +203,11 @@ func getValueString(value interface{}) string {
 		return fmt.Sprintf("%t", v)
 	case string:
 		return fmt.Sprintf("\"%s\"", escape.String(v))
+	case []byte:
+		return fmt.Sprintf("\"%s\"", escape.String(string(v)))
+	case []interface{}, map[string]interface{}:
+		b, _ := json.Marshal(v)
+		return fmt.Sprintf("\"%s\"", escape.String(string(b)))
 	}
 
 	return ""
