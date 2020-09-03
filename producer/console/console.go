@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package console
 
 import (
@@ -6,10 +9,11 @@ import (
 	"os"
 	"strings"
 
+	"go.uber.org/zap"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"go.uber.org/zap"
 )
 
 // Console represents console

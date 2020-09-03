@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package mock
 
 import telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"

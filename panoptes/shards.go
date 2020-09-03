@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package main
 
 import (
@@ -6,10 +9,11 @@ import (
 	"strconv"
 	"time"
 
+	"go.uber.org/zap"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"go.uber.org/zap"
 )
 
 // Shards represents sharding service.

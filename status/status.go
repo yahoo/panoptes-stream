@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package status
 
 import (
@@ -5,11 +8,12 @@ import (
 	"net/http"
 	"sync/atomic"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"go.uber.org/zap"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
 // Metrics represents counter and gauge metrics.

@@ -1,14 +1,18 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package main
 
 import (
 	"errors"
 	"os"
 
+	cli "github.com/urfave/cli/v2"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/config/consul"
 	"git.vzbuilders.com/marshadrad/panoptes/config/etcd"
 	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
-	cli "github.com/urfave/cli/v2"
 )
 
 type cmd struct {

@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package gnmi
 
 import (
@@ -5,12 +8,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
+
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
-	"github.com/stretchr/testify/assert"
-	"google.golang.org/grpc"
 )
 
 func TestAristaSimplePath(t *testing.T) {

@@ -1,11 +1,15 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package mock
 
 import (
 	"context"
 	"net"
 
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 	"google.golang.org/grpc"
+
+	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
 )
 
 // JTIResponse represents mock JTI response

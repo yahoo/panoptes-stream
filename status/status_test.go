@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package status
 
 import (
@@ -8,9 +11,10 @@ import (
 	"testing"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stretchr/testify/assert"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
 func TestHealthcheck(t *testing.T) {

@@ -1,3 +1,6 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package main
 
 import (
@@ -7,6 +10,8 @@ import (
 	"os/signal"
 	"syscall"
 	"time"
+
+	"go.uber.org/zap"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/database"
@@ -19,7 +24,6 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/status"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/dialout"
-	"go.uber.org/zap"
 )
 
 var (
