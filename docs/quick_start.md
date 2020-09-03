@@ -1,4 +1,6 @@
 ## .yaml Basic gNMI Configuration (dial-in mode)
+--------
+
 Here's a basic example with minimum requirements .yaml file that shows the required fields for collecting a sensor path from a device and showing the result on the console stdout every 10 seconds. this example assumed that you already configured gNMI at your device. if you need help on configuration please read [device configuration](device_config.md).
 
 #### Use Case

@@ -1,4 +1,6 @@
-## Panoptes configuration with Consul.
+## Panoptes configuration with Consul
+------------
+
 This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store.   
 
 ### Configuration specs
@@ -9,7 +11,8 @@ The Panoptes configuration categories as follows at Consul key value store:
 - [Databases](#databases)
 - [Global](#global)
 
-The below picture shows how the configurations link together. 
+The below picture shows how the configurations link together.
+ 
 ![panoptes config](imgs/link-config.png)
 
 #### Devices 

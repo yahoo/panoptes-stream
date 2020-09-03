@@ -1,4 +1,5 @@
-### Architecture
+## Architecture
+---------
 
 ![Panoptes Architecture](imgs/architect.png)
 
@@ -32,7 +33,9 @@ This component produces the metrics to given messaging bus.
 
 The component Ingests metrics to given database. 
 
-#### Status
+#### Security
 
-The status is responsible to provide local metrics and health checks. it can expose them to a 3rd party monitoring application for panoptes monitoring and alert.
+#### Observability
+
+The component is responsible to provide local metrics and health check. it can expose them to a 3rd party application for panoptes monitoring and alert.
 
