@@ -1,0 +1,105 @@
+version: "3"
+services:
+  consul:
+    image: consul:latest
+    container_name: consul
+    command: ["agent", "-dev", "-client=0.0.0.0"]
+    ports:
+      - "8500:8500"
+    networks:
+      - demo-net
+
+  consul-init:
+    image: consul:latest
+    container_name: consul-init
+    volumes:
+      - ./:/tmp/consul
+    environment:
+      - CONSUL_HTTP_ADDR=consul:8500
+    depends_on:
+      - consul
+    entrypoint: '/bin/sh -c "cat /tmp/consul/consul_kv_export.json | consul kv import -"'
+    networks:
+      - demo-net
+
+  panoptes-node1:
+    image: panoptes-stream:latest
+    container_name: panoptes-node1
+    depends_on:
+      - consul
+      - consul-init
+    environment:
+      - PANOPTES_CONFIG_CONSUL_ADDRESS=consul:8500
+      - PANOPTES_DISCOVERY_CONSUL_ADDRESS=consul:8500
+      - PANOPTES_DISCOVERY_CONSUL_HEALTHCHECKURL=http://panoptes-node1:8081/healthcheck
+    command: ["-consul", "-"]
+    ports:
+      - "8081:8081"
+    networks:
+      - demo-net
+
+  panoptes-node2:
+    image: panoptes-stream:latest
+    container_name: panoptes-node2
+    depends_on:
+      - consul
+      - consul-init
+    environment:
+      - PANOPTES_CONFIG_CONSUL_ADDRESS=consul:8500
+      - PANOPTES_DISCOVERY_CONSUL_ADDRESS=consul:8500
+      - PANOPTES_DISCOVERY_CONSUL_HEALTHCHECKURL=http://panoptes-node2:8081/healthcheck
+    command: ["-consul", "-"]
+    ports:
+      - "8082:8081"
+    networks:
+      - demo-net
+
+  simulator:
+    image: panoptes-stream:latest
+    container_name: panoptes-simulator
+    entrypoint: ["/usr/bin/simulator", "-interval", "5"]
+    networks:
+      demo-net:
+        aliases:
+          - device1.lax
+          - device2.lax
+          - device3.lax
+          - device4.lax
+          - device5.lax
+
+  grafana:
+    image: "grafana/grafana"
+    container_name: grafana
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=panoptes
+      - GF_SECURITY_ADMIN_PASSWORD=panoptes
+    networks:
+      - demo-net
+
+  influxdb:
+    image: "influxdb"
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=mybucket
+    networks:
+      - demo-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./:/etc/prometheus/
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - demo-net
+
+networks:
+  demo-net:
