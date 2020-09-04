@@ -111,7 +111,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "simulator"
                         }
@@ -216,7 +216,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "simulator"
                         }
@@ -327,7 +327,7 @@
                         },
                         {
                             "condition": "AND",
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "simulator"
                         }
@@ -474,7 +474,7 @@
                         },
                         {
                             "condition": "AND",
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "simulator"
                         }

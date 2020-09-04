@@ -111,7 +111,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "device1.lax"
                         },
@@ -260,7 +260,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "device2.lax"
                         },
@@ -409,7 +409,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "device3.lax"
                         },
@@ -558,7 +558,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "device4.lax"
                         },
@@ -707,7 +707,7 @@
                     ],
                     "tags": [
                         {
-                            "key": "system_id",
+                            "key": "_host_",
                             "operator": "=",
                             "value": "device5.lax"
                         },
