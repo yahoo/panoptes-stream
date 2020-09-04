@@ -35,21 +35,21 @@ type etcd struct {
 }
 
 type etcdConfig struct {
-	Endpoints []string
-	Prefix    string
+	Endpoints   []string
+	Prefix      string
+	DialTimeout int
 
 	TLSConfig config.TLSConfig
 }
 
 // New constructs etcd service discovery
 func New(cfg config.Config) (discovery.Discovery, error) {
-	var (
-		tlsConfig *tls.Config
-		e         = &etcd{
-			cfg:    cfg,
-			logger: cfg.Logger(),
-		}
-	)
+	var tlsConfig *tls.Config
+
+	etcd := &etcd{
+		cfg:    cfg,
+		logger: cfg.Logger(),
+	}
 
 	config, err := getConfig(cfg)
 	if err != nil {
@@ -69,30 +69,35 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		}
 	}
 
-	if len(config.Prefix) > 0 {
-		e.prefix = config.Prefix
-	} else {
-		e.prefix = "/panoptes/"
-	}
+	setDefaultConfig(config)
 
-	if len(config.Endpoints) < 1 {
-		config.Endpoints = []string{"127.0.0.1:2379"}
-	}
+	etcd.prefix = config.Prefix
 
-	e.client, err = clientv3.New(clientv3.Config{
-		Endpoints: config.Endpoints,
-		TLS:       tlsConfig,
+	etcd.client, err = clientv3.New(clientv3.Config{
+		Endpoints:   config.Endpoints,
+		DialTimeout: time.Duration(config.DialTimeout) * time.Second,
+		TLS:         tlsConfig,
+		LogConfig: &zap.Config{
+			Development:      false,
+			Level:            zap.NewAtomicLevelAt(zap.ErrorLevel),
+			Encoding:         "json",
+			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			OutputPaths:      []string{"stderr"},
+			ErrorOutputPaths: []string{"stderr"},
+		},
 	})
 	if err != nil {
 		return nil, err
 	}
 
-	return e, nil
+	return etcd, nil
 }
 
 // Register registers panoptes at etcd
 func (e *etcd) Register() error {
-	e.lock()
+	if err := e.lock(); err != nil {
+		return err
+	}
 	defer e.unlock()
 
 	meta := make(map[string]string)
@@ -109,7 +114,7 @@ func (e *etcd) Register() error {
 	for _, instance := range instances {
 		id, err := strconv.Atoi(instance.ID)
 		if err != nil {
-			e.logger.Warn("etcd.register", zap.Error(err))
+			e.logger.Warn("etcd", zap.String("event", "register"), zap.Error(err))
 			continue
 		}
 		ids = append(ids, id)
@@ -119,7 +124,7 @@ func (e *etcd) Register() error {
 				return err
 			}
 
-			e.logger.Info("consul", zap.String("event", "register.recover"), zap.String("id", instance.ID))
+			e.logger.Info("etcd", zap.String("event", "register.recover"), zap.String("id", instance.ID))
 
 			e.id = instance.ID
 
@@ -163,6 +168,7 @@ func (e *etcd) Watch(ch chan<- struct{}) {
 func (e *etcd) hearthBeat(leaseID clientv3.LeaseID) {
 	ch, err := e.client.KeepAlive(context.Background(), leaseID)
 	if err != nil {
+		// TODO
 		panic(err)
 	}
 
@@ -214,7 +220,7 @@ func (e *etcd) register(id, hostname string, meta map[string]string) error {
 
 // GetInstances returns all registered instances
 func (e *etcd) GetInstances() ([]discovery.Instance, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	prefix := path.Join(e.prefix, "services")
 	resp, err := e.client.Get(ctx, prefix, clientv3.WithPrefix())
 	cancel()
@@ -238,7 +244,7 @@ func (e *etcd) GetInstances() ([]discovery.Instance, error) {
 func (e *etcd) lock() error {
 	var err error
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 	e.session, err = concurrency.NewSession(e.client, concurrency.WithContext(ctx))
 	if err != nil {
@@ -246,18 +252,18 @@ func (e *etcd) lock() error {
 	}
 	cancel()
 
-	ctx, cancel = context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel = context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	prefix := path.Join(e.prefix, "global_lock")
 	e.lockHandler = concurrency.NewMutex(e.session, prefix)
-	cancel()
+
 	return e.lockHandler.Lock(ctx)
 }
 
 func (e *etcd) unlock() error {
 	defer e.session.Close()
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*5)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
 	return e.lockHandler.Unlock(ctx)
@@ -302,4 +308,18 @@ func getConfig(cfg config.Config) (*etcdConfig, error) {
 	err = json.Unmarshal(b, etcdConfig)
 
 	return etcdConfig, err
+}
+
+func setDefaultConfig(config *etcdConfig) {
+	if len(config.Endpoints) < 1 {
+		config.Endpoints = []string{"127.0.0.1:2379"}
+	}
+
+	if len(config.Prefix) < 1 {
+		config.Prefix = "/panoptes/"
+	}
+
+	if config.DialTimeout < 1 {
+		config.DialTimeout = 2
+	}
 }
