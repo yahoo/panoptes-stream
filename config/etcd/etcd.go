@@ -38,8 +38,9 @@ type etcd struct {
 }
 
 type etcdConfig struct {
-	Endpoints []string
-	Prefix    string
+	Endpoints   []string
+	Prefix      string
+	DialTimeout int
 
 	TLSConfig config.TLSConfig
 }
@@ -67,15 +68,9 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
-	if len(config.Endpoints) < 1 {
-		config.Endpoints = []string{"127.0.0.1:2379"}
-	}
+	setDefaultConfig(config)
 
-	if len(config.Prefix) > 0 {
-		etcd.prefix = config.Prefix
-	} else {
-		etcd.prefix = "config/"
-	}
+	etcd.prefix = config.Prefix
 
 	if config.TLSConfig.Enabled {
 		tlsConfig, err = secret.GetTLSConfig(&config.TLSConfig)
@@ -85,8 +80,17 @@ func New(filename string) (config.Config, error) {
 	}
 
 	etcd.client, err = clientv3.New(clientv3.Config{
-		Endpoints: config.Endpoints,
-		TLS:       tlsConfig,
+		Endpoints:   config.Endpoints,
+		DialTimeout: time.Duration(config.DialTimeout) * time.Second,
+		TLS:         tlsConfig,
+		LogConfig: &zap.Config{
+			Development:      false,
+			Level:            zap.NewAtomicLevelAt(zap.ErrorLevel),
+			Encoding:         "json",
+			EncoderConfig:    zap.NewProductionEncoderConfig(),
+			OutputPaths:      []string{"stderr"},
+			ErrorOutputPaths: []string{"stderr"},
+		},
 	})
 	if err != nil {
 		return nil, err
@@ -109,8 +113,7 @@ func (e *etcd) getRemoteConfig() error {
 		sensors    = make(map[string]*config.Sensor)
 	)
 
-	requestTimeout, _ := time.ParseDuration("5s")
-	ctx, cancel := context.WithTimeout(context.Background(), requestTimeout)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	resp, err := e.client.Get(ctx, e.prefix, clientv3.WithPrefix())
 	cancel()
 	if err != nil {
@@ -274,5 +277,19 @@ func (e *etcd) watch(ch chan<- struct{}) {
 				e.logger.Info("config.etcd watcher response dropped")
 			}
 		}
+	}
+}
+
+func setDefaultConfig(config *etcdConfig) {
+	if len(config.Endpoints) < 1 {
+		config.Endpoints = []string{"127.0.0.1:2379"}
+	}
+
+	if len(config.Prefix) < 1 {
+		config.Prefix = "panoptes/config/"
+	}
+
+	if config.DialTimeout < 1 {
+		config.DialTimeout = 2
 	}
 }
