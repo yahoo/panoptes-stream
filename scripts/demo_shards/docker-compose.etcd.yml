@@ -1,0 +1,102 @@
+version: "3"
+services:
+  etcd:
+    image: quay.io/coreos/etcd:latest
+    container_name: etcd
+    volumes:
+      - ./:/tmp/etcd
+    environment:
+      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
+      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
+      ETCDCTL_API: 3
+    command:
+      - /bin/sh
+      - -c
+      - |
+        etcdctl snapshot --data-dir /var/panoptes/etcd restore /tmp/etcd/etcd_kv_snapshot
+        etcd -data-dir=/var/panoptes/etcd
+
+    ports:
+      - "2379:2379"
+    networks:
+      - demo-net
+
+  panoptes-node1:
+    image: panoptes-stream:latest
+    container_name: panoptes-node1
+    depends_on:
+      - etcd
+    environment:
+      PANOPTES_CONFIG_ETCD_ENDPOINTS: etcd:2379
+      PANOPTES_DISCOVERY_ETCD_ENDPOINTS: etcd:2379
+      PANOPTES_DISCOVERY_ETCD_HEALTHCHECKURL: http://panoptes-node1:8081/healthcheck
+    command: ["-etcd", "-"]
+    ports:
+      - "8081:8081"
+    networks:
+      - demo-net
+
+  panoptes-node2:
+    image: panoptes-stream:latest
+    container_name: panoptes-node2
+    depends_on:
+      - etcd
+    environment:
+      PANOPTES_CONFIG_ETCD_ENDPOINTS: etcd:2379
+      PANOPTES_DISCOVERY_ETCD_ENDPOINTS: etcd:2379
+      PANOPTES_DISCOVERY_ETCD_HEALTHCHECKURL: http://panoptes-node2:8081/healthcheck
+    command: ["-etcd", "-"]
+    ports:
+      - "8082:8081"
+    networks:
+      - demo-net
+
+  simulator:
+    image: panoptes-stream:latest
+    container_name: panoptes-simulator
+    entrypoint: ["/usr/bin/simulator", "-interval", "5"]
+    networks:
+      demo-net:
+        aliases:
+          - device1.lax
+          - device2.lax
+          - device3.lax
+          - device4.lax
+          - device5.lax
+
+  grafana:
+    image: "grafana/grafana"
+    container_name: grafana
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=panoptes
+      - GF_SECURITY_ADMIN_PASSWORD=panoptes
+    networks:
+      - demo-net
+
+  influxdb:
+    image: "influxdb"
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=mybucket
+    networks:
+      - demo-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    volumes:
+      - ./:/etc/prometheus/
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - demo-net
+
+networks:
+  demo-net:
