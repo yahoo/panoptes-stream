@@ -6,8 +6,8 @@ package consul
 import (
 	"encoding/json"
 	"fmt"
-	"os"
 	"path"
+	"runtime"
 	"strings"
 
 	"github.com/hashicorp/consul/api"
@@ -20,7 +20,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// consul represents the consul distributed key-value storage
+// consul represents the consul distributed key-value storage.
 type consul struct {
 	client *api.Client
 
@@ -43,7 +43,7 @@ type consulConfig struct {
 	TLSConfig config.TLSConfig
 }
 
-// New constructs consul configuration management
+// New constructs consul configuration management.
 func New(filename string) (config.Config, error) {
 	var err error
 
@@ -55,7 +55,10 @@ func New(filename string) (config.Config, error) {
 
 	config := &consulConfig{}
 
-	yaml.Read(filename, config)
+	err = yaml.Read(filename, config)
+	if err != nil && filename != "-" {
+		c.logger.Fatal("consul", zap.Error(err))
+	}
 
 	prefix := "panoptes_config_consul"
 	err = envconfig.Process(prefix, config)
@@ -88,12 +91,14 @@ func New(filename string) (config.Config, error) {
 		return nil, err
 	}
 
+	c.logger.Info("panoptes-stream", zap.String("version", c.global.Version))
+	c.logger.Info("panoptes-stream", zap.String("go version", runtime.Version()), zap.String("go os/arch", runtime.GOOS+"/"+runtime.GOARCH))
+
 	if !c.global.WatcherDisabled {
 		go func() {
 			err := c.watch(config.Address)
 			if err != nil {
-				c.logger.Error("consul.watcher", zap.Error(err))
-				os.Exit(1)
+				c.logger.Fatal("consul.watcher", zap.Error(err))
 			}
 		}()
 	}
@@ -221,42 +226,42 @@ func (c *consul) getRemoteConfig() error {
 	return nil
 }
 
-// Devices returns configured devices
+// Devices returns configured devices.
 func (c *consul) Devices() []config.Device {
 	return c.devices
 }
 
-// Producers returns configured producers
+// Producers returns configured producers.
 func (c *consul) Producers() []config.Producer {
 	return c.producers
 }
 
-// Databases returns configured databases
+// Databases returns configured databases.
 func (c *consul) Databases() []config.Database {
 	return c.databases
 }
 
-// Sensors returns configured sensors
+// Sensors returns configured sensors.
 func (c *consul) Sensors() []config.Sensor {
 	return c.sensors
 }
 
-// Global returns global configuration
+// Global returns global configuration.
 func (c *consul) Global() *config.Global {
 	return c.global
 }
 
-// Informer returns informer channel
+// Informer returns informer channel.
 func (c *consul) Informer() chan struct{} {
 	return c.informer
 }
 
-// Logger returns logging handler
+// Logger returns logging handler.
 func (c *consul) Logger() *zap.Logger {
 	return c.logger
 }
 
-// Update gets configuration from consul key value store
+// Update gets configuration from consul key value store.
 func (c *consul) Update() error {
 	return c.getRemoteConfig()
 }

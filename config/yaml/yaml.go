@@ -5,7 +5,7 @@ package yaml
 
 import (
 	"io/ioutil"
-	"os"
+	"runtime"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/kelseyhightower/envconfig"
@@ -15,7 +15,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-// yaml represents yaml configuration management
+// yaml represents yaml configuration management.
 type yaml struct {
 	filename  string
 	devices   []config.Device
@@ -48,7 +48,7 @@ type yamlConfig struct {
 	config.Global `yaml:",inline"`
 }
 
-// New constructs yaml configuration management
+// New constructs yaml configuration management.
 func New(filename string) (config.Config, error) {
 	yamlCfg := &yamlConfig{}
 	if err := Read(filename, yamlCfg); err != nil {
@@ -61,17 +61,20 @@ func New(filename string) (config.Config, error) {
 		informer: make(chan struct{}, 1),
 	}
 
+	y.global = y.getGlobal(&yamlCfg.Global)
+
+	y.logger.Info("panoptes-stream", zap.String("version", y.Global().Version))
+	y.logger.Info("panoptes-stream", zap.String("go version", runtime.Version()), zap.String("go os/arch", runtime.GOOS+"/"+runtime.GOARCH))
+
 	y.devices = y.getDevices(yamlCfg)
 	y.producers = y.getProducers(yamlCfg.Producers)
 	y.databases = y.getDatabases(yamlCfg.Databases)
 	y.sensors = y.getSensors(yamlCfg.Sensors)
-	y.global = y.getGlobal(&yamlCfg.Global)
 
 	if !yamlCfg.Global.WatcherDisabled {
 		go func() {
 			if err := y.watcher(); err != nil {
-				y.logger.Error("watcher", zap.Error(err))
-				os.Exit(1)
+				y.logger.Fatal("watcher", zap.Error(err))
 			}
 
 		}()
@@ -80,7 +83,7 @@ func New(filename string) (config.Config, error) {
 	return y, nil
 }
 
-// Update reads yaml file
+// Update reads yaml file again and updates config.
 func (y *yaml) Update() error {
 	yamlCfg := &yamlConfig{}
 
@@ -97,32 +100,32 @@ func (y *yaml) Update() error {
 	return nil
 }
 
-// Devices returns configured devices
+// Devices returns configured devices.
 func (y *yaml) Devices() []config.Device {
 	return y.devices
 }
 
-// Global returns global configuration
+// Global returns global configuration.
 func (y *yaml) Global() *config.Global {
 	return y.global
 }
 
-// Producers returns configured producers
+// Producers returns configured producers.
 func (y *yaml) Producers() []config.Producer {
 	return y.producers
 }
 
-// Databases returns configured databases
+// Databases returns configured databases.
 func (y *yaml) Databases() []config.Database {
 	return y.databases
 }
 
-// Sensors returns configured sensors
+// Sensors returns configured sensors.
 func (y *yaml) Sensors() []config.Sensor {
 	return y.sensors
 }
 
-// Logger returns logging handler
+// Logger returns logging handler.
 func (y *yaml) Logger() *zap.Logger {
 	return y.logger
 }
@@ -168,10 +171,11 @@ func (y *yaml) getDevices(cfg *yamlConfig) []config.Device {
 	return devices
 }
 
-// Read reads a file and deserialization data
+// Read reads a file and deserialization data.
 func Read(filename string, c interface{}) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
+		// TODO filename should be added to error
 		return err
 	}
 
@@ -190,9 +194,12 @@ func (y *yaml) getProducers(p map[string]producer) []config.Producer {
 	)
 
 	for name, pConfig := range p {
-		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			y.logger.Error("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
-			os.Exit(1)
+		if pConfig.ConfigFile != "" {
+			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
+				y.logger.Fatal("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
+			} else {
+				y.logger.Info("yaml", zap.String("msg", name+" config expected in env variables"))
+			}
 		}
 
 		producers = append(producers, config.Producer{
@@ -211,16 +218,19 @@ func (y *yaml) getProducers(p map[string]producer) []config.Producer {
 	return producers
 }
 
-func (y *yaml) getDatabases(p map[string]database) []config.Database {
+func (y *yaml) getDatabases(d map[string]database) []config.Database {
 	var (
 		databases []config.Database
 		cfg       interface{}
 	)
 
-	for name, pConfig := range p {
-		if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-			y.logger.Error("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
-			os.Exit(1)
+	for name, pConfig := range d {
+		if pConfig.ConfigFile != "" {
+			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
+				y.logger.Fatal("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
+			}
+		} else {
+			y.logger.Info("yaml", zap.String("msg", name+" config expected in env variables"))
 		}
 
 		databases = append(databases, config.Database{
@@ -251,8 +261,7 @@ func (y *yaml) getGlobal(g *config.Global) *config.Global {
 
 	if g.Discovery.ConfigFile != "" {
 		if err := Read(g.Discovery.ConfigFile, &conf); err != nil {
-			y.logger.Error("yaml", zap.Error(err), zap.String("file", g.Discovery.ConfigFile))
-			os.Exit(1)
+			y.logger.Fatal("yaml", zap.Error(err), zap.String("file", g.Discovery.ConfigFile))
 		}
 
 		g.Discovery.Config = conf

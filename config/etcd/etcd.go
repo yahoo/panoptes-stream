@@ -9,6 +9,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"path"
+	"runtime"
 	"strings"
 	"time"
 
@@ -21,7 +22,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// etcd represents etcd configuration management
+// etcd represents etcd configuration management.
 type etcd struct {
 	client *clientv3.Client
 
@@ -45,7 +46,7 @@ type etcdConfig struct {
 	TLSConfig config.TLSConfig
 }
 
-// New constructs etcd configuration management
+// New constructs etcd configuration management.
 func New(filename string) (config.Config, error) {
 	var (
 		err       error
@@ -60,7 +61,10 @@ func New(filename string) (config.Config, error) {
 
 	config := &etcdConfig{}
 
-	yaml.Read(filename, config)
+	err = yaml.Read(filename, config)
+	if err != nil && filename != "-" {
+		etcd.logger.Fatal("etcd", zap.Error(err))
+	}
 
 	prefix := "panoptes_config_etcd"
 	err = envconfig.Process(prefix, config)
@@ -99,6 +103,9 @@ func New(filename string) (config.Config, error) {
 	if err = etcd.getRemoteConfig(); err != nil {
 		return nil, err
 	}
+
+	etcd.logger.Info("panoptes-stream", zap.String("version", etcd.global.Version))
+	etcd.logger.Info("panoptes-stream", zap.String("go version", runtime.Version()), zap.String("go os/arch", runtime.GOOS+"/"+runtime.GOARCH))
 
 	if !etcd.global.WatcherDisabled {
 		go etcd.watch(etcd.informer)
@@ -226,42 +233,42 @@ func (e *etcd) getRemoteConfig() error {
 	return nil
 }
 
-// Devices returns configured devices
+// Devices returns configured devices.
 func (e *etcd) Devices() []config.Device {
 	return e.devices
 }
 
-// Producers returns configured producers
+// Producers returns configured producers.
 func (e *etcd) Producers() []config.Producer {
 	return e.producers
 }
 
-// Databases returns configured databases
+// Databases returns configured databases.
 func (e *etcd) Databases() []config.Database {
 	return e.databases
 }
 
-// Sensors returns configured sensors
+// Sensors returns configured sensors.
 func (e *etcd) Sensors() []config.Sensor {
 	return e.sensors
 }
 
-// Global returns global configuration
+// Global returns global configuration.
 func (e *etcd) Global() *config.Global {
 	return e.global
 }
 
-// Informer returns informer channel
+// Informer returns informer channel.
 func (e *etcd) Informer() chan struct{} {
 	return e.informer
 }
 
-// Logger returns logging handler
+// Logger returns logging handler.
 func (e *etcd) Logger() *zap.Logger {
 	return e.logger
 }
 
-// Update gets configuration from etcd key value store
+// Update gets configuration from etcd key value store.
 func (e *etcd) Update() error {
 	return e.getRemoteConfig()
 }

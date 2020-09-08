@@ -49,7 +49,7 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 // GetDefaultLogger creates default zap logger
 func GetDefaultLogger() *zap.Logger {
 	var cfg = zap.Config{
-		Level:            zap.NewAtomicLevelAt(zapcore.DebugLevel),
+		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
 		EncoderConfig:    zap.NewProductionEncoderConfig(),
 		Encoding:         "console",
 		OutputPaths:      []string{"stdout"},

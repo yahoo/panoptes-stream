@@ -36,7 +36,7 @@ type MemSink struct {
 func NewMockConfig() *MockConfig {
 	var (
 		err error
-		m   = &MockConfig{}
+		m   = &MockConfig{MGlobal: &Global{Version: "0.0.0"}}
 	)
 
 	cfg := zap.NewDevelopmentConfig()
