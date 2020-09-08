@@ -1,17 +1,28 @@
 apiVersion: apps/v1
+{{- if eq .Values.serviceDiscovery "consul" }}
 kind: Deployment
+{{- else }}
+kind: StatefulSet
+{{- end }}
 metadata:
   name: panoptes-stream
 spec:
   selector:
     matchLabels:
       app: panoptes-stream
+  {{- if eq .Values.serviceDiscovery "k8s" }}    
+  serviceName: panoptes
+  {{- end }}     
   replicas: {{ .Values.replicaCount}}
   template:
     metadata:
       labels:
         app: panoptes-stream
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8081"  
     spec:
+      serviceAccountName: panoptes
       {{- if .Values.affinity }}
       affinity:
         podAntiAffinity:
@@ -31,9 +42,15 @@ spec:
         - name: panoptes
           image: panoptes-stream
           imagePullPolicy: Never
+          {{- if eq .Values.configuration "consul" }} 
           args:
             - "-consul"
             - "-"
+          {{- else if eq .Values.configuration "k8s" }}
+          args:
+            - "-config"
+            - "/etc/panoptes/config.yaml"
+          {{- end }}    
           env:
           - name: HOST_IP
             valueFrom:
@@ -55,8 +72,15 @@ spec:
           livenessProbe:
             httpGet:
               path: /healthcheck
-              port: {{ .Values.statusPort}}
-              scheme: HTTP    
-          ports:
-            - containerPort: {{ .Values.statusPort}}
-              name: metrics 
+              port: 8081
+              scheme: HTTP 
+            timeoutSeconds: 2
+          volumeMounts:
+            - name: panoptes-config
+              mountPath: /etc/panoptes
+
+      volumes:
+        - name: panoptes-config
+          configMap:
+            name: panoptes-config        
+

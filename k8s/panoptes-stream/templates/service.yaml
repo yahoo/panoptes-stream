@@ -8,7 +8,7 @@ spec:
   clusterIP: None
   ports:
     - name: status
-      port: {{ .Values.statusPort}}
-      targetPort: {{ .Values.statusPort}}   
+      port: 8081
+      targetPort: 8081   
   selector:
     app: panoptes-stream
