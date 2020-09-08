@@ -1,54 +1,28 @@
 version: "3"
 services:
-  etcd:
-    image: quay.io/coreos/etcd:latest
-    container_name: etcd
-    volumes:
-      - ./:/tmp/etcd
-    environment:
-      ETCD_ADVERTISE_CLIENT_URLS: http://0.0.0.0:2379
-      ETCD_LISTEN_CLIENT_URLS: http://0.0.0.0:2379
-      ETCDCTL_API: 3
-    command:
-      - /bin/sh
-      - -c
-      - |
-        etcdctl snapshot --data-dir /var/panoptes/etcd restore /tmp/etcd/etcd_kv_snapshot
-        etcd -data-dir=/var/panoptes/etcd
-
-    ports:
-      - "2379:2379"
-    networks:
-      - demo-net
-
   panoptes-node1:
     image: panoptes-stream:latest
     container_name: panoptes-node1
-    depends_on:
-      - etcd
+    volumes:
+      - ./:/etc/panoptes
+    command: ["-config", "/etc/panoptes/config.yml"]
     environment:
-      PANOPTES_CONFIG_ETCD_ENDPOINTS: etcd:2379
-      PANOPTES_DISCOVERY_ETCD_ENDPOINTS: etcd:2379
-    command: ["-etcd", "-"]
-    ports:
-      - "8081:8081"
+      - PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086
+      - PANOPTES_DATABASE_INFLUXDB1_BUCKET=mybucket
     networks:
       - demo-net
 
   panoptes-node2:
     image: panoptes-stream:latest
     container_name: panoptes-node2
-    depends_on:
-      - etcd
+    volumes:
+      - ./:/etc/panoptes
+    command: ["-config", "/etc/panoptes/config.yml"]
     environment:
-      PANOPTES_CONFIG_ETCD_ENDPOINTS: etcd:2379
-      PANOPTES_DISCOVERY_ETCD_ENDPOINTS: etcd:2379
-    command: ["-etcd", "-"]
-    ports:
-      - "8082:8081"
+      - PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086
+      - PANOPTES_DATABASE_INFLUXDB1_BUCKET=mybucket
     networks:
       - demo-net
-
   simulator:
     image: panoptes-stream:latest
     container_name: panoptes-simulator

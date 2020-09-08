@@ -1,0 +1,57 @@
+devices:
+  - host: device1.lax
+    port: 50051
+    sensors:
+      - sensor1
+  - host: device2.lax
+    port: 50051
+    sensors:
+      - sensor1
+  - host: device3.lax
+    port: 50051
+    sensors:
+      - sensor1
+  - host: device4.lax
+    port: 50051
+    sensors:
+      - sensor1
+  - host: device5.lax
+    port: 50051
+    sensors:
+      - sensor1
+
+sensors:
+  sensor1:
+    path: /interfaces/interface/state/counters
+    mode: sample
+    sampleInterval: 10
+    service: juniper.gnmi
+    output: influxdb1::ifcounters
+
+databases:
+  influxdb1:
+    service: influxdb
+
+discovery:
+  service: pseudo
+  config:
+    instances:
+      - panoptes-node1:8081
+      - panoptes-node2:8081
+    probe: http
+    path: /healthcheck
+
+shards:
+  enabled: true
+  numberOfNodes: 2
+  InitializingShards: 1
+
+status:
+  addr: "0.0.0.0:8081"
+
+logger:
+  level: debug
+  outputPaths:
+    - stdout
+  errorOutputPaths:
+    - stderr
