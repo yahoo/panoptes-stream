@@ -19,6 +19,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/discovery"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery/consul"
 	"git.vzbuilders.com/marshadrad/panoptes/discovery/etcd"
+	"git.vzbuilders.com/marshadrad/panoptes/discovery/k8s"
+	"git.vzbuilders.com/marshadrad/panoptes/discovery/pseudo"
 	"git.vzbuilders.com/marshadrad/panoptes/producer"
 	"git.vzbuilders.com/marshadrad/panoptes/register"
 	"git.vzbuilders.com/marshadrad/panoptes/status"
@@ -44,7 +46,7 @@ func main() {
 
 	cfg, err := getConfig()
 	if err != nil {
-		fmt.Println(err)
+		fmt.Println("config", err)
 		os.Exit(1)
 	}
 
@@ -53,13 +55,10 @@ func main() {
 
 	outChan := make(telemetry.ExtDSChan, cfg.Global().BufferSize)
 
-	logger.Info("starting ...")
-
 	// discovery
 	discovery, err = discoveryRegister(cfg)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		logger.Fatal("discovery", zap.Error(err))
 	}
 
 	if discovery != nil {
@@ -152,6 +151,16 @@ func discoveryRegister(cfg config.Config) (discovery.Discovery, error) {
 		}
 	case "etcd":
 		discovery, err = etcd.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+	case "k8s":
+		discovery, err = k8s.New(cfg)
+		if err != nil {
+			return nil, err
+		}
+	case "pseudo":
+		discovery, err = pseudo.New(cfg)
 		if err != nil {
 			return nil, err
 		}
