@@ -213,7 +213,7 @@ func (s *Shards) waitForInitialShards() {
 
 		instances, err := s.discovery.GetInstances()
 		if err != nil {
-			s.logger.Error("shard", zap.String("event", "discovery shards failed"), zap.Error(err))
+			s.logger.Error("shards", zap.String("event", "discovery shards failed"), zap.Error(err))
 			continue
 		}
 
@@ -227,8 +227,10 @@ func (s *Shards) waitForInitialShards() {
 		}
 
 		if currentAvailableNodes >= s.initializingShards {
-			s.logger.Info("shard", zap.String("event", "initialized"), zap.Int("available.nodes", currentAvailableNodes))
+			s.logger.Info("shards", zap.String("event", "initialized"), zap.Int("available.nodes", currentAvailableNodes))
 			break
 		}
+
+		s.logger.Info("shards", zap.String("event", "wait.initial"), zap.Int("available.nodes", currentAvailableNodes))
 	}
 }

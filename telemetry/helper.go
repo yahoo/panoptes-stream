@@ -16,7 +16,7 @@ import (
 	"github.com/openconfig/ygot/ygot"
 )
 
-// GetKey returns telemetry key and extracted labels
+// GetKey returns telemetry key and extracted labels.
 func GetKey(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string) {
 	labels := make(map[string]string)
 
@@ -40,7 +40,7 @@ func GetKey(buf *bytes.Buffer, path []*gpb.PathElem) (string, map[string]string)
 	return buf.String(), labels
 }
 
-// GetValue returns telemetry value
+// GetValue returns telemetry value.
 func GetValue(tv *gpb.TypedValue) (interface{}, error) {
 	var (
 		jsondata []byte
@@ -83,7 +83,7 @@ func GetValue(tv *gpb.TypedValue) (interface{}, error) {
 	return value, err
 }
 
-// GetGNMISubscriptions return gNMI subscription based on the sensors
+// GetGNMISubscriptions return gNMI subscription based on the sensors.
 func GetGNMISubscriptions(sensors []*config.Sensor) []*gpb.Subscription {
 	var subscriptions []*gpb.Subscription
 
@@ -107,7 +107,7 @@ func GetGNMISubscriptions(sensors []*config.Sensor) []*gpb.Subscription {
 	return subscriptions
 }
 
-// GetPathOutput returns path to output map
+// GetPathOutput returns path to output map.
 func GetPathOutput(sensors []*config.Sensor) map[string]string {
 	var pathOutput = make(map[string]string)
 
@@ -135,7 +135,7 @@ func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 	return list, nil
 }
 
-// MergeLabels merges key labels with prefix labes
+// MergeLabels merges key labels with prefix labels.
 func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[string]string {
 	if len(keyLabels) > 0 {
 		for k, v := range prefixLabels {
@@ -151,7 +151,7 @@ func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[s
 	return prefixLabels
 }
 
-// getPathWOKey returns path string without key/value
+// getPathWOKey returns path string without key/value.
 func getPathWithoutKey(path string) string {
 	var buf bytes.Buffer
 
@@ -202,6 +202,7 @@ func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.
 	return rSensors
 }
 
+// GetDefaultOutput returns default output if available.
 func GetDefaultOutput(sensors []*config.Sensor) string {
 	var output = make(map[string]bool)
 

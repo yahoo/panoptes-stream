@@ -23,7 +23,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// etcd represents the etcd as service discovery
+// etcd represents the etcd as service discovery.
 type etcd struct {
 	id          string
 	prefix      string
@@ -42,7 +42,7 @@ type etcdConfig struct {
 	TLSConfig config.TLSConfig
 }
 
-// New constructs etcd service discovery
+// New constructs etcd service discovery.
 func New(cfg config.Config) (discovery.Discovery, error) {
 	var tlsConfig *tls.Config
 
@@ -93,7 +93,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 	return etcd, nil
 }
 
-// Register registers panoptes at etcd
+// Register registers panoptes at etcd.
 func (e *etcd) Register() error {
 	if err := e.lock(); err != nil {
 		return err
@@ -150,6 +150,8 @@ func (e *etcd) Deregister() error {
 	return nil
 }
 
+// Watch monitors for updates at etcd panoptes service
+// and notify through the channel.
 func (e *etcd) Watch(ch chan<- struct{}) {
 	prefix := path.Join(e.prefix, "services")
 	rch := e.client.Watch(context.Background(), prefix, clientv3.WithPrefix())
@@ -159,7 +161,7 @@ func (e *etcd) Watch(ch chan<- struct{}) {
 			select {
 			case ch <- struct{}{}:
 			default:
-				e.logger.Info("etcd", zap.String("event", "watcher.response.drop"))
+				e.logger.Debug("etcd", zap.String("event", "watcher.response.drop"))
 			}
 		}
 	}
@@ -218,7 +220,7 @@ func (e *etcd) register(id, hostname string, meta map[string]string) error {
 	return err
 }
 
-// GetInstances returns all registered instances
+// GetInstances returns all registered instances.
 func (e *etcd) GetInstances() ([]discovery.Instance, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	prefix := path.Join(e.prefix, "services")

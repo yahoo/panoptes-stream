@@ -24,7 +24,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret"
 )
 
-// consul represents the Consul service discovery
+// consul represents the Consul service discovery.
 type consul struct {
 	id        string
 	cfg       config.Config
@@ -42,7 +42,7 @@ type consulConfig struct {
 	TLSConfig config.TLSConfig
 }
 
-// New constructs consul service discovery
+// New constructs consul service discovery.
 func New(cfg config.Config) (discovery.Discovery, error) {
 	config, err := getConfig(cfg)
 	if err != nil {
@@ -82,7 +82,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 	}, nil
 }
 
-// Register registers the panoptes at consul
+// Register registers the panoptes at consul.
 func (c *consul) Register() error {
 	key := path.Join(c.config.Prefix, "global_lock")[1:]
 	err := c.lock(key)
@@ -172,7 +172,7 @@ func (c *consul) GetInstances() ([]discovery.Instance, error) {
 	return instances, nil
 }
 
-// Deregister deregisters the panoptes at consul
+// Deregister deregisters the panoptes at consul.
 func (c *consul) Deregister() error {
 	return c.client.Agent().ServiceDeregister(c.id)
 }
@@ -269,7 +269,7 @@ func (c *consul) Watch(ch chan<- struct{}) {
 			select {
 			case ch <- struct{}{}:
 			default:
-				c.logger.Info("consul", zap.String("event", "watcher.response.drop"))
+				c.logger.Debug("consul", zap.String("event", "watcher.response.drop"))
 			}
 		}
 		lastIdx = idx
