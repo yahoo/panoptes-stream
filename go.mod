@@ -7,6 +7,7 @@ require (
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.2
 	github.com/hashicorp/consul/api v1.5.0
+	github.com/hashicorp/consul/sdk v0.5.0
 	github.com/hashicorp/vault v1.4.3
 	github.com/hashicorp/vault-plugin-secrets-kv v0.5.5
 	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
@@ -28,6 +29,11 @@ require (
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.23.0
 	gopkg.in/yaml.v3 v3.0.0-20200615113413-eeeca48fe776
+	k8s.io/api v0.18.6
+	k8s.io/apimachinery v0.18.6
+	k8s.io/client-go v0.18.6
+	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // indirect
+	k8s.io/utils v0.0.0-20200821003339-5e75c0163111 // indirect
 	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc
 )
 
