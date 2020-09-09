@@ -6,9 +6,6 @@ services:
     volumes:
       - ./:/etc/panoptes
     command: ["-config", "/etc/panoptes/config.yml"]
-    environment:
-      - PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086
-      - PANOPTES_DATABASE_INFLUXDB1_BUCKET=mybucket
     networks:
       - demo-net
 
@@ -18,9 +15,6 @@ services:
     volumes:
       - ./:/etc/panoptes
     command: ["-config", "/etc/panoptes/config.yml"]
-    environment:
-      - PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086
-      - PANOPTES_DATABASE_INFLUXDB1_BUCKET=mybucket
     networks:
       - demo-net
   simulator:

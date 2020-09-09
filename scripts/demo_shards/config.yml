@@ -31,6 +31,9 @@ sensors:
 databases:
   influxdb1:
     service: influxdb
+    config:
+      server: http://influxdb:8086
+      bucket: mybucket
 
 discovery:
   service: pseudo

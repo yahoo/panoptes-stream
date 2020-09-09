@@ -17,4 +17,6 @@ sensors:
 databases:
   influxdb1:
     service: influxdb
-    configFile: /etc/panoptes/influxdb.yml
+    config:
+      server: http://influxdb:8086
+      bucket: mydb
