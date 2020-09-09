@@ -29,21 +29,11 @@ type yaml struct {
 	logger *zap.Logger
 }
 
-type producer struct {
-	Service    string `yaml:"service"`
-	ConfigFile string `yaml:"configFile"`
-}
-
-type database struct {
-	Service    string `yaml:"service"`
-	ConfigFile string `yaml:"configFile"`
-}
-
 type yamlConfig struct {
 	Devices   []config.DeviceTemplate
 	Sensors   map[string]config.Sensor
-	Producers map[string]producer
-	Databases map[string]database
+	Producers map[string]config.Producer
+	Databases map[string]config.Database
 
 	config.Global `yaml:",inline"`
 }
@@ -175,7 +165,6 @@ func (y *yaml) getDevices(cfg *yamlConfig) []config.Device {
 func Read(filename string, c interface{}) error {
 	b, err := ioutil.ReadFile(filename)
 	if err != nil {
-		// TODO filename should be added to error
 		return err
 	}
 
@@ -187,25 +176,14 @@ func Read(filename string, c interface{}) error {
 	return nil
 }
 
-func (y *yaml) getProducers(p map[string]producer) []config.Producer {
-	var (
-		producers []config.Producer
-		cfg       interface{}
-	)
+func (y *yaml) getProducers(p map[string]config.Producer) []config.Producer {
+	var producers []config.Producer
 
 	for name, pConfig := range p {
-		if pConfig.ConfigFile != "" {
-			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-				y.logger.Fatal("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
-			} else {
-				y.logger.Info("yaml", zap.String("msg", name+" config expected in env variables"))
-			}
-		}
-
 		producers = append(producers, config.Producer{
 			Name:    name,
 			Service: pConfig.Service,
-			Config:  cfg,
+			Config:  pConfig.Config,
 		})
 	}
 
@@ -218,25 +196,14 @@ func (y *yaml) getProducers(p map[string]producer) []config.Producer {
 	return producers
 }
 
-func (y *yaml) getDatabases(d map[string]database) []config.Database {
-	var (
-		databases []config.Database
-		cfg       interface{}
-	)
+func (y *yaml) getDatabases(d map[string]config.Database) []config.Database {
+	var databases []config.Database
 
-	for name, pConfig := range d {
-		if pConfig.ConfigFile != "" {
-			if err := Read(pConfig.ConfigFile, &cfg); err != nil {
-				y.logger.Fatal("yaml", zap.Error(err), zap.String("file", pConfig.ConfigFile))
-			}
-		} else {
-			y.logger.Info("yaml", zap.String("msg", name+" config expected in env variables"))
-		}
-
+	for name, dConfig := range d {
 		databases = append(databases, config.Database{
 			Name:    name,
-			Service: pConfig.Service,
-			Config:  cfg,
+			Service: dConfig.Service,
+			Config:  dConfig.Config,
 		})
 	}
 
@@ -257,16 +224,6 @@ func (y *yaml) getSensors(s map[string]config.Sensor) []config.Sensor {
 }
 
 func (y *yaml) getGlobal(g *config.Global) *config.Global {
-	var conf = make(map[string]interface{})
-
-	if g.Discovery.ConfigFile != "" {
-		if err := Read(g.Discovery.ConfigFile, &conf); err != nil {
-			y.logger.Fatal("yaml", zap.Error(err), zap.String("file", g.Discovery.ConfigFile))
-		}
-
-		g.Discovery.Config = conf
-	}
-
 	envconfig.Process("panoptes", g)
 
 	config.SetDefaultGlobal(g)

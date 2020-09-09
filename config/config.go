@@ -104,9 +104,8 @@ type Shards struct {
 
 // Discovery represents discovery service
 type Discovery struct {
-	ConfigFile string `yaml:"configFile"`
-	Service    string
-	Config     interface{}
+	Service string
+	Config  interface{}
 }
 
 // DeviceOptions represents global device options

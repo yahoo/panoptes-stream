@@ -4,12 +4,10 @@
 package yaml
 
 import (
-	"bytes"
 	"context"
 	"io/ioutil"
 	"os"
 	"testing"
-	"text/template"
 	"time"
 
 	"github.com/stretchr/testify/assert"
@@ -19,29 +17,42 @@ import (
 )
 
 var yamlContent = `
-devices: 
+devices:
   - host: "192.168.59.3"
     password: admin
     port: 50051
-    sensors: 
+    sensors:
       - sensor1
-sensors: 
-  sensor1: 
+sensors:
+  sensor1:
     mode: on_change
     output: "console::stdout"
     path: /interfaces/interface/state
     service: juniper.gnmi
     sampleInterval: 10
     heartbeatInterval: 11
-    suppressRedundant: true		
+    suppressRedundant: true
 producers:
   kafka1:
     service: kafka
-    configFile: {{.KafkaConfigFile}}
+    config:
+      brokers:
+        - 127.0.0.1:9092
+      batchSize: 100
+      topics:
+        - interface
+        - bgp
 databases:
   influxdb1:
     service: influxdb
-    configFile: {{.InfluxConfigFile}}		
+    config:
+      server: http://localhost:8086
+      bucket: mydb
+discovery:
+  service: pseudo
+  config:
+    probe: http
+    interval: 2
 logger:
   level: debug
   encoding: console
@@ -50,59 +61,18 @@ status:
 shards:
   enabled: true
 deviceOptions:
-  username: juniper       
+  username: juniper
 watcherDisabled: true
 `
-
-var kafkaConfig = `
-brokers:
-  - 127.0.0.1:9092
-batchSize: 100
-topics:
-  - interface
-  - bgp
-`
-
-var influxConfig = `
-server: http://localhost:8086
-bucket: mydb
-`
-
-type Tpl struct {
-	KafkaConfigFile  string
-	InfluxConfigFile string
-}
 
 func TestNewYaml(t *testing.T) {
 	cfgFile, err := ioutil.TempFile("", "config")
 	assert.Equal(t, nil, err)
 	defer os.Remove(cfgFile.Name())
 
-	cfgKafka, err := ioutil.TempFile("", "kafka")
-	assert.Equal(t, nil, err)
-	defer os.Remove(cfgKafka.Name())
-
-	cfgInflux, err := ioutil.TempFile("", "influx")
-	assert.Equal(t, nil, err)
-	defer os.Remove(cfgInflux.Name())
-
-	tpl := Tpl{cfgKafka.Name(), cfgInflux.Name()}
-	cfgTpl, err := template.New("test").Parse(yamlContent)
-	assert.Equal(t, nil, err)
-	buf := new(bytes.Buffer)
-	cfgTpl.Execute(buf, tpl)
-
 	// write main config
-	cfgFile.WriteString(buf.String())
+	cfgFile.WriteString(yamlContent)
 	cfgFile.Close()
-
-	// write kafka config
-	cfgKafka.WriteString(kafkaConfig)
-	cfgFile.Close()
-
-	// write influxdb config
-	cfgInflux.WriteString(influxConfig)
-	cfgInflux.Close()
 
 	cfg, err := New(cfgFile.Name())
 	assert.Equal(t, nil, err)
@@ -145,6 +115,9 @@ func TestNewYaml(t *testing.T) {
 		assert.Equal(t, "debug", cfg.Global().Logger["level"])
 		assert.Equal(t, true, cfg.Global().Shards.Enabled)
 		assert.Equal(t, "juniper", cfg.Global().DeviceOptions.Username)
+
+		assert.Equal(t, "pseudo", cfg.Global().Discovery.Service)
+		assert.Equal(t, "http", cfg.Global().Discovery.Config.(map[string]interface{})["probe"])
 
 		cfg.Update()
 	}
