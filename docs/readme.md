@@ -1,10 +1,6 @@
 
-- [Getting Started](getting_started.md)
-- [Architecture](architecture.md)
-- [Demo - single node](demo.md)
-- [Demo - cluster](demo_consul_shards.md)
-- [Troubleshooting]()
-- [FAQ](faq.md)
-- [Glossary](glossary.md)
-
-
+- [Getting Started](/docs/getting_started.md)
+- [Architecture](/docs/architecture.md)
+- [Demo](/docs/demo_list.md)
+- [FAQ](/docs/faq.md)
+- [Glossary](/docs/glossary.md)

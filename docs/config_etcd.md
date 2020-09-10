@@ -1,10 +1,10 @@
-## Panoptes configuration with Consul
+## Panoptes configuration with etcd
 ------------
 
-This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store.   
+This document will show you how to configure Panoptes with [etcd](http://etcd.io) key value store.   
 
 ### Configuration specs
-The Panoptes configuration categories as follows at Consul key value store:
+The Panoptes configuration categories as follows at etcd key value store:
 - [Devices](#devices)
 - [Sensors](#sensors)
 - [Producers](#producers)
@@ -138,19 +138,20 @@ Example status configuration:
 ```
 
 #### Discovery
-Panoptes can register itself to Consul discovery service and it required once you enabled Sharding feature. 
+Panoptes can register itself to etcd discovery service and it is required once you enabled the Sharding feature. 
 
 Example discovery configuration:
 
 ```json
 "discovery": {
-   "service": "consul",
+   "service": "etcd",
    "config": { 
-     "address": "127.0.0.1:8500",
-     "healthcheckURL": "http://127.0.0.1:8081/healthcheck"
+     "endpoints": ["127.0.0.1:2379"],
    } 
  }
 ```
+
+Detailed instructions for Panoptes service discovery are found [here](discovery.md)
 
 #### Dialout
 Panoptes supports gRPC [dial-out](glossary.md#dialout) mode for Cisco MDT at the moment. you can configure it to listen on a specific address and port that should be reachable from your dial-out mode devices. 
@@ -167,7 +168,7 @@ Example Dial-Out mode configuration:
  } 
 ```
 
-#### Shard
+#### Shards
 By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
 
 Example Shard configuration:
@@ -181,7 +182,7 @@ Example Shard configuration:
 ```
 
 #### Logger
-The level of logging to show and output destination after the Panoptes has started. the output can be file or console (stdout/stdin) 
+The level of logging to show and output destination after the Panoptes has started. the output can be file or console (stdout/stdin).
 
 Example Logging configuration:
 
@@ -194,7 +195,7 @@ Example Logging configuration:
 ```
 
 #### Device Options
-The device options are shared configuration between all of devices. the device overlapped configuration is priority, it means a device configured options are preferred to global device options.
+The device options are shared configuration between all of the devices. the device overlapped configuration is priority, it means a device configured options are preferred to global device options.
 
 Example Device Options configuration:
 
@@ -211,17 +212,21 @@ Example Device Options configuration:
 }
 ```
 
-#### Initializing Consul
+#### Initializing etcd
 
 ```
-curl https://git.vzbuilders.com/marshadrad/panoptes/blob/master/scripts/consul/init_config.json | consul kv import -
-
+export ETCDCTL_API=3
+etcdctl put panoptes/config/devices/
+etcdctl put panoptes/config/database/
+etcdctl put panoptes/config/producers/
+etcdctl put panoptes/config/sensors/
+etcdctl put panoptes/config/global {}
 ```
 
-#### Backup and Restore Consul
+#### Backup and Restore etcd
 ```
-consul kv export > panoptes.config.json
+ETCDCTL_API=3 etcdctl snapshot save etcd_kv_snapshot
 ```
 ```
-consul kv import @panoptes.config.json
+ETCDCTL_API=3 etcdctl snapshot --data-dir=/etcd restore etcd_kv_snapshot
 ```

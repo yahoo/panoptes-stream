@@ -1,4 +1,4 @@
-## Demo 
+## Demo Single Node 
 --------
 
 ![panoptes demo](imgs/demo.png)
@@ -19,5 +19,8 @@ This is a demo with Panoptes gNMI simulator. you can see the simulated data same
 ```console
 # docker-compose down
 ```
+
+ <span style="color:purple">All demonstrations</span>
+Please check out the [demo page](demo_list.md) to see all of the demonstrations for different scenarios. 
 
 

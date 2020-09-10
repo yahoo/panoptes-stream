@@ -9,14 +9,14 @@
 |port          | The telemetry port that configured at device.           | 
 |username      | username if authentication is enabled at device.        |
 |password      | password if authentication is enabled at device.        |
-|tlsConfig     | TLS configuration parameters. check [TLS config](#tls). |
+|tlsConfig     | TLS configuration parameters. check [TLS config](/docs/config_tls.md). |
 
 
 #### Sensor  
 
 | key              | description                                                                                             |
 |------------------|---------------------------------------------------------------------------------------------------------|
-|service           |telemetry name based on the vendor. current supported [services](#services).                             |
+|service           |telemetry name based on the vendor. current supported [services](#telemetry-services).                             |
 |output            |the output can be a producer or a database that you already configured.                                  |
 |path              |The sensor path describes a YANG path or a subset of data definitions in a YANG model with a container.  |
 |mode              |streaming subscription mode: sample or on_change.                                                        |
@@ -38,23 +38,13 @@
 |arista.gnmi       | Arista gNMI                                       |
 
 
-#### TLS   
-
-| key               | description                                       |
-|-------------------|---------------------------------------------------|
-|enabled            | enable the TLS                                    |    
-|certFile           | certificate file                                  |
-|keyFile            | private key file                                  |
-|caFile             | certificate authority certification               |
-|insecureSkipVerify |it controls whether a client verifies the server's certificate chain and host name |
-
 #### Status keys
 
 | key               | description                                       |
 |-------------------|---------------------------------------------------|
 |disabled           | disable the status (including healthcheck)        |
 |addr               | status ip address and port (ip:port)              |
-|tlsConfig          | TLS configuration                                 |
+|tlsConfig          | TLS configuration parameters. check [TLS config](/docs/config_tls.md).      |
 
 #### Shards keys
 
@@ -76,7 +66,7 @@
 |-------------------|-------------------------------------------------------|
 |services           |dial-out service configuration                         |
 |defaultOutput      |default output                                         |
-|tlsConfig          |TLS configuration parameters. check [TLS config](#tls).|
+|tlsConfig          |TLS configuration parameters. check [TLS config](/docs/config_tls.md).|
 
 
 #### Device Options
@@ -84,7 +74,7 @@
 |-------------------|-------------------------------------------------------|
 |username           |username if authentication is enabled at device.       |
 |password           |password if authentication is enabled at device.       |
-|tlsConfig          |TLS configuration parameters. check [TLS config](#tls).|
+|tlsConfig          |TLS configuration parameters. check [TLS config](/docs/config_tls.md).|
 
 #### Global
 | key               | description                                          |
@@ -92,3 +82,13 @@
 |watcherDisabled    |disable watcher (not recommended)                     |
 |bufferSize         |shared buffer between telemetries                     |
 |outputBufferSize   |output buffer (per producer or database)              |
+
+#### TLS   
+
+| key               | description                                       |
+|-------------------|---------------------------------------------------|
+|enabled| enable or disable the TLS configuration.|
+|caFile| if caFile is empty, Panoptes uses the host's root CA set.|
+|certFile| the certficate file contain PEM encoded data.
+|keyFile| the private key file contain PEM encoded data.
+|insecureSkipVerify|it controls whether a client verifies the server's certificate chain and host name.|

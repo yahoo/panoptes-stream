@@ -11,7 +11,7 @@ Here's a basic example with minimum requirements .yaml file that shows the requi
 - Open a text editor and paste the below yaml and save it as config.yaml.
 - Edit IP address and port. you can add username and password if needed.
 - Change the service name to other vendors (cisco.gnmi or juniper.gnmi) if needed.
-- In case you needed advance configuration please read [.yaml spec](yaml_spec.md).
+- In case you needed advance configuration please read [.yaml spec](config_yaml.md).
 
 ```yaml
 devices:
