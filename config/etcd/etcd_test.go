@@ -24,13 +24,13 @@ func TestNewEtcd(t *testing.T) {
 	defer cancel()
 
 	kv := clientv3.NewKV(client)
-	kv.Put(ctx, "config/devices/core1.lax", `{"host": "core1.bur","port": 50051,"sensors" : ["sensor1"]}`)
-	kv.Put(ctx, "config/sensors/sensor1", `{"service": "arista.gnmi","output":"console::stdout", "path": "/interfaces/", "mode": "sample"}`)
-	kv.Put(ctx, "config/databases/db1", `{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`)
-	kv.Put(ctx, "config/producers/kafka1", `{"service": "kafka", "config" : {"brokers": ["127.0.0.1:9092"], "topics":["bgp"]}}`)
-	kv.Put(ctx, "config/global", `{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8081"}}`)
+	kv.Put(ctx, "panoptes/config/devices/core1.lax", `{"host": "core1.bur","port": 50051,"sensors" : ["sensor1"]}`)
+	kv.Put(ctx, "panoptes/config/sensors/sensor1", `{"service": "arista.gnmi","output":"console::stdout", "path": "/interfaces/", "mode": "sample"}`)
+	kv.Put(ctx, "panoptes/config/databases/db1", `{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`)
+	kv.Put(ctx, "panoptes/config/producers/kafka1", `{"service": "kafka", "config" : {"brokers": ["127.0.0.1:9092"], "topics":["bgp"]}}`)
+	kv.Put(ctx, "panoptes/config/global", `{"logger": {"level":"info", "encoding": "console", "outputPaths": ["stdout"], "errorOutputPaths":["stderr"]}, "status": {"addr":"127.0.0.2:8081"}}`)
 
-	cfg, err := New("")
+	cfg, err := New("-")
 	assert.Equal(t, nil, err)
 
 	devices := cfg.Devices()
@@ -50,7 +50,7 @@ func TestNewEtcd(t *testing.T) {
 	// make sure watch is ready
 	time.Sleep(time.Second)
 
-	kv.Put(ctx, "config/databases/db2", `{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`)
+	kv.Put(ctx, "panoptes/config/databases/db2", `{"service": "influxdb", "config": {"server": "https://localhost:8086"}}`)
 
 	select {
 	case <-cfg.Informer():
@@ -63,7 +63,7 @@ func TestNewEtcd(t *testing.T) {
 	assert.Len(t, databases, 2)
 
 	// invalid json data
-	kv.Put(ctx, "config/devices/core1.lax", `"host": "core1.bur","port": 50051,"sensors" : ["sensor1"]}`)
+	kv.Put(ctx, "panoptes/config/devices/core1.lax", `"host": "core1.bur","port": 50051,"sensors" : ["sensor1"]}`)
 	err = cfg.Update()
 	assert.NotEqual(t, nil, err)
 }
@@ -80,6 +80,6 @@ func TestEmptyConfig(t *testing.T) {
 	kv := clientv3.NewKV(client)
 	kv.Put(ctx, "config/", "")
 
-	_, err := New("")
+	_, err := New("-")
 	assert.Error(t, err)
 }
