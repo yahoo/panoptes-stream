@@ -8,7 +8,6 @@ import (
 	"log"
 	"math/rand"
 	"net"
-	"os"
 	"time"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
@@ -28,8 +27,7 @@ func main() {
 
 	ln, err := net.Listen("tcp", ":50051")
 	if err != nil {
-		log.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 
 	gServer := grpc.NewServer()

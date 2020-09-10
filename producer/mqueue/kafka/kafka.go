@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"encoding/json"
-	"os"
 	"strings"
 	"time"
 
@@ -62,8 +61,7 @@ func (k *Kafka) Start() {
 	chMap := make(map[string]chan telemetry.DataStore)
 	config, err := k.getConfig()
 	if err != nil {
-		k.logger.Error("kafka", zap.Error(err))
-		os.Exit(1)
+		k.logger.Fatal("kafka", zap.Error(err))
 	}
 
 	for _, topic := range config.Topics {
