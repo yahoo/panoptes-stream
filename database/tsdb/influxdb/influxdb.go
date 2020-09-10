@@ -9,7 +9,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"os"
 	"strings"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
@@ -57,14 +56,12 @@ func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan teleme
 func (i *InfluxDB) Start() {
 	config, err := i.getConfig()
 	if err != nil {
-		i.logger.Error("influxdb", zap.Error(err))
-		os.Exit(1)
+		i.logger.Fatal("influxdb", zap.Error(err))
 	}
 
 	client, err := i.getClient(config)
 	if err != nil {
-		i.logger.Error("influxdb", zap.Error(err))
-		os.Exit(1)
+		i.logger.Fatal("influxdb", zap.Error(err))
 	}
 
 	writeAPI := client.WriteApi(config.Org, config.Bucket)
