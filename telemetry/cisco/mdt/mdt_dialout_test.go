@@ -1,6 +1,3 @@
-//: Copyright Verizon Media
-//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
-
 package mdt
 
 import (
@@ -9,20 +6,61 @@ import (
 	"testing"
 	"time"
 
+	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
+	"github.com/golang/protobuf/proto"
 	"github.com/stretchr/testify/assert"
+	"google.golang.org/grpc"
 
+	"git.vzbuilders.com/marshadrad/panoptes/config"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
 )
 
-func TestHandler(t *testing.T) {
+func TestDialoutStart(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	cfg := config.NewMockConfig()
+	ch := make(telemetry.ExtDSChan, 2)
+
+	cfg.Global().Dialout = config.Dialout{
+		Services: map[string]config.DialoutService{
+			"cisco.mdt": {
+				Addr:    "127.0.0.1:50051",
+				Workers: 1,
+			},
+		},
+	}
+
+	d := NewDialout(ctx, cfg, ch)
+	go d.Start()
+	time.Sleep(time.Second)
+
+	conn, err := grpc.DialContext(ctx, "127.0.0.1:50051", grpc.WithInsecure())
+	assert.NoError(t, err)
+	mdtDialoutClient := dialout.NewGRPCMdtDialoutClient(conn)
+	mdtDialout, err := mdtDialoutClient.MdtDialout(ctx)
+	assert.NoError(t, err)
+
+	tm := mock.MDTInterfaceII()
+	b, err := proto.Marshal(tm)
+	assert.NoError(t, err)
+	mdtDialout.Send(&dialout.MdtDialoutArgs{ReqId: 1, Data: b})
+	time.Sleep(time.Second)
+	r := <-ch
+	labels := r.DS["labels"].(map[string]string)
+	assert.Equal(t, "Sub3", labels["subscriptionId"])
+	assert.Equal(t, "ios", labels["nodeId"])
+	assert.Equal(t, "openconfig-interfaces:interfaces/interface", labels["path"])
+}
+
+func TestDialoutHandler(t *testing.T) {
 	buf := new(bytes.Buffer)
 	ch := make(telemetry.ExtDSChan, 10)
 
-	m := &MDT{
+	m := &Dialout{
+		cfg:        config.NewMockConfig(),
 		pathOutput: map[string]string{"Sub3": "console::stdout"},
 		outChan:    ch,
-		systemID:   "127.0.0.1",
 	}
 
 	tm := mock.MDTInterfaceII()
@@ -71,7 +109,7 @@ func TestHandler(t *testing.T) {
 			assert.Equal(t, "console::stdout", r.Output)
 			assert.Equal(t, exp.value, r.DS["value"])
 			assert.Equal(t, exp.labels, r.DS["labels"])
-			assert.Equal(t, "127.0.0.1", r.DS["system_id"])
+			assert.Equal(t, "ios", r.DS["system_id"])
 			assert.Equal(t, exp.timestamp, r.DS["timestamp"])
 
 		case <-ctx.Done():

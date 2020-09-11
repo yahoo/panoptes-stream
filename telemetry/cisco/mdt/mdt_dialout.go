@@ -10,23 +10,25 @@ import (
 	"net"
 	"sync"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/peer"
 
 	dialout "github.com/cisco-ie/nx-telemetry-proto/mdt_dialout"
 	mdt "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
 	"github.com/golang/protobuf/proto"
 	"go.uber.org/zap"
+
+	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/secret"
+	"git.vzbuilders.com/marshadrad/panoptes/status"
+	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-// Dialout represents MDT dial-out
+// Dialout represents MDT dial-out.
 type Dialout struct {
 	ctx        context.Context
 	cfg        config.Config
-	service    string
 	dataChan   chan []byte
 	outChan    telemetry.ExtDSChan
 	logger     *zap.Logger
@@ -36,12 +38,11 @@ type Dialout struct {
 	sync.RWMutex
 }
 
-// NewDialout returns a new instance of MDT dial-out
-func NewDialout(ctx context.Context, service string, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
+// NewDialout returns a new instance of MDT dial-out.
+func NewDialout(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
 	m := &Dialout{
 		ctx:        ctx,
 		cfg:        cfg,
-		service:    service,
 		outChan:    outChan,
 		logger:     cfg.Logger(),
 		dataChan:   make(chan []byte, 1000),
@@ -55,14 +56,22 @@ func NewDialout(ctx context.Context, service string, cfg config.Config, outChan 
 	return m
 }
 
-// Start creates workers and starts gRPC server
+// Start creates workers and starts gRPC server.
 func (m *Dialout) Start() error {
-	conf := m.cfg.Global().Dialout.Services[m.service]
+	var grpcSrvOpts []grpc.ServerOption
+
+	tlsConf := m.cfg.Global().Dialout.TLSConfig
+	conf := m.cfg.Global().Dialout.Services["cisco.mdt"]
+
 	if conf.Addr == "" {
 		return errors.New("address is empty")
 	}
 
-	for i := 0; i < 1; i++ {
+	if conf.Workers < 1 {
+		conf.Workers = 2
+	}
+
+	for i := 0; i < conf.Workers; i++ {
 		go m.worker()
 	}
 
@@ -71,16 +80,26 @@ func (m *Dialout) Start() error {
 		return err
 	}
 
-	srv := grpc.NewServer()
+	if tlsConf.Enabled {
+		tlsConfig, err := secret.GetTLSServerConfig(&tlsConf)
+		if err != nil {
+			return err
+		}
+
+		creds := grpc.Creds(credentials.NewTLS(tlsConfig))
+		grpcSrvOpts = append(grpcSrvOpts, creds)
+	}
+
+	srv := grpc.NewServer(grpcSrvOpts...)
 	dialout.RegisterGRPCMdtDialoutServer(srv, m)
 	go srv.Serve(ln)
 
-	m.logger.Info(m.service+".dialout", zap.String("address", conf.Addr), zap.Bool("tls", m.cfg.Global().Dialout.TLSConfig.Enabled))
+	m.logger.Info("cisco.mdt.dialout", zap.String("address", conf.Addr), zap.Bool("tls", m.cfg.Global().Dialout.TLSConfig.Enabled))
 
 	return nil
 }
 
-// Update updates path to output once the configuration changed
+// Update updates path to output once the configuration changed.
 func (m *Dialout) Update() {
 	m.Lock()
 	defer m.Unlock()
@@ -91,7 +110,7 @@ func (m *Dialout) Update() {
 	}
 }
 
-// MdtDialout gets stream metrics and fan-out to workers
+// MdtDialout gets stream metrics and fan-out to workers.
 func (m *Dialout) MdtDialout(stream dialout.GRPCMdtDialout_MdtDialoutServer) error {
 	var buf *bytes.Buffer
 
@@ -215,7 +234,6 @@ func (m *Dialout) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 				Output: output,
 			}:
 			default:
-				m.metrics["dropsTotal"].Inc()
 				m.logger.Warn("cisco.mdt.dialout", zap.String("error", "dataset drop"))
 			}
 		}

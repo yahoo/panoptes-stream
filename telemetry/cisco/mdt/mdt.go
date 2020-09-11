@@ -29,7 +29,7 @@ const (
 
 var mdtVersion = "0.0.1"
 
-// MDT represents Model-Driven Telemetry
+// MDT represents Model-Driven Telemetry.
 type MDT struct {
 	conn          *grpc.ClientConn
 	subscriptions []string
@@ -43,7 +43,7 @@ type MDT struct {
 	pathOutput map[string]string
 }
 
-// New returns new instance of NMI
+// New returns new instance of NMI.
 func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, outChan telemetry.ExtDSChan) telemetry.NMI {
 	var metrics = make(map[string]status.Metrics)
 
@@ -72,7 +72,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 	return m
 }
 
-// Start gets stream metrics and fan-out to workers
+// Start gets stream metrics and fan-out to workers.
 func (m *MDT) Start(ctx context.Context) error {
 
 	subsArgs := &mdtGRPC.SubscribeRequest{

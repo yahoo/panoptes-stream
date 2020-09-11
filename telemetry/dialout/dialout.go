@@ -33,7 +33,7 @@ func New(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *D
 func (d *Dialout) Start() {
 	for service := range d.cfg.Global().Dialout.Services {
 		if service == "cisco.mdt" {
-			d.mdtHandler = mdt.NewDialout(d.ctx, service, d.cfg, d.outChan)
+			d.mdtHandler = mdt.NewDialout(d.ctx, d.cfg, d.outChan)
 			d.mdtHandler.Start()
 		}
 	}
