@@ -91,7 +91,7 @@ func (s *Status) start() error {
 		return http.ListenAndServe(config.Addr, nil)
 	}
 
-	tlsConfig, err := secret.GetTLSConfig(&config.TLSConfig)
+	tlsConfig, err := secret.GetTLSServerConfig(&config.TLSConfig)
 	if err != nil {
 		return err
 	}
