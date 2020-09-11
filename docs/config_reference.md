@@ -9,7 +9,7 @@
 |port          | The telemetry port that configured at device.           | 
 |username      | username if authentication is enabled at device.        |
 |password      | password if authentication is enabled at device.        |
-|tlsConfig     | TLS configuration parameters. check [TLS config](/docs/config_tls.md). |
+|tlsConfig     | [TLS configuration](/docs/config_tls.md) parameters.|
 
 
 #### Sensor  
@@ -44,7 +44,7 @@
 |-------------------|---------------------------------------------------|
 |disabled           | disable the status (including healthcheck)        |
 |addr               | status ip address and port (ip:port)              |
-|tlsConfig          | TLS configuration parameters. check [TLS config](/docs/config_tls.md).      |
+|tlsConfig          | [TLS configuration](/docs/config_tls.md) parameters.     |
 
 #### Shards keys
 
@@ -66,7 +66,7 @@
 |-------------------|-------------------------------------------------------|
 |services           |dial-out service configuration                         |
 |defaultOutput      |default output                                         |
-|tlsConfig          |TLS configuration parameters. check [TLS config](/docs/config_tls.md).|
+|tlsConfig          |[TLS configuration](/docs/config_tls.md) parameters.|
 
 
 #### Device Options
@@ -74,7 +74,7 @@
 |-------------------|-------------------------------------------------------|
 |username           |username if authentication is enabled at device.       |
 |password           |password if authentication is enabled at device.       |
-|tlsConfig          |TLS configuration parameters. check [TLS config](/docs/config_tls.md).|
+|tlsConfig          |[TLS configuration](/docs/config_tls.md) parameters.|
 
 #### Global
 | key               | description                                          |
@@ -92,3 +92,12 @@
 |certFile| the certficate file contain PEM encoded data.
 |keyFile| the private key file contain PEM encoded data.
 |insecureSkipVerify|it controls whether a client verifies the server's certificate chain and host name.|
+
+---
+
+#### Dialout cisco.mdt
+
+| key               | description                                       |
+|-------------------|-|
+|addr| server ip address and port (ip:port)|
+|workers| number of workers|

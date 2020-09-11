@@ -162,8 +162,8 @@ Example Dial-Out mode configuration:
 ```json
 "dialout": {
     "services": {
-  		"cisco.mdt": {
-     		"addr": "0.0.0.0:50055"
+      "cisco.mdt": {
+        "addr": "0.0.0.0:50055"
     	}
     }
  } 

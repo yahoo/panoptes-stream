@@ -10,7 +10,7 @@
 - affinity: (boolean: false) - It allows / doesn't allow to schedule Panoptes pods on the same node.
 
 
-#### Run in panoptes namespace
+#### Deploy in panoptes namespace
 
 - Create panoptes namespace
 ```console

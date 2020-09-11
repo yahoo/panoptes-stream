@@ -1,11 +1,11 @@
 ## Service Discovery Reference
 ---
-The Panoptes supports the follow service discoveries:
+The Panoptes supports the following service discoveries:
 
-1- Consul
-2- etcd
-3- Kubernetes / k8s
-4- Pseudo
+- Consul
+- etcd
+- Kubernetes / k8s
+- Pseudo
 
 The service discovery is required to enable shards / cluster service and you need to select one of them depending on the size of your nodes and your infrastructure. These four options cover almost all the use cases. The Pseudo is the last option for those who don't want to use another 3rd party software like Consul for service discovery but they need to enable shards. Pseudo is a simple health checking system without registration, instead it gets the node's information through configuration. It is recommended for small shards / cluster size.
 
@@ -17,7 +17,7 @@ The service discovery is required to enable shards / cluster service and you nee
 |Address| The address and port of the Consul agent        |
 |Prefix| The distributed locking prefix at Consul|
 |HealthcheckURL| The health check url | 
-|TLSConfig | TLS configuration|
+|TLSConfig | [TLS configuration](/docs/config_tls.md).|
 
 Configuration type: consul or etcd
 Key: global
@@ -49,7 +49,7 @@ discovery:
 |-|-|
 |Endpoints| The addresses and ports of the Consul agent        | 
 |Prefix| The distributed locking prefix at Consul|
-|TLSConfig | TLS configuration|
+|TLSConfig | [TLS configuration](/docs/config_tls.md).|
 
 Configuration type: consul or etcd
 Configuration type: consul or etcd
@@ -102,7 +102,7 @@ discovery:
 |Path | The path to access on the HTTP/HTTPS server|      
 |Timeout|the probe timeout in second|   
 |Interval| the probe interval in second|  
-|TLSConfig| TLS configuration|
+|TLSConfig| [TLS configuration](/docs/config_tls.md).|
 
 
 Configuration type: consul or etcd
