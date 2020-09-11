@@ -58,7 +58,8 @@ func TestBatchDrainer(t *testing.T) {
 
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	nsqServer(ctx, t)
+	cmd := nsqServer(ctx, t)
+	defer cmd.Process.Kill()
 
 	cfg := config.NewMockConfig()
 
@@ -90,12 +91,12 @@ func TestBatchDrainer(t *testing.T) {
 	}
 }
 
-func nsqServer(ctx context.Context, t *testing.T) {
-	go func() {
-		addr := os.Getenv("PANOPTES_NSQ_ADDR")
-		cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp", "-tcp-address", addr)
-		t.Log(cmd.Run())
-	}()
+func nsqServer(ctx context.Context, t *testing.T) *exec.Cmd {
+	addr := os.Getenv("PANOPTES_NSQ_ADDR")
+	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp", "-tcp-address", addr)
+	cmd.Start()
 
-	time.Sleep(1 * time.Second)
+	t.Log(cmd.String())
+
+	return cmd
 }
