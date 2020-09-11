@@ -6,6 +6,7 @@ package consul
 import (
 	"os"
 	"testing"
+	"time"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/sdk/testutil"
@@ -20,6 +21,8 @@ func TestNewConsul(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer srv.Stop()
+
+	time.Sleep(time.Second)
 
 	config := map[string][]byte{
 		"panoptes/config/devices/core1.bur": []byte(`{"host": "core1.lhr", "port": 50051,  "sensors" : ["sensor1"]}`),
@@ -84,6 +87,8 @@ func TestEmptyConfig(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer srv.Stop()
+
+	time.Sleep(time.Second)
 
 	os.Setenv("PANOPTES_CONFIG_CONSUL_ADDRESS", srv.HTTPAddr)
 

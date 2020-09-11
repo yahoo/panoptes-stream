@@ -124,7 +124,8 @@ type Dialout struct {
 
 // DialoutService represent specific dialout telemetry
 type DialoutService struct {
-	Addr string
+	Addr    string
+	Workers int
 }
 
 // DeviceTemplate represents device configuration structure
