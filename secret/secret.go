@@ -40,6 +40,20 @@ func GetTLSConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	return getTLSConfigLocal(cfg)
 }
 
+// GetTLSServerConfig returns TLS config
+func GetTLSServerConfig(cfg *config.TLSConfig) (*tls.Config, error) {
+	if len(cfg.CertFile) < 1 || len(cfg.KeyFile) < 1 {
+		return nil, errors.New("certificate or key not provided")
+	}
+
+	tlsConfig, ok, err := getTLSConfigRemote(cfg)
+	if ok {
+		return tlsConfig, err
+	}
+
+	return getTLSConfigLocal(cfg)
+}
+
 // GetCredentials returns credentials
 func GetCredentials(sType, path string) (map[string]string, error) {
 	sec, err := GetSecretEngine(sType)
