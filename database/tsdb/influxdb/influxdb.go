@@ -10,6 +10,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	influxdb2 "github.com/influxdata/influxdb-client-go"
 	"github.com/influxdata/influxdb/pkg/escape"
@@ -22,7 +23,7 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-// InfluxDB represents InfluxDB
+// InfluxDB represents InfluxDB.
 type InfluxDB struct {
 	ctx    context.Context
 	ch     telemetry.ExtDSChan
@@ -31,18 +32,19 @@ type InfluxDB struct {
 }
 
 type influxDBConfig struct {
-	Server     string
-	Bucket     string
-	Org        string
-	Token      string
-	BatchSize  uint
-	MaxRetries uint
-	Timeout    uint
+	Server        string
+	Bucket        string
+	Org           string
+	Token         string
+	BatchSize     uint
+	MaxRetries    uint
+	Timeout       uint
+	FlushInterval int
 
 	TLSConfig config.TLSConfig
 }
 
-// New returns a new influxdb instance
+// New returns a new influxdb instance.
 func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan telemetry.ExtDSChan) database.Database {
 	return &InfluxDB{
 		ctx:    ctx,
@@ -52,8 +54,10 @@ func New(ctx context.Context, cfg config.Database, lg *zap.Logger, inChan teleme
 	}
 }
 
-// Start starts influxdb ingestion
+// Start starts influxdb ingestion.
 func (i *InfluxDB) Start() {
+	var flush bool
+
 	config, err := i.getConfig()
 	if err != nil {
 		i.logger.Fatal("influxdb", zap.Error(err))
@@ -64,11 +68,13 @@ func (i *InfluxDB) Start() {
 		i.logger.Fatal("influxdb", zap.Error(err))
 	}
 
-	writeAPI := client.WriteApi(config.Org, config.Bucket)
+	writeAPI := client.WriteApiBlocking(config.Org, config.Bucket)
 
 	i.logger.Info("influxdb", zap.String("name", i.cfg.Name), zap.String("server", config.Server), zap.String("bucket", config.Bucket))
 
 	buf := new(bytes.Buffer)
+	batch := make([]string, 0, config.BatchSize)
+	flushTicker := time.NewTicker(time.Duration(config.FlushInterval) * time.Second)
 
 	for {
 		select {
@@ -80,13 +86,35 @@ func (i *InfluxDB) Start() {
 			line, err := getLineProtocol(buf, v)
 			if err != nil {
 				i.logger.Error("influxdb", zap.Error(err), zap.String("output", v.Output))
+				continue
 			}
 
-			writeAPI.WriteRecord(line)
+			batch = append(batch, line)
+
+		case <-flushTicker.C:
+			flush = true
 
 		case <-i.ctx.Done():
 			i.logger.Info("influxdb", zap.String("msg", "database has been terminated"), zap.String("name", i.cfg.Name))
 			return
+		}
+
+		if len(batch) == int(config.BatchSize) || flush {
+			for {
+				err = writeAPI.WriteRecord(i.ctx, batch...)
+				if err != nil {
+					i.logger.Error("influxdb", zap.String("event", "write"), zap.Error(err))
+
+					// backoff
+					time.Sleep(1 * time.Second)
+					continue
+				}
+
+				break
+			}
+
+			flush = false
+			batch = batch[:0]
 		}
 	}
 
@@ -133,17 +161,8 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 		return nil, err
 	}
 
-	if config.BatchSize != 0 {
-		opts.SetBatchSize(config.BatchSize)
-	}
-
-	if config.MaxRetries != 0 {
-		opts.SetMaxRetries(config.MaxRetries)
-	}
-
-	if config.Timeout != 0 {
-		opts.SetHttpRequestTimeout(config.Timeout)
-	}
+	opts.SetMaxRetries(config.MaxRetries)
+	opts.SetHttpRequestTimeout(config.Timeout)
 
 	client := influxdb2.NewClientWithOptions(config.Server, token, opts)
 
@@ -151,24 +170,29 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 }
 
 func (i *InfluxDB) getConfig() (*influxDBConfig, error) {
-	config := new(influxDBConfig)
+	conf := new(influxDBConfig)
 	b, err := json.Marshal(i.cfg.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(b, config)
+	err = json.Unmarshal(b, conf)
 	if err != nil {
 		return nil, err
 	}
 
 	prefix := "panoptes_database_" + i.cfg.Name
-	err = envconfig.Process(prefix, config)
+	err = envconfig.Process(prefix, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return config, nil
+	config.SetDefault(&conf.BatchSize, 1000)
+	config.SetDefault(&conf.Timeout, 1)
+	config.SetDefault(&conf.MaxRetries, 2)
+	config.SetDefault(&conf.FlushInterval, 1)
+
+	return conf, nil
 }
 
 func getToken(tokenConfig string) (string, error) {
