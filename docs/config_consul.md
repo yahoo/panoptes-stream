@@ -1,7 +1,28 @@
 ## Panoptes configuration with Consul
 ------------
 
-This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store.   
+This document will show you how to configure Panoptes with [Consul](http://consul.io) key value store. 
+
+Panoptes can find Consul address and other configuration from one of the following options:
+- Yaml configuration file
+- Default configuration once you set a dash as argument. 
+- Through environment variables.
+
+```console
+panoptes -consul config.yaml
+panoptes -consul -
+```
+
+sample .yaml file
+```yaml
+address: 192.168.55.5:8500 
+prefix: panoptes/config/
+```
+
+You can set environment variables with following format: PANOPTES_CONFIG_CONSUL_{{key}}
+For instance: ```PANOPTES_CONFIG_CONSUL_ADDRESS=127.0.0.1:8500```
+
+  
 
 ### Configuration specs
 The Panoptes configuration categories as follows at Consul key value store:
@@ -170,7 +191,7 @@ Example Dial-Out mode configuration:
 ```
 
 #### Shards
-By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
+By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](shards.md)
 
 Example Shard configuration:
 

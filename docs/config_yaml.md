@@ -3,6 +3,10 @@
 
 This document will show you how to write Panoptes configuration using [YAML](https://en.wikipedia.org/wiki/YAML).   
 
+```console
+panoptes -config config.yaml
+```
+
 ### Configuration specs
 The Panoptes configuration categories as follows at YAML configuration:
 
@@ -62,6 +66,11 @@ producers:
         - bgp
 ```
 
+You can set environment variables for config keys with following format: PANOPTES_PRODUCER_{{producer_name}}_{{config_key}}
+For instance: ```PANOPTES_PRODUCER_KAFKA1_BROKERS=192.168.55.10:9092```
+
+You can see all available producer config keys at [configuration reference](config_reference.md#producer).
+
 #### Databases
 The databases are defined as a list of databases. you can assign them to one or more sensors under sensors configuration.
 
@@ -73,6 +82,8 @@ databases:
       server: http://influxdb:8086
       bucket: mybucket
 ```
+You can set environment variables for config keys with following format: PANOPTES_DATABASE_{{database_name}}_{{config_key}}
+For instance: ```PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086``` 
 
 You can see all available sensor config keys at [configuration reference](config_reference.md#databases).
 
@@ -94,7 +105,12 @@ You can see all available sensor config keys at [configuration reference](config
 ```yaml
 status:
   addr: "0.0.0.0:8081"
-```  
+``` 
+
+You can set environment variables for status with following format: PANOPTES_STATUS_{{key}}
+For instance: ```PANOPTES_STATUS_ADDR="0.0.0.0:8081"```
+
+You can see all available sensor config keys at [configuration reference](config_reference.md#status).
 
 #### Discovery
 
@@ -104,6 +120,17 @@ discovery:
   config:
     address: "127.0.0.1:8500"
 ```
+
+You can set environment variables for discovery with following formats: 
+PANOPTES_DISCOVERY_SERVICE
+PANOPTES_DISCOVERY_{{service_name}}_{{config_keys}}
+For instance: 
+```PANOPTES_DISCOVERY_SERVICE=consul"```
+```PANOPTES_DISCOVERY_CONSUL_ADDRESS=127.0.0.1:8500```
+
+You can see all available sensor config keys at [configuration reference](config_reference.md#discovery).
+
+
 
 #### Shards
 
@@ -144,6 +171,15 @@ deviceOptions:
   username: "admin"
   password: "admin"
 ```  
+
+#### Global 
+```yaml
+bufferSize: 20000
+outputBufferSize: 10000
+```
+You can set environment variables for global parameters with following format: PANOPTES_{{global_keys}}
+For instance: 
+```PANOPTES_BUFFERSIZE=20000"```
 
 
 #### Watcher and vim editor

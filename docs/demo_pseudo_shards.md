@@ -1,4 +1,4 @@
-### Demo Panoptes Shards / Cluster feature 
+### Panoptes Shards / Cluster demonstration
 ---
 Panoptes configuration: YAML 
 Service discovery: Pseudo
@@ -16,6 +16,11 @@ This demo included 6 containers as follow:
 The devices (5x simulated juniper devices) assigned to node-1 and node-2 automatically through auto sharding. it works based the hashing and modulo operation. you can see the configuration at http://localhost:8500 (key/value: panoptes > config)
 
 ![panoptes consul demo](imgs/demo_shards_pseudo.png)
+#### Checkout GitHub
+```
+git checkout github.com/yahoo/panoptes-stream
+cd panoptes-stream/scripts/demo_shards
+```
 #### Start the containers
 ```console
 docker-compose -f docker-compose.pseudo.yml up -d
@@ -45,7 +50,7 @@ docker start panoptes-node2
 
 ![panoptes consul demo](imgs/demo_shards_gf_03.png)
 
-##### Clean up
+#### Clean up
 ```console
 docker-compose -f docker-compose.pseudo.yml down
 ```

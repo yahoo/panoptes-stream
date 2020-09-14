@@ -1,4 +1,4 @@
-### Demo Panoptes Shards / Cluster feature with Consul
+### Panoptes Shards / Cluster with Consul demonstration
 ---
 Panoptes configuration: Consul
 Service discovery: Consul
@@ -6,7 +6,7 @@ Service discovery: Consul
 You can see this demo through http://localhost:3000 in real time once you turned the demo up.
 The grafana dashboard username is panoptes and password is panoptes
 This demo included 8 containers as follow:
-- Two panoptes nodes
+- Two Panoptes nodes
 - Panoptes gNMI simulator
 - Consul
 - Consul initializer 
@@ -17,6 +17,13 @@ This demo included 8 containers as follow:
 The devices (5x simulated juniper devices) assigned to node-1 and node-2 automatically through auto sharding. it works based the hashing and modulo operation. you can see the configuration at http://localhost:8500 (key/value: panoptes > config)
 
 ![panoptes consul demo](imgs/demo_shards_consul.png)
+
+#### Checkout GitHub
+```
+git checkout github.com/yahoo/panoptes-stream
+cd panoptes-stream/scripts/demo_shards
+```
+
 #### Start the containers
 ```console
 docker-compose -f docker-compose.consul.yml up -d
@@ -46,7 +53,7 @@ docker start panoptes-node2
 
 ![panoptes consul demo](imgs/demo_shards_gf_03.png)
 
-##### Clean up
+#### Clean up
 ```console
 docker-compose -f docker-compose.consul.yml down
 ```

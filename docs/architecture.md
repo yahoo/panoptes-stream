@@ -21,21 +21,21 @@ This component provides **scalability and availability** through auto sharding o
 
 #### Demux
 
-The demux **routes metrics** to proper producers and databases based on the given configuration. It can be able to run different producers and databases concurrently. In case of the network latency or database/messaging bus maintenance the demux can write metrics to local drive to prevent any metrics losing and return them once they are backed up. It provides **guaranteed metrics delivery** when you enabled the local drive storage feature.
+The demux **routes metrics** to proper producers and databases based on the given configuration. It can be able to run different producers and databases concurrently. In case of the network latency or database/messaging-queue maintenance the demux can write metrics to local drive to prevent any metrics losing and return them once they are backed up. It provides **[guaranteed telemetry delivery](/docs/gtd.md)** when you enabled the local drive storage feature.
 
 ![panoptes demux](imgs/demux.png)
 
 #### Discovery
 
-The discovery automatically detects other instances once each node is registered to a given discovery application. it supports well-known applications and it is required when you need to enable shards.
+The discovery automatically detects other instances once each node is registered to a given discovery application. it supports well-known applications  and works with Kubenetes API to detects other nodes liveness.
 
 #### Producers
 
-This component produces the metrics to given messaging bus.
+This component produces the metrics to given messaging queues. Panoptes can create multi instances of producers with different topics at the same time and route metrics to appropriate destinations.
 
 #### Databases
 
-The component Ingests metrics to given database. 
+The component Ingests metrics to given databases. Panoptes can create multi instances of databases at the same time and route metrics to appropriate destinations.
 
 #### Security
 

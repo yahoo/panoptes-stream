@@ -27,6 +27,50 @@
 |disabled          |disable the sensor.                                                                                      |
 
 
+#### Producers
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+| service           | producer name: kafka or nsq               |
+| config            |  depends on the producer|
+
+
+##### Kafka
+
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+| brokers           |                |
+| topics            |  |
+| batchSize
+| batchTimeout
+| maxAttempts
+| queueCapacity
+| keepAlive
+| compression
+| ioTimeout
+| tlsConfig
+
+
+
+#### Databases
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+| service           | database name: influxdb               |
+| config            |  depends on the database|
+
+
+##### InfluxDB
+
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+| server           |                |
+| bucket            |  |
+| org
+| token
+| batchSize
+| maxRetries
+| timeout
+
+
 #### Telemetry Services  
 
 | service          | description                                       |
@@ -38,7 +82,7 @@
 |arista.gnmi       | Arista gNMI                                       |
 
 
-#### Status keys
+#### Status
 
 | key               | description                                       |
 |-------------------|---------------------------------------------------|
@@ -46,7 +90,7 @@
 |addr               | status ip address and port (ip:port)              |
 |tlsConfig          | [TLS configuration](/docs/config_tls.md) parameters.     |
 
-#### Shards keys
+#### Shards
 
 | key               | description                                       |
 |-------------------|---------------------------------------------------|
@@ -58,8 +102,7 @@
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
 | service           | service discovery name: consul or etcd               |
-| configFile        | it's valid once configuration management is yaml     |
-| config            | it's valid once configuration management is not yaml |
+| config            |  |
 
 #### Dialout
 | key               | description                                           |

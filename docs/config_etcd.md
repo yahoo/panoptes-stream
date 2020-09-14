@@ -1,7 +1,28 @@
 ## Panoptes configuration with etcd
 ------------
 
-This document will show you how to configure Panoptes with [etcd](http://etcd.io) key value store.   
+This document will show you how to configure Panoptes with [etcd](http://etcd.io) key value store.
+
+Panoptes can find etcd address and other configuration from one of the following options:
+- Yaml configuration file
+- Default configuration once you set a dash as argument. 
+- Through environment variables.
+
+```console
+panoptes -etcd config.yaml
+panoptes -etcd -
+```
+
+sample .yaml file
+```yaml
+endpoints: 
+  - 192.168.55.5:2379
+  - 192.168.55.6:2379 
+prefix: panoptes/config/
+```
+
+You can set environment variables with following format: PANOPTES_CONFIG_ETCD_{{key}}
+For instance: ```PANOPTES_CONFIG_ETCD_ADDRESS=192.168.55.5:2379,192.168.55.6:2379```
 
 ### Configuration specs
 The Panoptes configuration categories as follows at etcd key value store:
@@ -169,7 +190,7 @@ Example Dial-Out mode configuration:
 ```
 
 #### Shards
-By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](sharding.md)
+By enabling sharding, Panoptes's nodes try to auto sharding of network devices and take over if one or more nodes have been failed. if you need details information please read [Sharding Deep Dive](shards.md)
 
 Example Shard configuration:
 

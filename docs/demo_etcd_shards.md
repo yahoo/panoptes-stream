@@ -1,4 +1,4 @@
-### Demo Panoptes Shards / Cluster feature with etcd
+### Panoptes Shards / Cluster with etcd demonstration
 ---
 Panoptes configuration: etcd
 Service discovery: etcd
@@ -7,7 +7,7 @@ You can see this demo through http://localhost:3000 in real time once you turned
 The grafana dashboard username is panoptes and password is panoptes
 This demo included 7 containers as follow:
 
-- Two panoptes nodes
+- Two Panoptes nodes
 - Panoptes gNMI simulator
 - etcd
 - Grafana
@@ -17,6 +17,13 @@ This demo included 7 containers as follow:
 The devices (5x simulated juniper devices) assigned to node-1 and node-2 automatically through auto sharding. it works based the hashing and modulo operation. you can see the configuration through command line (etcdctl)
 
 ![panoptes consul demo](imgs/demo_shards_etcd.png)
+
+#### Checkout GitHub
+```
+git checkout github.com/yahoo/panoptes-stream
+cd panoptes-stream/scripts/demo_shards
+```
+
 #### Start the containers
 ```console
 docker-compose -f docker-compose.etcd.yml up -d
@@ -45,7 +52,7 @@ docker start panoptes-node2
 
 ![panoptes consul demo](imgs/demo_shards_gf_03.png)
 
-##### Clean up
+#### Clean up
 ```console
 docker-compose -f docker-compose.etcd.yml down
 ```
