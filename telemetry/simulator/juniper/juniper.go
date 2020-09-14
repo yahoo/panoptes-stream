@@ -1,6 +1,10 @@
+//: Copyright Verizon Media
+//: Licensed under the terms of the Apache 2.0 License. See LICENSE file in the project root for terms.
+
 package juniper
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"time"
@@ -23,6 +27,7 @@ type ifce struct {
 type Update struct {
 	Notification *gnmi.Notification
 	interval     time.Duration
+	ctx          context.Context
 }
 
 func (i *ifce) update() {
@@ -33,8 +38,9 @@ func (i *ifce) update() {
 }
 
 // New constructs juniper simpulator update
-func New(i int) *Update {
+func New(ctx context.Context, i int) *Update {
 	return &Update{
+		ctx:      ctx,
 		interval: time.Duration(i),
 	}
 }
@@ -65,7 +71,11 @@ func (u Update) Run(server gnmi.GNMI_SubscribeServer) error {
 			}
 		}
 
-		time.Sleep(u.interval * time.Second)
+		select {
+		case <-time.After(u.interval * time.Second):
+		case <-u.ctx.Done():
+			return nil
+		}
 	}
 }
 
