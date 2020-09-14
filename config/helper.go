@@ -11,7 +11,7 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
-// ConvDeviceTemplate transforms devicetemplate to device
+// ConvDeviceTemplate transforms devicetemplate to device.
 func ConvDeviceTemplate(d DeviceTemplate) Device {
 	device := Device{}
 	b, _ := json.Marshal(&d)
@@ -20,7 +20,7 @@ func ConvDeviceTemplate(d DeviceTemplate) Device {
 	return device
 }
 
-// GetLogger tries to create a zap logger based on the user configuration
+// GetLogger tries to create a zap logger based on the user configuration.
 func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	var cfg zap.Config
 	b, err := json.Marshal(lcfg)
@@ -46,7 +46,7 @@ func GetLogger(lcfg map[string]interface{}) *zap.Logger {
 	return logger
 }
 
-// GetDefaultLogger creates default zap logger
+// GetDefaultLogger creates default zap logger.
 func GetDefaultLogger() *zap.Logger {
 	var cfg = zap.Config{
 		Level:            zap.NewAtomicLevelAt(zapcore.InfoLevel),
@@ -68,7 +68,7 @@ func GetDefaultLogger() *zap.Logger {
 	return logger
 }
 
-// DeviceValidation validates configured device
+// DeviceValidation validates configured device.
 func DeviceValidation(device Device) error {
 	if len(device.Sensors) < 1 {
 		return fmt.Errorf("device: %s doesn't have any sensors", device.Host)
@@ -85,7 +85,7 @@ func DeviceValidation(device Device) error {
 	return nil
 }
 
-// SensorValidation validates configured sensor
+// SensorValidation validates configured sensor.
 func SensorValidation(sensor Sensor) error {
 	availSensors := map[string]bool{
 		"arista.gnmi":       true,
@@ -103,7 +103,7 @@ func SensorValidation(sensor Sensor) error {
 	return nil
 }
 
-// SetDefaultGlobal set global default value
+// SetDefaultGlobal set global default value.
 func SetDefaultGlobal(g *Global) {
 	g.Version = "0.0.1"
 
@@ -113,5 +113,19 @@ func SetDefaultGlobal(g *Global) {
 
 	if g.OutputBufferSize == 0 {
 		g.OutputBufferSize = 10000
+	}
+}
+
+// SetDefault set default value if the s == zero.
+func SetDefault(s interface{}, d interface{}) {
+	switch v := s.(type) {
+	case *int:
+		if *v == 0 {
+			*v = d.(int)
+		}
+	case *uint:
+		if *v == 0 {
+			*v = uint(d.(int))
+		}
 	}
 }
