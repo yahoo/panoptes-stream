@@ -4,6 +4,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"log"
 	"math/rand"
@@ -31,7 +32,7 @@ func main() {
 	}
 
 	gServer := grpc.NewServer()
-	juniperGnmiUpdate := juniper.New(interval)
+	juniperGnmiUpdate := juniper.New(context.Background(), interval)
 	mockServer := &mock.GNMIServer{Resp: juniperGnmiUpdate}
 	gnmi.RegisterGNMIServer(gServer, mockServer)
 
