@@ -39,7 +39,9 @@ func TestMQ(t *testing.T) {
 	ds := telemetry.ExtDataStore{
 		Output: "test::test",
 		DS: telemetry.DataStore{
-			"metric": "test",
+			"metric":    "test",
+			"labels":    map[string]string{"label1": "value1"},
+			"timestamp": 1599982184000000,
 		},
 	}
 
@@ -77,7 +79,9 @@ func TestBatchDrainer(t *testing.T) {
 	ds := telemetry.ExtDataStore{
 		Output: "test::test",
 		DS: telemetry.DataStore{
-			"metric": "test",
+			"metric":    "test",
+			"labels":    map[string]string{"label1": "value1"},
+			"timestamp": 1599982184000000,
 		},
 	}
 

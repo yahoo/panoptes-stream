@@ -66,6 +66,8 @@ func NewMQ(ctx context.Context, lg *zap.Logger, chMap *extDSChanMap) (*MQ, error
 		return nil, err
 	}
 
+	lg.Info("demux.mq", zap.String("address", mqConfig.Addr))
+
 	m := &MQ{
 		ctx:           ctx,
 		logger:        lg,
@@ -96,6 +98,8 @@ func (m *MQ) publish(ds telemetry.ExtDataStore, topic string) {
 
 	m.Lock()
 	if len(m.batch[topic]) > m.batchSize {
+		m.logger.Debug("demux.mq", zap.String("event", "publish"))
+
 		err := m.producer.MultiPublish(topic, m.batch[topic])
 		if err != nil {
 			m.logger.Error("demux.mq", zap.Error(err))
@@ -197,6 +201,13 @@ func (m *MQ) consumer(ctx context.Context, topic string) {
 func (h *messageHandler) HandleMessage(m *nsq.Message) error {
 	var ds telemetry.ExtDataStore
 	json.Unmarshal(m.Body, &ds)
+
+	labels := map[string]string{}
+	for k, v := range ds.DS["labels"].(map[string]interface{}) {
+		labels[k] = v.(string)
+	}
+	ds.DS["labels"] = labels
+	ds.DS["timestamp"] = int64(ds.DS["timestamp"].(float64))
 
 	select {
 	case h.ch <- ds:
