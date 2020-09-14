@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/url"
+	"strings"
 
 	"go.uber.org/zap"
 )
@@ -109,4 +110,24 @@ func (s *MemSink) Unmarshal() map[string]string {
 	v := make(map[string]string)
 	json.Unmarshal(s.Bytes(), &v)
 	return v
+}
+
+// UnmarshalSlice returns array of decoded logs as key value and reset the buffer.
+func (s *MemSink) UnmarshalSlice() []map[string]string {
+	defer s.Reset()
+
+	r := []map[string]string{}
+
+	stream := strings.Split(s.String(), "\n")
+	for _, s := range stream {
+		if len(s) < 1 {
+			continue
+		}
+
+		v := make(map[string]string)
+		json.Unmarshal([]byte(s), &v)
+		r = append(r, v)
+	}
+
+	return r
 }
