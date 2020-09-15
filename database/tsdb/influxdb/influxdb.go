@@ -12,7 +12,8 @@ import (
 	"strings"
 	"time"
 
-	influxdb2 "github.com/influxdata/influxdb-client-go"
+	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
+	"github.com/influxdata/influxdb-client-go/v2/api/http"
 	"github.com/influxdata/influxdb/pkg/escape"
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
@@ -68,7 +69,7 @@ func (i *InfluxDB) Start() {
 		i.logger.Fatal("influxdb", zap.Error(err))
 	}
 
-	writeAPI := client.WriteApiBlocking(config.Org, config.Bucket)
+	writeAPI := client.WriteAPIBlocking(config.Org, config.Bucket)
 
 	i.logger.Info("influxdb", zap.String("name", i.cfg.Name), zap.String("server", config.Server), zap.String("bucket", config.Bucket))
 
@@ -104,6 +105,11 @@ func (i *InfluxDB) Start() {
 				err = writeAPI.WriteRecord(i.ctx, batch...)
 				if err != nil {
 					i.logger.Error("influxdb", zap.String("event", "write"), zap.Error(err))
+					v, ok := err.(*http.Error)
+					// 400 bad request doesn't need to retry
+					if ok && v.StatusCode == 400 {
+						break
+					}
 
 					// backoff
 					time.Sleep(1 * time.Second)
@@ -153,7 +159,7 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 		if err != nil {
 			return nil, err
 		}
-		opts = opts.SetTlsConfig(tls)
+		opts = opts.SetTLSConfig(tls)
 	}
 
 	token, err := getToken(config.Token)
@@ -162,7 +168,7 @@ func (i *InfluxDB) getClient(config *influxDBConfig) (influxdb2.Client, error) {
 	}
 
 	opts.SetMaxRetries(config.MaxRetries)
-	opts.SetHttpRequestTimeout(config.Timeout)
+	opts.SetHTTPRequestTimeout(config.Timeout)
 
 	client := influxdb2.NewClientWithOptions(config.Server, token, opts)
 
