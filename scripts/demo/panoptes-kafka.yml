@@ -1,0 +1,24 @@
+devices:
+  - host: simulator
+    port: 50051
+    username: admin
+    password: admin
+    sensors:
+      - sensor1
+
+sensors:
+  sensor1:
+    path: /interfaces/interface/state/counters
+    mode: sample
+    sampleInterval: 5
+    service: juniper.gnmi
+    output: kafka01::ifcounters
+
+producers:
+  kafka01:
+    service: kafka
+    config:
+      brokers:
+        - kafka:9092
+      topics:
+        - ifcounters

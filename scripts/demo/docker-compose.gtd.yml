@@ -1,0 +1,49 @@
+version: "3"
+services:
+  panoptes:
+    image: panoptes-stream:latest
+    container_name: panoptes-node
+    depends_on:
+      - simulator
+      - influxdb
+    volumes:
+      - ./:/etc/panoptes
+    command: ["-config", "/etc/panoptes/panoptes.yml"]
+    environment:
+      - PANOPTES_NSQ_ADDR=nsqd:4150
+      - PANOPTES_BUFFERSIZE=1000
+      - PANOPTES_OUTPUTBUFFERSIZE=1000
+    ports:
+      - "8081:8081"
+  simulator:
+    image: panoptes-stream:latest
+    container_name: panoptes-simulator
+    entrypoint: ["/usr/bin/simulator", "-interval", "5"]
+
+  grafana:
+    image: "grafana/grafana"
+    container_name: grafana
+    volumes:
+      - ./grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=panoptes
+      - GF_SECURITY_ADMIN_PASSWORD=panoptes
+
+  influxdb:
+    image: "influxdb"
+    container_name: influxdb
+    ports:
+      - "8086:8086"
+    environment:
+      - INFLUXDB_DB=mydb
+
+  nsqd:
+    image: nsqio/nsq
+    container_name: nsq
+    command: /nsqd --mem-queue-size=0
+    ports:
+      - "4150"
+      - "4151"
