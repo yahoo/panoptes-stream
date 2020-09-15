@@ -36,6 +36,7 @@ type pseudo struct {
 	path      string
 	timeout   time.Duration
 	interval  time.Duration
+	maxRetry  int
 	tlsConfig *config.TLSConfig
 }
 
@@ -45,6 +46,7 @@ type pseudoConfig struct {
 	Path      string
 	Timeout   int
 	Interval  int
+	MaxRetry  int
 	TLSConfig *config.TLSConfig
 }
 
@@ -57,35 +59,32 @@ type instance struct {
 
 // New constructs pseudo service discovery.
 func New(cfg config.Config) (discovery.Discovery, error) {
-	config, err := getConfig(cfg)
+	conf, err := getConfig(cfg)
 	if err != nil {
 		return nil, err
 	}
 
 	prefix := "panoptes_discovery_pseudo"
-	err = envconfig.Process(prefix, config)
+	err = envconfig.Process(prefix, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	if config.Interval < 1 {
-		config.Interval = 15
-	}
-
-	if config.Timeout < 1 {
-		config.Timeout = 2
-	}
+	config.SetDefault(&conf.Interval, 15)
+	config.SetDefault(&conf.Timeout, 1)
+	config.SetDefault(&conf.MaxRetry, 3)
 
 	p := &pseudo{
-		cfg:    cfg,
-		logger: cfg.Logger(),
-		probe:  config.Probe,
-		path:   config.Path,
+		cfg:      cfg,
+		logger:   cfg.Logger(),
+		probe:    conf.Probe,
+		path:     conf.Path,
+		maxRetry: conf.MaxRetry,
 
-		interval: time.Duration(config.Interval) * time.Second,
-		timeout:  time.Duration(config.Timeout) * time.Second,
+		interval: time.Duration(conf.Interval) * time.Second,
+		timeout:  time.Duration(conf.Timeout) * time.Second,
 
-		tlsConfig: config.TLSConfig,
+		tlsConfig: conf.TLSConfig,
 	}
 
 	localIPs, err := getLocalIPaddrs()
@@ -93,7 +92,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 		return nil, err
 	}
 
-	for id, addr := range consensusOrdinal(config.Instances) {
+	for id, addr := range consensusOrdinal(conf.Instances) {
 		hostname, err := getHostname(localIPs, addr)
 		if err != nil {
 			return nil, err
@@ -103,7 +102,7 @@ func New(cfg config.Config) (discovery.Discovery, error) {
 			id:       strconv.Itoa(id),
 			address:  addr,
 			hostname: hostname,
-			status:   "failing",
+			status:   "failure",
 		})
 
 		if hostname != "" {
@@ -178,13 +177,13 @@ func (p *pseudo) Watch(ch chan<- struct{}) {
 func (p *pseudo) check() {
 	// check insterval
 	ticker := time.NewTicker(p.interval)
-	// warm-up time
-	time.Sleep(5 * time.Second)
+	// warm-up time (status server)
+	time.Sleep(2 * time.Second)
 
 	for {
 		for _, instance := range p.instances {
 			if p.probe == "http" || p.probe == "https" {
-				p.checkHTTP(instance)
+				go p.checkHTTP(instance)
 			} else {
 				p.logger.Fatal("pseudo", zap.String("msg", "probe doesn't support"))
 			}
@@ -209,7 +208,9 @@ func getConfig(cfg config.Config) (*pseudoConfig, error) {
 func (p *pseudo) checkHTTP(instance *instance) {
 	var (
 		tlsConfig *tls.Config
+		resp      *http.Response
 		err       error
+		retry     int
 	)
 
 	if p.tlsConfig.Enabled {
@@ -225,10 +226,17 @@ func (p *pseudo) checkHTTP(instance *instance) {
 		Timeout: p.timeout,
 	}
 
-	resp, err := client.Get(p.probe + "://" + path.Join(instance.address, p.path))
-	if err != nil {
-		instance.status = "failure"
-		return
+	for {
+		retry++
+		resp, err = client.Get(p.probe + "://" + path.Join(instance.address, p.path))
+		if err == nil {
+			break
+		} else if retry == p.maxRetry {
+			instance.status = "failure"
+			return
+		}
+
+		time.Sleep(time.Second)
 	}
 
 	if resp.StatusCode < 400 && resp.StatusCode >= 200 {
