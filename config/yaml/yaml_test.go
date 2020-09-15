@@ -110,14 +110,23 @@ func TestNewYaml(t *testing.T) {
 		assert.Equal(t, "mydb", config["bucket"])
 		assert.Equal(t, "http://localhost:8086", config["server"])
 
+		// Sensors
+		sensors := cfg.Sensors()
+		assert.Equal(t, "on_change", sensors[0].Mode)
+		assert.Equal(t, "juniper.gnmi", sensors[0].Service)
+
 		// global
 		assert.Equal(t, "0.0.0.0:8081", cfg.Global().Status.Addr)
 		assert.Equal(t, "debug", cfg.Global().Logger["level"])
 		assert.Equal(t, true, cfg.Global().Shards.Enabled)
 		assert.Equal(t, "juniper", cfg.Global().DeviceOptions.Username)
 
+		// discovery
 		assert.Equal(t, "pseudo", cfg.Global().Discovery.Service)
 		assert.Equal(t, "http", cfg.Global().Discovery.Config.(map[string]interface{})["probe"])
+
+		// logger
+		assert.NotNil(t, cfg.Logger())
 
 		cfg.Update()
 	}
