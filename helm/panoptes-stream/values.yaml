@@ -1,0 +1,6 @@
+namespace: default
+replicaCount: 3
+initializingShards: 1
+affinity: false
+serviceDiscovery: k8s
+configuration: k8s

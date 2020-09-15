@@ -1,0 +1,46 @@
+# panoptes global configuration when values.configuration set to consul.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: panoptes-global
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "0"
+data:
+  global.json: |-
+    {
+      "status": {
+        "addr": ":{{ .Values.statusPort}}"
+      },
+      "discovery": {
+       "service": "{{ .Values.serviceDiscovery}}",
+       "config": {
+        "namespace": "{{ .Values.namespace}}",  
+        "healthcheckURL": "http://{{`{{ .POD_IP}}`}}:{{ .Values.statusPort}}/healthcheck"
+       }
+      },
+      "shards" : {
+        "enabled": true,
+        "numberOfNodes": {{ .Values.replicaCount}},
+        "InitializingShards" : {{ .Values.initializingShards}}
+      }
+    }
+
+---
+# panoptes configuration when values.configuration set to k8s
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: panoptes-config
+data:
+  config.yaml: |-
+    discovery:
+      service: {{ .Values.serviceDiscovery}}
+      config:
+        namespace: {{ .Values.namespace}}
+        healthcheckURL: http://{{`{{ .POD_IP}}`}}:{{ .Values.statusPort}}/healthcheck   
+    shards:
+      enabled: true
+      numberOfNodes: {{ .Values.replicaCount}}
+      InitializingShards: {{ .Values.initializingShards}}  
+
