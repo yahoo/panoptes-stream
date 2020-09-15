@@ -5,7 +5,6 @@ package kafka
 
 import (
 	"context"
-	"crypto/tls"
 	"encoding/json"
 	"strings"
 	"time"
@@ -45,7 +44,7 @@ type Kafka struct {
 	logger *zap.Logger
 }
 
-// New constructs kafka producer
+// New constructs an instance of kafka producer.
 func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
 
 	return &Kafka{
@@ -56,7 +55,7 @@ func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan teleme
 	}
 }
 
-// Start sends the data to the different topics (fan-out)
+// Start sends the data to the different topics (fan-out).
 func (k *Kafka) Start() {
 	chMap := make(map[string]chan telemetry.DataStore)
 	config, err := k.getConfig()
@@ -105,7 +104,7 @@ func (k *Kafka) Start() {
 func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic string) error {
 	var (
 		batch        = make([]kafka.Message, 0, config.BatchSize)
-		batchSize    = 100
+		batchSize    = 1000
 		batchTimeout = 1
 		flush        = false
 	)
@@ -154,9 +153,17 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 		}
 
 		if len(batch) == batchSize || flush {
-			err := w.WriteMessages(k.ctx, batch...)
-			if err != nil {
-				k.logger.Error("kafka", zap.Error(err))
+			for {
+				err := w.WriteMessages(k.ctx, batch...)
+				if err != nil {
+					k.logger.Error("kafka", zap.String("event", "write"), zap.Error(err))
+
+					// backoff
+					time.Sleep(1 * time.Second)
+					continue
+				}
+
+				break
 			}
 
 			flush = false
@@ -205,13 +212,11 @@ func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.Writer
 		},
 	}
 
-	if config.TLSConfig.CertFile != "" || config.TLSConfig.CAFile != "" {
+	if config.TLSConfig.Enabled {
 		cfg.Dialer.TLS, err = secret.GetTLSConfig(&config.TLSConfig)
 		if err != nil {
 			return cfg, err
 		}
-	} else {
-		cfg.Dialer.TLS = &tls.Config{InsecureSkipVerify: config.TLSConfig.InsecureSkipVerify}
 	}
 
 	switch config.Compression {
