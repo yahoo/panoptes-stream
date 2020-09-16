@@ -1,5 +1,6 @@
 
 ### Overview
+---
 
 Installing Panoptes is simple. Depends on your requirements there are different approaches to installing Panoptes.  
 

@@ -1,6 +1,7 @@
 ### Single node with Kafka demonstration 
 ---
 
+![panoptes demo](imgs/demo_kafka.png)
 
 ##### Checkout GitHub
 ```
@@ -17,11 +18,13 @@ docker-compose -f docker-compose.kafka.yml up -d
 ```console
 docker-compose -f docker-compose.kafka.yml ps
 ```
+![panoptes kafka](/docs/imgs/demo_kafka_dc_ps.png)
 
 ```consol
 docker exec -it kafka bash
-/opt/bitnami/kafka/bin/kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic ifcounters --from-beginning
-/opt/bitnami/kafka/bin/kafka-topics.sh --describe --zookeeper zookeeper:2181 --topic ifcounters
+cd /opt/bitnami/kafka/bin
+kafka-console-consumer.sh --bootstrap-server localhost:9092 --topic ifcounters --from-beginning
+kafka-topics.sh --describe --zookeeper zookeeper:2181 --topic ifcounters
 ```
 
 ##### Clean up

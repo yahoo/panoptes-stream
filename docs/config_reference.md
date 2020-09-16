@@ -104,6 +104,18 @@
 | service           | service discovery name: consul or etcd               |
 | config            |  |
 
+#### Pseudo
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+|instances
+|probe
+|path
+|timeout
+|interval
+|maxRetry
+|tlsConfig 
+
+
 #### Dialout
 | key               | description                                           |
 |-------------------|-------------------------------------------------------|
