@@ -24,7 +24,7 @@ func TestJuniper(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
-	ln, err := net.Listen("tcp", "localhost:50051")
+	ln, err := net.Listen("tcp", "localhost:0")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -44,7 +44,7 @@ func TestJuniper(t *testing.T) {
 			Path:   "/interfaces/interface/state/counters/",
 			Output: "test::test"},
 	}
-	conn, err := grpc.DialContext(ctx, "127.0.0.1:50051", grpc.WithInsecure())
+	conn, err := grpc.DialContext(ctx, ln.Addr().String(), grpc.WithInsecure())
 	g := jGNMI.New(cfg.Logger(), conn, sensors, ch)
 	g.Start(ctx)
 
