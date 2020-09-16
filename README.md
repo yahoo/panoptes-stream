@@ -1,4 +1,7 @@
+![panoptes logo](/docs/imgs/panoptes_streaming_logo.png)
+
 ## Panoptes Streaming
+
 A cloud native distributed streaming network telemetry 
 
 ![panoptes steaming](/docs/imgs/diagram.png)
