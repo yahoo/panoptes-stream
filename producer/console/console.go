@@ -19,13 +19,13 @@ import (
 // Console represents console
 // It's just print pretty metrics on the stdout or stderr for testing purpose
 type Console struct {
-	ch telemetry.ExtDSChan
-	lg *zap.Logger
+	ch     telemetry.ExtDSChan
+	logger *zap.Logger
 }
 
 // New returns a new console instance
 func New(ctx context.Context, cfg config.Producer, lg *zap.Logger, inChan telemetry.ExtDSChan) producer.Producer {
-	return &Console{ch: inChan}
+	return &Console{ch: inChan, logger: lg}
 }
 
 // Start starts printing available metric
@@ -38,7 +38,7 @@ func (c *Console) Start() {
 
 		out := strings.Split(v.Output, "::")
 		if len(out) < 2 {
-			c.lg.Error("wrong output", zap.String("output", v.Output))
+			c.logger.Error("wrong output", zap.String("output", v.Output))
 			continue
 		}
 
