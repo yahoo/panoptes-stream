@@ -42,14 +42,18 @@ func TestNewConsul(t *testing.T) {
 	devices := cfg.Devices()
 	databases := cfg.Databases()
 	producers := cfg.Producers()
+	sensors := cfg.Sensors()
 
 	assert.Len(t, devices, 1)
 	assert.Len(t, databases, 1)
 	assert.Len(t, producers, 2)
+	assert.Len(t, sensors, 1)
 
 	assert.Equal(t, "core1.lhr", devices[0].Host)
 	assert.Equal(t, "influxdb", databases[0].Service)
 	assert.Equal(t, "kafka", producers[0].Service)
+	assert.Equal(t, "juniper.jti", sensors[0].Service)
+	assert.NotNil(t, cfg.Informer())
 	assert.Equal(t, "127.0.0.2:8081", cfg.Global().Status.Addr)
 	assert.NotEqual(t, nil, cfg.Logger())
 

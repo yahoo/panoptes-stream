@@ -62,7 +62,6 @@ shards:
   enabled: true
 deviceOptions:
   username: juniper
-watcherDisabled: true
 `
 
 func TestNewYaml(t *testing.T) {
@@ -130,6 +129,11 @@ func TestNewYaml(t *testing.T) {
 
 		cfg.Update()
 	}
+}
+
+func TestNewYamlFileNotExist(t *testing.T) {
+	_, err := New("not_exist.yaml")
+	assert.Error(t, err)
 }
 
 func TestConfigDevices(t *testing.T) {

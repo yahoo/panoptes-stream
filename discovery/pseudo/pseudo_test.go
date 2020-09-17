@@ -22,16 +22,17 @@ func TestCheckHTTP(t *testing.T) {
 	defer ts.Close()
 
 	cfg.Global().Discovery.Config = pseudoConfig{
-		Instances: []string{ts.Listener.Addr().String(), "127.0.0.2:1355"},
+		Instances: []string{ts.Listener.Addr().String(), "127.0.0.2:5555"},
 		Probe:     "http",
 		Path:      "",
 		MaxRetry:  1,
+		Timeout:   1,
 	}
 
 	d, err := New(cfg)
 	assert.NoError(t, err)
 
-	time.Sleep((2 + 2) * time.Second)
+	time.Sleep((2 + 3) * time.Second)
 
 	instances, err := d.GetInstances()
 	assert.NoError(t, err)
@@ -39,9 +40,13 @@ func TestCheckHTTP(t *testing.T) {
 	hostname, err := os.Hostname()
 	assert.NoError(t, err)
 	assert.Len(t, instances, 2)
-	assert.Equal(t, hostname, instances[0].Address)
-	assert.Equal(t, "passing", instances[0].Status)
-	assert.Equal(t, "failure", instances[1].Status)
+
+	assert.NotEqual(t, instances[0].Address, instances[1].Address)
+	for i := 0; i < 2; i++ {
+		if instances[i].Address != "" && instances[i].Address != hostname {
+			assert.Fail(t, "unexpected hostname")
+		}
+	}
 }
 
 func TestDeepCopy(t *testing.T) {

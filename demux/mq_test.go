@@ -65,7 +65,7 @@ func TestBatchDrainer(t *testing.T) {
 
 	cfg := config.NewMockConfig()
 
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 
 	chMap := &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)}
 	testChan := make(telemetry.ExtDSChan)

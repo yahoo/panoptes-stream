@@ -102,3 +102,21 @@ func BenchmarkLineProtocol(b *testing.B) {
 		getLineProtocol(buf, data)
 	}
 }
+
+func TestGetValueString(t *testing.T) {
+	var v interface{}
+	v = 1
+	assert.Equal(t, "1", getValueString(v))
+	v = 1.5
+	assert.Equal(t, "1.500000", getValueString(v))
+	v = true
+	assert.Equal(t, "true", getValueString(v))
+	v = "test"
+	assert.Equal(t, "\"test\"", getValueString(v))
+	v = []byte("test")
+	assert.Equal(t, "\"test\"", getValueString(v))
+	v = map[string]interface{}{"name": "foo"}
+	assert.Equal(t, "\"{\\\"name\\\":\\\"foo\\\"}\"", getValueString(v))
+	v = map[string]string{"a": "b"}
+	assert.Equal(t, "", getValueString(v))
+}
