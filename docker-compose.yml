@@ -3,6 +3,10 @@ services:
   panoptes:
     build: .
     image: panoptes-stream:latest
+    container_name: panoptes-node
+    depends_on:
+      - simulator
+      - influxdb
     volumes:
       - ./scripts/demo:/etc/panoptes
     command: ["-config", "/etc/panoptes/panoptes.yml"]
@@ -10,10 +14,12 @@ services:
       - "8081:8081"
   simulator:
     image: panoptes-stream:latest
+    container_name: panoptes-simulator
     entrypoint: ["/usr/bin/simulator", "-interval", "5"]
 
   grafana:
     image: "grafana/grafana"
+    container_name: grafana
     volumes:
       - ./scripts/demo/grafana/datasources:/etc/grafana/provisioning/datasources
       - ./scripts/demo/grafana/dashboards:/etc/grafana/provisioning/dashboards
@@ -25,6 +31,7 @@ services:
 
   influxdb:
     image: "influxdb"
+    container_name: influxdb
     ports:
       - "8086:8086"
     environment:
