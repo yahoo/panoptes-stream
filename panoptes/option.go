@@ -5,7 +5,6 @@ package main
 
 import (
 	"errors"
-	"os"
 
 	cli "github.com/urfave/cli/v2"
 
@@ -21,10 +20,10 @@ type cmd struct {
 	etcd       string
 }
 
-func getConfig() (config.Config, error) {
+func getConfig(args []string) (config.Config, error) {
 	var cfg config.Config
 
-	cli, err := getCli()
+	cli, err := getCli(args)
 	if err != nil {
 		return nil, err
 	}
@@ -49,7 +48,7 @@ func getConfig() (config.Config, error) {
 	return cfg, nil
 }
 
-func getCli() (*cmd, error) {
+func getCli(args []string) (*cmd, error) {
 	cm := cmd{}
 
 	flags := []cli.Flag{
@@ -59,11 +58,11 @@ func getCli() (*cmd, error) {
 		},
 		&cli.StringFlag{
 			Name:  "consul",
-			Usage: "enable consul configuration management",
+			Usage: "enable consul configuration management (path to a file in yaml format or -)",
 		},
 		&cli.StringFlag{
 			Name:  "etcd",
-			Usage: "enable etcd configuration management",
+			Usage: "enable etcd configuration management (path to a file in yaml format or -)",
 		},
 	}
 
@@ -87,7 +86,7 @@ func getCli() (*cmd, error) {
 		},
 	}
 
-	err := app.Run(os.Args)
+	err := app.Run(args)
 
 	return &cm, err
 }
