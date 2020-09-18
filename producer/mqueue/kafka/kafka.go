@@ -94,7 +94,7 @@ func (k *Kafka) Start() {
 			}
 
 		case <-k.ctx.Done():
-			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("brokers", strings.Join(config.Brokers, ",")))
+			k.logger.Info("kafka", zap.String("event", "terminate"), zap.String("brokers", strings.Join(config.Brokers, ",")))
 			return
 		}
 	}

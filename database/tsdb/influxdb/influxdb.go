@@ -96,7 +96,7 @@ func (i *InfluxDB) Start() {
 			flush = true
 
 		case <-i.ctx.Done():
-			i.logger.Info("influxdb", zap.String("msg", "database has been terminated"), zap.String("name", i.cfg.Name))
+			i.logger.Info("influxdb", zap.String("event", "terminate"), zap.String("name", i.cfg.Name))
 			return
 		}
 
