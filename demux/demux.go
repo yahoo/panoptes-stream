@@ -18,7 +18,8 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
 
-// Demux represents demux
+// Demux manages instances of producer/database and
+// routes metrics to appropriate channels.
 type Demux struct {
 	ctx       context.Context
 	cfg       config.Config
@@ -38,7 +39,7 @@ type extDSChanMap struct {
 	eDSChan map[string]telemetry.ExtDSChan
 }
 
-// New constructs new demux
+// New constructs new instance of demux.
 func New(ctx context.Context, cfg config.Config, pr *producer.Registrar, db *database.Registrar, inChan telemetry.ExtDSChan) *Demux {
 	return &Demux{
 		ctx:       ctx,
@@ -74,7 +75,7 @@ func (d *Demux) init() error {
 	return nil
 }
 
-// Start starts demux
+// Start starts demux.
 func (d *Demux) Start() {
 	d.init()
 
@@ -134,6 +135,10 @@ func (d *Demux) subscribeProducer(producer config.Producer) error {
 		return errors.New("producer not exist")
 	}
 
+	if _, ok := d.producers[producer.Name]; ok {
+		return errors.New("duplicate subscription")
+	}
+
 	// register producer
 	d.producers[producer.Name] = producer
 	// make channel
@@ -159,6 +164,10 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 		return errors.New("database not exist")
 	}
 
+	if _, ok := d.databases[database.Name]; ok {
+		return errors.New("duplicate subscription")
+	}
+
 	// register database
 	d.databases[database.Name] = database
 	// make a channel
@@ -176,6 +185,11 @@ func (d *Demux) subscribeDatabase(database config.Database) error {
 }
 
 func (d *Demux) unsubscribeProducer(producer config.Producer) {
+	if _, ok := d.register[producer.Name]; !ok {
+		d.logger.Error("demux", zap.String("event", "unavailable"), zap.String("name", producer.Name))
+		return
+	}
+
 	d.register[producer.Name]()
 	delete(d.producers, producer.Name)
 	delete(d.register, producer.Name)
@@ -183,13 +197,18 @@ func (d *Demux) unsubscribeProducer(producer config.Producer) {
 }
 
 func (d *Demux) unsubscribeDatabase(database config.Database) {
+	if _, ok := d.register[database.Name]; !ok {
+		d.logger.Error("demux", zap.String("event", "unavailable"), zap.String("name", database.Name))
+		return
+	}
+
 	d.register[database.Name]()
 	delete(d.databases, database.Name)
 	delete(d.register, database.Name)
 	d.chMap.del(database.Name)
 }
 
-// Update updates databases and producers
+// Update updates databases and producers.
 func (d *Demux) Update() {
 	d.updateProducer()
 	d.updateDatabase()
