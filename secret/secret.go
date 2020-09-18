@@ -15,12 +15,12 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/secret/vault"
 )
 
-// Secret represents Secret interface
+// Secret represents Secret interface.
 type Secret interface {
 	GetSecrets(string) (map[string][]byte, error)
 }
 
-// GetSecretEngine returns proper secret instance
+// GetSecretEngine returns proper secret instance.
 func GetSecretEngine(sType string) (Secret, error) {
 	switch sType {
 	case "vault":
@@ -30,7 +30,7 @@ func GetSecretEngine(sType string) (Secret, error) {
 	return nil, fmt.Errorf("%s secret engine doesn't support", sType)
 }
 
-// GetTLSConfig returns TLS config
+// GetTLSConfig returns TLS config.
 func GetTLSConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	tlsConfig, ok, err := getTLSConfigRemote(cfg)
 	if ok {
@@ -40,7 +40,7 @@ func GetTLSConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	return getTLSConfigLocal(cfg)
 }
 
-// GetTLSServerConfig returns TLS config
+// GetTLSServerConfig returns TLS config.
 func GetTLSServerConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	if len(cfg.CertFile) < 1 || len(cfg.KeyFile) < 1 {
 		return nil, errors.New("certificate or key not provided")
@@ -54,7 +54,7 @@ func GetTLSServerConfig(cfg *config.TLSConfig) (*tls.Config, error) {
 	return getTLSConfigLocal(cfg)
 }
 
-// GetCredentials returns credentials
+// GetCredentials returns credentials.
 func GetCredentials(sType, path string) (map[string]string, error) {
 	sec, err := GetSecretEngine(sType)
 	if err != nil {
@@ -74,7 +74,7 @@ func GetCredentials(sType, path string) (map[string]string, error) {
 	return result, nil
 }
 
-// ParseRemoteSecretInfo returns secret type and path
+// ParseRemoteSecretInfo returns secret type and path.
 func ParseRemoteSecretInfo(key string) (string, string, bool) {
 	re := regexp.MustCompile(`__([a-zA-Z0-9]*)::(.*)`)
 	match := re.FindStringSubmatch(key)
