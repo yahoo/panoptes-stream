@@ -4,6 +4,7 @@
 package vault
 
 import (
+	"os"
 	"testing"
 
 	kv "github.com/hashicorp/vault-plugin-secrets-kv"
@@ -11,6 +12,7 @@ import (
 	"github.com/hashicorp/vault/http"
 	"github.com/hashicorp/vault/sdk/logical"
 	"github.com/hashicorp/vault/vault"
+	"github.com/stretchr/testify/assert"
 )
 
 func createVaultTestCluster(t *testing.T) *vault.TestCluster {
@@ -66,4 +68,15 @@ func TestGetSecrets(t *testing.T) {
 	if string(secret) != "topsecret" {
 		t.Error("expect to get secret: topsecret but got", string(secret))
 	}
+}
+
+func TestNew(t *testing.T) {
+	os.Setenv("PANOPTES_VAULT_TLSCONFIG_ENABLED", "true")
+	os.Setenv("PANOPTES_VAULT_TLSCONFIG_INSECURESKIPVERIFY", "true")
+	os.Setenv("PANOPTES_VAULT_ADDRESS", "http://127.0.0.1:8200")
+	os.Setenv("PANOPTES_VAULT_TOKEN", "token")
+
+	v, err := New()
+	assert.NoError(t, err)
+	assert.NotNil(t, v)
 }

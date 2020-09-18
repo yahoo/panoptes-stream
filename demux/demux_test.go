@@ -11,8 +11,13 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"git.vzbuilders.com/marshadrad/panoptes/database"
+	"git.vzbuilders.com/marshadrad/panoptes/producer"
+	"git.vzbuilders.com/marshadrad/panoptes/register"
 	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 )
+
+var cfg = config.NewMockConfig()
 
 func TestStartErrors(t *testing.T) {
 	var (
@@ -21,7 +26,7 @@ func TestStartErrors(t *testing.T) {
 	)
 
 	ctx := context.Background()
-	cfg := config.NewMockConfig()
+
 	d := New(ctx, cfg, nil, nil, inChan)
 	d.chMap.add("test", outChan)
 	d.Start()
@@ -54,6 +59,75 @@ func TestStartErrors(t *testing.T) {
 
 	assert.Equal(t, "output not found", e)
 
+}
+
+func TestRegisteration(t *testing.T) {
+	inChan := make(telemetry.ExtDSChan, 2)
+
+	ctx := context.Background()
+	cfg.LogOutput.Reset()
+
+	// producer
+	producerRegistrar := producer.NewRegistrar(cfg.Logger())
+	register.Producer(producerRegistrar)
+
+	// database
+	databaseRegistrar := database.NewRegistrar(cfg.Logger())
+	register.Database(databaseRegistrar)
+
+	d := New(ctx, cfg, producerRegistrar, databaseRegistrar, inChan)
+
+	// not exist
+	p := config.Producer{
+		Name:    "notexist",
+		Service: "notexist",
+	}
+	err := d.subscribeProducer(p)
+	assert.Error(t, err)
+
+	// subscribe
+	p = config.Producer{
+		Name:    "console",
+		Service: "console",
+	}
+	err = d.subscribeProducer(p)
+	assert.NoError(t, err)
+	assert.Equal(t, p, d.producers["console"])
+	err = d.subscribeProducer(p)
+	assert.Error(t, err)
+
+	// duplicate subscription
+
+	// unsubscribe
+	d.unsubscribeProducer(p)
+
+	// already unsubscribe
+	d.unsubscribeProducer(p)
+
+	// not exist
+	db := config.Database{
+		Name:    "notexist",
+		Service: "notexist",
+	}
+	err = d.subscribeDatabase(db)
+	assert.Error(t, err)
+
+	// subscribe
+	db = config.Database{
+		Name:    "influx1",
+		Service: "influxdb",
+	}
+	err = d.subscribeDatabase(db)
+	assert.NoError(t, err)
+	// duplicate subscription
+	err = d.subscribeDatabase(db)
+	assert.Error(t, err)
+
+	// unsubscribe
+	d.unsubscribeDatabase(db)
+
+	// already unsubscribe
+	d.unsubscribeDatabase(db)
 }
 
 func BenchmarkDemux(b *testing.B) {
