@@ -89,7 +89,8 @@ func (g *GNMI) Start(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < 1; i++ {
+	workers := config.GetEnvInt("JUNIPER_GNMI_WORKERS", 1)
+	for i := 0; i < workers; i++ {
 		go g.worker(ctx)
 	}
 

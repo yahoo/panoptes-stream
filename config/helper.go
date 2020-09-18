@@ -6,6 +6,8 @@ package config
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"strconv"
 
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
@@ -107,13 +109,23 @@ func SensorValidation(sensor Sensor) error {
 func SetDefaultGlobal(g *Global) {
 	g.Version = "0.0.1"
 
-	if g.BufferSize == 0 {
-		g.BufferSize = 20000
+	SetDefault(&g.OutputBufferSize, 10000)
+	SetDefault(&g.BufferSize, 20000)
+}
+
+// GetEnvInt returns given env variable in integer if available
+// otherwise it returns the default value.
+func GetEnvInt(name string, defaultValue int) int {
+	value := os.Getenv("PANOPTES_" + name)
+	if value != "" {
+		v, err := strconv.Atoi(value)
+		if err != nil {
+			return defaultValue
+		}
+		return v
 	}
 
-	if g.OutputBufferSize == 0 {
-		g.OutputBufferSize = 10000
-	}
+	return defaultValue
 }
 
 // SetDefault set default value if the s == zero.

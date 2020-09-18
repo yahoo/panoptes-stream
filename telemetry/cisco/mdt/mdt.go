@@ -88,7 +88,8 @@ func (m *MDT) Start(ctx context.Context) error {
 		return err
 	}
 
-	for i := 0; i < 1; i++ {
+	workers := config.GetEnvInt("CISCO_MDT_WORKERS", 1)
+	for i := 0; i < workers; i++ {
 		go m.worker(ctx)
 	}
 
