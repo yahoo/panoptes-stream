@@ -44,7 +44,7 @@ func main() {
 
 	signal.Notify(signalCh, syscall.SIGINT, syscall.SIGTERM)
 
-	cfg, err := getConfig()
+	cfg, err := getConfig(os.Args)
 	if err != nil {
 		fmt.Println("config", err)
 		os.Exit(1)
