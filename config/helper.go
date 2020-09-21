@@ -13,6 +13,8 @@ import (
 	"go.uber.org/zap/zapcore"
 )
 
+var version string
+
 // ConvDeviceTemplate transforms devicetemplate to device.
 func ConvDeviceTemplate(d DeviceTemplate) Device {
 	device := Device{}
@@ -107,7 +109,7 @@ func SensorValidation(sensor Sensor) error {
 
 // SetDefaultGlobal set global default value.
 func SetDefaultGlobal(g *Global) {
-	g.Version = "0.0.1"
+	g.Version = GetVersion()
 
 	SetDefault(&g.OutputBufferSize, 10000)
 	SetDefault(&g.BufferSize, 20000)
@@ -140,4 +142,13 @@ func SetDefault(s interface{}, d interface{}) {
 			*v = uint(d.(int))
 		}
 	}
+}
+
+// GetVersion returns Panoptes version
+func GetVersion() string {
+	if version != "" {
+		return version
+	}
+
+	return "unknown"
 }
