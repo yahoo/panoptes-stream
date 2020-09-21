@@ -5,6 +5,8 @@ package main
 
 import (
 	"errors"
+	"fmt"
+	"io"
 
 	cli "github.com/urfave/cli/v2"
 
@@ -66,10 +68,38 @@ func getCli(args []string) (*cmd, error) {
 		},
 	}
 
+	cli.AppHelpTemplate = `Panoptes Streaming
+
+-config filename       path to a file in yaml format to read configuration
+-consul filename or -  enable consul configuration management
+-etcd   filename or -  enable etcd configuration management
+-help, -h      show help
+-version, -v   show version
+
+In case of consul or etcd, if you set dash as argument, Panoptes assumes
+they available at localhost with default configuration.
+for more information visit http://github.com/yahoo/panoptes-stream/docs
+
+`
+
+	cli.VersionFlag = &cli.BoolFlag{
+		Name: "version", Aliases: []string{"v"},
+		Usage: "print only the version",
+	}
+
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("Panoptes Streaming Version: %s\n\n", c.App.Version)
+		cli.OsExiter(0)
+	}
+
+	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
+		fmt.Fprintf(w, templ)
+		cli.OsExiter(0)
+	}
+
 	app := &cli.App{
-		Name:  "Panoptes Streaming",
-		Usage: "A cloud native distributed streaming network telemetry",
-		Flags: flags,
+		Version: config.GetVersion(),
+		Flags:   flags,
 		Action: func(c *cli.Context) error {
 			cm = cmd{
 				configFile: c.String("config"),
