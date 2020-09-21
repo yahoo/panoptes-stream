@@ -19,7 +19,8 @@ A cloud native distributed streaming network telemetry
 - [Getting Started](/docs/getting_started.md)
 - [Architecture](/docs/architecture.md)
 - [Demo](/docs/demo_list.md)
-- [Glossary](/docs/glossary.md)
+- [FAQ](/docs/faq.md)
+
 ### License
 Code is licensed under the Apache License, Version 2.0 (the "License").
 Content is licensed under the CC BY 4.0 license. Terms available at https://creativecommons.org/licenses/by/4.0/.
