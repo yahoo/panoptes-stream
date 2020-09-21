@@ -23,6 +23,18 @@ Router(config-model-driven-subs)#sensor-group-id SubGroup1 sample-interval 30000
 Router(config-mdt-subscription)# commit
 ```
 
+#### Panoptes
+Sample sensor configuration
+
+```yaml
+sensors:
+  sensor1:
+    subscription: Sub1
+    service: cisco.mdt
+    output: console::stdout
+```
+
+
 #### validation show commands
 ```
 show grpc

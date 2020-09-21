@@ -1,5 +1,5 @@
 
-## TLS configuration
+### TLS configuration
 
 |key                 | description                                                                         |
 |--------------------|-------------------------------------------------------------------------------------|
@@ -9,7 +9,7 @@
 |keyFile             | The private key file contain PEM encoded data.                                      |
 |insecureSkipVerify  | It controls whether a client verifies the server's certificate chain and host name. |
 
-
+###### Sample TLS configuration:
 JSON
 ```json
 "tlsConfig": { 
@@ -31,7 +31,33 @@ tlsConfig:
     insecureSkipVerify": true 
 ```       
 
-##### Generate self-signed TLS Certificates by [cfssl](https://github.com/cloudflare/cfssl) and [cfssljson](https://github.com/cloudflare/cfssl)
+### Vault by Hashicorp
+Panoptes supports Vault for storing device's passwords, TLS keys and certificates.
+```
+Config syntax: __vault::key_path
+```
+```
+Value format: map[string][]byte, keys: cert, key and ca
+```
+###### Sample TLS configuration with Vault:
+JSON
+```json
+"tlsConfig": { 
+    "enabled": true,
+    "certFile": "__vault::panoptes/device/tls", 
+    "insecureSkipVerify": true 
+}
+```  
+YAML
+```yaml
+tlsConfig:
+    enabled": true 
+    certFile": __vault::panoptes/device/tls
+    insecureSkipVerify": true 
+```       
+
+
+### Generate self-signed TLS Certificates by [cfssl](https://github.com/cloudflare/cfssl) and [cfssljson](https://github.com/cloudflare/cfssl)
 
 ```
 cfssl gencert -initca ca-csr.json | cfssljson -bare ca

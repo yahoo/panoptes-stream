@@ -31,7 +31,7 @@ docker-compose -f docker-compose.consul.yml ps
 ```
 ![panoptes consul demo](imgs/demo_shards_pseudo_dc_ps.png)
 
-[http://localhost:3000](http://localhost:3000) Panoptes Sharding Status
+[http://localhost:3000](http://localhost:3000/d/2/panoptes-sharding-status?orgId=1&refresh=5s) Panoptes Sharding Status
 
 
 ![panoptes consul demo](imgs/demo_shards_gf_01.png)
@@ -46,9 +46,12 @@ The node one will take over the device[2 & 4].lax in less than a minute.
 ```console
 docker start panoptes-node2
 ```
-[http://localhost:3000](http://localhost:3000) Panoptes Sharding Status
+[http://localhost:3000](http://localhost:3000/d/2/panoptes-sharding-status?orgId=1&refresh=5s) Panoptes Sharding Status
 
 ![panoptes consul demo](imgs/demo_shards_gf_03.png)
+
+[http://localhost:3000](http://localhost:3000/d/1/panoptes-sharding-demo?orgId=1&refresh=5s&from=now-5m&to=now) Panoptes Sharding Demo
+![panoptes consul demo](imgs/demo_shards_graphs.png)
 
 #### Clean up
 ```console

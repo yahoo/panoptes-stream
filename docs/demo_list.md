@@ -1,6 +1,6 @@
-### Panoptes Streaming Demo
+### Panoptes Streaming Demonstrations :whale:
 ---
-You can try six different Panoptes streaming demonstrations at your laptop. they use Panoptes gNMI simulator to simulate Juniper routers so you can see exactly what's happening at the real production. The demo will take less than a minute to execute.
+You can try :six: different Panoptes streaming demonstrations at your laptop. they use Panoptes gNMI simulator to simulate Juniper routers so you can see exactly what's happening at the real production. The demo will take less than a minute to execute.
 
 
 You need to install [docker](https://docs.docker.com/get-docker/), in case you don’t have it already. 
