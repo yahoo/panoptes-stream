@@ -64,7 +64,7 @@ func (k *Kafka) Start() {
 	}
 
 	for _, topic := range config.Topics {
-		chMap[topic] = make(chan telemetry.DataStore, 1)
+		chMap[topic] = make(chan telemetry.DataStore, 1000)
 
 		go func(topic string, ch chan telemetry.DataStore) {
 			err := k.start(config, ch, topic)
@@ -74,11 +74,12 @@ func (k *Kafka) Start() {
 		}(topic, chMap[topic])
 	}
 
+L:
 	for {
 		select {
 		case v, ok := <-k.ch:
 			if !ok {
-				break
+				break L
 			}
 
 			topic := strings.Split(v.Output, "::")
@@ -103,21 +104,11 @@ func (k *Kafka) Start() {
 
 func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic string) error {
 	var (
-		batch        = make([]kafka.Message, 0, config.BatchSize)
-		batchSize    = 1000
-		batchTimeout = 1
-		flush        = false
+		batch = make([]kafka.Message, 0, config.BatchSize)
+		flush = false
 	)
 
-	if config.BatchSize > 0 {
-		batchSize = config.BatchSize
-	}
-
-	if config.BatchTimeout > 0 {
-		batchTimeout = config.BatchTimeout
-	}
-
-	flushTicker := time.NewTicker(time.Second * time.Duration(batchTimeout))
+	flushTicker := time.NewTicker(time.Second * time.Duration(config.BatchTimeout))
 
 	cfg, err := k.getWriterConfig(config, topic)
 	if err != nil {
@@ -130,11 +121,7 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 
 	for {
 		select {
-		case v, ok := <-ch:
-			if !ok {
-				break
-			}
-
+		case v := <-ch:
 			b, err := json.Marshal(v)
 			if err != nil {
 				k.logger.Error("kafka", zap.Error(err))
@@ -144,21 +131,27 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 			batch = append(batch, kafka.Message{Value: b})
 
 		case <-flushTicker.C:
-			flush = true
+			if len(batch) > 0 {
+				flush = true
+			} else {
+				continue
+			}
 
 		case <-k.ctx.Done():
-			k.logger.Info("kafka", zap.String("msg", "terminated"), zap.String("topic", topic))
+			k.logger.Info("kafka", zap.String("event", "terminate"), zap.String("topic", topic))
+			w.WriteMessages(k.ctx, batch...)
+			w.Close()
 			return nil
 
 		}
 
-		if len(batch) == batchSize || flush {
-			for {
+		if len(batch) == config.BatchSize || flush {
+			for k.ctx.Err() == nil {
 				err := w.WriteMessages(k.ctx, batch...)
 				if err != nil {
 					k.logger.Error("kafka", zap.String("event", "write"), zap.Error(err))
 
-					// backoff
+					// extra backoff
 					time.Sleep(1 * time.Second)
 					continue
 				}
@@ -167,30 +160,33 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 			}
 
 			flush = false
-			batch = nil
+			batch = batch[:0]
 		}
 	}
 }
 
 func (k *Kafka) getConfig() (*kafkaConfig, error) {
-	config := new(kafkaConfig)
+	conf := new(kafkaConfig)
 	b, err := json.Marshal(k.cfg.Config)
 	if err != nil {
 		return nil, err
 	}
 
-	err = json.Unmarshal(b, config)
+	err = json.Unmarshal(b, conf)
 	if err != nil {
 		return nil, err
 	}
 
 	prefix := "panoptes_producer_" + k.cfg.Name
-	err = envconfig.Process(prefix, config)
+	err = envconfig.Process(prefix, conf)
 	if err != nil {
 		return nil, err
 	}
 
-	return config, nil
+	config.SetDefault(&conf.BatchSize, 1000)
+	config.SetDefault(&conf.BatchTimeout, 1)
+
+	return conf, nil
 }
 
 func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.WriterConfig, error) {

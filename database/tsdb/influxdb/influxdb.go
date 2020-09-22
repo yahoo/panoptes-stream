@@ -77,11 +77,12 @@ func (i *InfluxDB) Start() {
 	batch := make([]string, 0, config.BatchSize)
 	flushTicker := time.NewTicker(time.Duration(config.FlushInterval) * time.Second)
 
+L:
 	for {
 		select {
 		case v, ok := <-i.ch:
 			if !ok {
-				break
+				break L
 			}
 
 			line, err := getLineProtocol(buf, v)
@@ -93,15 +94,20 @@ func (i *InfluxDB) Start() {
 			batch = append(batch, line)
 
 		case <-flushTicker.C:
-			flush = true
+			if len(batch) > 0 {
+				flush = true
+			} else {
+				continue
+			}
 
 		case <-i.ctx.Done():
 			i.logger.Info("influxdb", zap.String("event", "terminate"), zap.String("name", i.cfg.Name))
+			writeAPI.WriteRecord(i.ctx, batch...)
 			return
 		}
 
 		if len(batch) == int(config.BatchSize) || flush {
-			for {
+			for i.ctx.Err() == nil {
 				err = writeAPI.WriteRecord(i.ctx, batch...)
 				if err != nil {
 					i.logger.Error("influxdb", zap.String("event", "write"), zap.Error(err))
