@@ -5,6 +5,7 @@ package demux
 
 import (
 	"context"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"testing"
@@ -17,19 +18,26 @@ import (
 )
 
 func TestMQ(t *testing.T) {
-	os.Setenv("PANOPTES_NSQ_ADDR", "127.0.0.1:4155")
-
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	nsqServer(ctx, t)
+	_, tmpDir := nsqServer(ctx, t)
+	defer os.RemoveAll(tmpDir)
+
+	time.Sleep(2 * time.Second)
+
+	t.Run("testBatchDrainer", testBatchDrainer)
+	t.Run("testPublish", testPublish)
+}
+
+func testPublish(t *testing.T) {
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	cfg := config.NewMockConfig()
 
-	time.Sleep(1 * time.Second)
-
 	chMap := &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)}
 	testChan := make(telemetry.ExtDSChan)
-	chMap.add("test", testChan)
+	chMap.add("test1", testChan)
 
 	mq, err := NewMQ(ctx, cfg.Logger(), chMap)
 	assert.NoError(t, err)
@@ -37,7 +45,7 @@ func TestMQ(t *testing.T) {
 	mq.drainInterval = time.Duration(10)
 
 	ds := telemetry.ExtDataStore{
-		Output: "test::test",
+		Output: "test1::test1",
 		DS: telemetry.DataStore{
 			"metric":    "test",
 			"labels":    map[string]string{"label1": "value1"},
@@ -45,7 +53,7 @@ func TestMQ(t *testing.T) {
 		},
 	}
 
-	mq.publish(ds, "test")
+	mq.publish(ds, "test1")
 
 	select {
 	case dsQ := <-testChan:
@@ -55,17 +63,11 @@ func TestMQ(t *testing.T) {
 	}
 }
 
-func TestBatchDrainer(t *testing.T) {
-	os.Setenv("PANOPTES_NSQ_ADDR", "127.0.0.1:4155")
-
+func testBatchDrainer(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	cmd := nsqServer(ctx, t)
-	defer cmd.Process.Kill()
 
 	cfg := config.NewMockConfig()
-
-	time.Sleep(3 * time.Second)
 
 	chMap := &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)}
 	testChan := make(telemetry.ExtDSChan)
@@ -95,12 +97,15 @@ func TestBatchDrainer(t *testing.T) {
 	}
 }
 
-func nsqServer(ctx context.Context, t *testing.T) *exec.Cmd {
-	addr := os.Getenv("PANOPTES_NSQ_ADDR")
-	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", "/tmp", "-tcp-address", addr)
+func nsqServer(ctx context.Context, t *testing.T) (*exec.Cmd, string) {
+	dir, err := ioutil.TempDir("", "nsq")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", dir, "-tcp-address", "127.0.0.1:4150", "-http-address", "127.0.0.1:4153")
 	cmd.Start()
 
 	t.Log(cmd.String())
 
-	return cmd
+	return cmd, dir
 }

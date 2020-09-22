@@ -15,14 +15,29 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-func TestNewConsulAndRegistration(t *testing.T) {
-	t.Parallel()
+var srv *testutil.TestServer
 
-	srv, err := testutil.NewTestServerConfigT(t, nil)
+func TestConsul(t *testing.T) {
+	var err error
+	srv, err = testutil.NewTestServerConfigT(t, nil)
 	assert.Equal(t, nil, err)
 	defer srv.Stop()
 
-	time.Sleep(time.Second * 2)
+	time.Sleep(2 * time.Second)
+
+	t.Run("testNewConsulAndRegistration", testNewConsulAndRegistration)
+	t.Run("testSecondNodes", testSecondNodes)
+	t.Run("testWatch", testWatch)
+}
+
+func testNewConsulAndRegistration(t *testing.T) {
+	//t.Parallel()
+
+	// srv, err := testutil.NewTestServerConfigT(t, nil)
+	// assert.Equal(t, nil, err)
+	// defer srv.Stop()
+
+	// time.Sleep(time.Second * 2)
 
 	cfg := config.NewMockConfig()
 	cfg.MGlobal = &config.Global{
@@ -45,14 +60,14 @@ func TestNewConsulAndRegistration(t *testing.T) {
 	assert.Equal(t, "0", instances[0].ID)
 }
 
-func TestSecondNodes(t *testing.T) {
-	t.Parallel()
+func testSecondNodes(t *testing.T) {
+	//t.Parallel()
 
-	srv, err := testutil.NewTestServerConfigT(t, nil)
-	assert.Equal(t, nil, err)
-	defer srv.Stop()
+	// srv, err := testutil.NewTestServerConfigT(t, nil)
+	// assert.Equal(t, nil, err)
+	// defer srv.Stop()
 
-	time.Sleep(time.Second * 2)
+	// time.Sleep(time.Second * 2)
 
 	cfg := config.NewMockConfig()
 	cfg.MGlobal = &config.Global{
@@ -81,14 +96,14 @@ func TestSecondNodes(t *testing.T) {
 	assert.Len(t, instances, 2)
 }
 
-func TestWatch(t *testing.T) {
-	t.Parallel()
+func testWatch(t *testing.T) {
+	//t.Parallel()
 
-	srv, err := testutil.NewTestServerConfigT(t, nil)
-	assert.Equal(t, nil, err)
-	defer srv.Stop()
+	// srv, err := testutil.NewTestServerConfigT(t, nil)
+	// assert.Equal(t, nil, err)
+	// defer srv.Stop()
 
-	time.Sleep(time.Second * 2)
+	// time.Sleep(time.Second * 2)
 
 	cfg := config.NewMockConfig()
 	cfg.MGlobal = &config.Global{

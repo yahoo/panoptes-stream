@@ -15,8 +15,11 @@ import (
 	"git.vzbuilders.com/marshadrad/panoptes/config"
 )
 
-func TestNewConsul(t *testing.T) {
-	srv, err := testutil.NewTestServerConfigT(t, nil)
+var srv *testutil.TestServer
+
+func TestConsul(t *testing.T) {
+	var err error
+	srv, err = testutil.NewTestServerConfigT(t, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -24,6 +27,11 @@ func TestNewConsul(t *testing.T) {
 
 	time.Sleep(time.Second)
 
+	t.Run("testNewConsul", testNewConsul)
+	t.Run("testEmptyConfig", testEmptyConfig)
+}
+
+func testNewConsul(t *testing.T) {
 	config := map[string][]byte{
 		"panoptes/config/devices/core1.bur": []byte(`{"host": "core1.lhr", "port": 50051,  "sensors" : ["sensor1"]}`),
 		"panoptes/config/sensors/sensor1":   []byte(`{"service": "juniper.jti", "path": "/interfaces/", "mode": "sample", "sampleInterval": 10, "output":"console::stdout"}`),
@@ -66,8 +74,6 @@ func TestNewConsul(t *testing.T) {
 }
 
 func TestGetTLSConfig(t *testing.T) {
-	t.Parallel()
-
 	cfg := &consulConfig{}
 	tls, err := getTLSConfig(cfg)
 	assert.Equal(t, nil, err)
@@ -85,20 +91,12 @@ func TestGetTLSConfig(t *testing.T) {
 	assert.Equal(t, true, tls.InsecureSkipVerify)
 }
 
-func TestEmptyConfig(t *testing.T) {
-	srv, err := testutil.NewTestServerConfigT(t, nil)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer srv.Stop()
-
-	time.Sleep(time.Second)
-
+func testEmptyConfig(t *testing.T) {
 	os.Setenv("PANOPTES_CONFIG_CONSUL_ADDRESS", srv.HTTPAddr)
 
 	config := map[string][]byte{"panoptes/config/": []byte("")}
 	srv.PopulateKV(t, config)
 
-	_, err = New("-")
+	_, err := New("-")
 	assert.Equal(t, nil, err)
 }
