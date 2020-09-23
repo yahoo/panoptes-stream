@@ -27,7 +27,8 @@ func TestStart(t *testing.T) {
 	mCfg := config.NewMockConfig()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, tmpDir := nsqServer(ctx, t)
+	cmd, tmpDir := nsqServer(ctx, t)
+	defer cmd.Process.Kill()
 	defer os.RemoveAll(tmpDir)
 
 	time.Sleep(time.Second)

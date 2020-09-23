@@ -20,7 +20,8 @@ import (
 func TestMQ(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	_, tmpDir := nsqServer(ctx, t)
+	cmd, tmpDir := nsqServer(ctx, t)
+	defer cmd.Process.Kill()
 	defer os.RemoveAll(tmpDir)
 
 	time.Sleep(2 * time.Second)
