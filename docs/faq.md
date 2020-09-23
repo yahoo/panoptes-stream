@@ -9,4 +9,6 @@
 * What does routing metrics means?
     >Panoptes can route the metrics / sensors to specific producer with given topic or route to a specific database with a given table. for example you can send the BGP metrics to Kafka with topic: BGP and send the interface counters to Kafka with topic: Interface also at the same time you can route VLAN metrics to InfluxDB with measurement vlan.
 * How to monitor Panoptes?
-    >Panoptes provides local monitoring information and exposes them through http endpoint with Prometheus format.         
+    >Panoptes provides local monitoring information and exposes them through http endpoint with Prometheus format.
+* Panoptes vs Panoptes Streaming
+    >Here we call it Panoptes instead of Panoptes-Stream or Panoptes streaming. In fact there is another [Panoptes](https://github.com/yahoo/panoptes) which that's a Python based network telemetry ecosystem that implements discovery, enrichment and polling (SNMP). We highly recommend it.

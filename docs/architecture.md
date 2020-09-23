@@ -15,7 +15,7 @@ The configuration supports **dynamic configuration** without requiring panoptes 
 
 #### Shards
 
-This component provides **scalability and availability** through auto sharding of network devices. Once the shards are enabled each panoptes instance is responsible for specified devices. In other words the shards groups the devices and assigns them to each instance to spread load and failover. In case of failure the other instances take over the load quickly.
+This component provides **scalability and fault tolerance** through auto sharding of network devices. Once the shards are enabled each panoptes instance is responsible for specified devices. In other words the shards groups the devices and assigns them to each instance to spread load and failover. In case of failure the other instances take over the load quickly.
 
 ![panoptes shards](imgs/shards.png)
 
