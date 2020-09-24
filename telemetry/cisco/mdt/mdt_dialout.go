@@ -40,6 +40,12 @@ type Dialout struct {
 
 // NewDialout returns a new instance of MDT dial-out.
 func NewDialout(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSChan) *Dialout {
+	var metrics = make(map[string]status.Metrics)
+
+	metrics["dropsTotal"] = status.NewCounter("cisco_mdt_drops_total", "")
+
+	status.Register(status.Labels{}, metrics)
+
 	m := &Dialout{
 		ctx:        ctx,
 		cfg:        cfg,
@@ -47,6 +53,7 @@ func NewDialout(ctx context.Context, cfg config.Config, outChan telemetry.ExtDSC
 		logger:     cfg.Logger(),
 		dataChan:   make(chan []byte, 1000),
 		pathOutput: make(map[string]string),
+		metrics:    metrics,
 	}
 
 	for _, sensor := range cfg.Sensors() {
@@ -234,6 +241,7 @@ func (m *Dialout) handler(buf *bytes.Buffer, tm *mdt.Telemetry) {
 				Output: output,
 			}:
 			default:
+				m.metrics["dropsTotal"].Inc()
 				m.logger.Warn("cisco.mdt.dialout", zap.String("error", "dataset drop"))
 			}
 		}

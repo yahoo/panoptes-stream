@@ -60,6 +60,7 @@ func New(logger *zap.Logger, conn *grpc.ClientConn, sensors []*config.Sensor, ou
 		logger:     logger,
 		dataChan:   make(chan []byte, 1000),
 		pathOutput: make(map[string]string),
+		metrics:    metrics,
 	}
 
 	for _, sensor := range sensors {
