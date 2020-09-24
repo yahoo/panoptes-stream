@@ -93,7 +93,7 @@ for more information visit http://github.com/yahoo/panoptes-stream/docs
 	}
 
 	cli.HelpPrinter = func(w io.Writer, templ string, data interface{}) {
-		fmt.Fprintf(w, templ)
+		fmt.Fprint(w, templ)
 		cli.OsExiter(0)
 	}
 
