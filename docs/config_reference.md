@@ -16,12 +16,12 @@
 
 | key              | description                                                                                             |
 |------------------|---------------------------------------------------------------------------------------------------------|
-|service           |telemetry name based on the vendor. current supported [services](#telemetry-services).                             |
+|service           |telemetry name based on the vendor. current supported [services](#telemetry-services).                   |
 |output            |the output can be a producer or a database that you already configured.                                  |
 |path              |The sensor path describes a YANG path or a subset of data definitions in a YANG model with a container.  |
 |mode              |streaming subscription mode: sample or on_change.                                                        |
 |sampleInterval    |the data in sample mode must be sent once per sample interval in seconds.                                |
-|suppressRedundant |once it enabled the unchanged data in on_change mode sends every heartbeatInterval (vendor must support).|
+|suppressRedundant |once it enabled the unchanged data sends every heartbeatInterval in on_change mode (vendor must support).|
 |heartbeatInterval |specifies the maximum allowable silent period in seconds (vendor must support).                          |
 |subscription      |a subscription binds one or more sensor paths (Cisco).                                                   |
 |disabled          |disable the sensor.                                                                                      |
@@ -38,17 +38,20 @@
 
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
-| brokers           |                |
-| topics            |  |
-| batchSize
-| batchTimeout
-| maxAttempts
-| queueCapacity
-| keepAlive
-| compression
-| ioTimeout
-| tlsConfig
+| brokers           |list of brokers |
+| topics            |list of topics|
+| batchSize         |size of batch|
+| batchTimeout      |flush at least every batchTimeout|
+| maxAttempts       |limit of how many attempts will be made before delivering the error|
+| keepAlive         |keep-alive period for an active network|
+| compression       |compression codec to compress Kafka messages (gzip, snappy, lz4)|
+| tlsConfig         |[TLS configuration](/docs/config_tls.md) parameters.|
 
+
+##### NSQ
+| key               | description                                          |
+|-------------------|------------------------------------------------------|
+|
 
 
 #### Databases
@@ -62,13 +65,13 @@
 
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
-| server           |                |
-| bucket            |  |
-| org
-| token
-| batchSize
-| maxRetries
-| timeout
+| server            |server url               |
+| bucket            |name of the location where time series data is stored|
+| org|organization name|
+| token|authentication token
+| batchSize|size of batch
+| maxRetries|maximum count of retry attempts of failed writes
+| timeout|HTTP request timeout|
 
 
 #### Telemetry Services  
@@ -107,13 +110,13 @@
 #### Pseudo
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
-|instances
-|probe
-|path
-|timeout
-|interval
-|maxRetry
-|tlsConfig 
+|instances|list of instance's IP addresses|
+|probe| http or https
+|path| healthcheck url path
+|timeout| prob timeout
+|interval|healthcheck time interval
+|maxRetry| healthcheck maximum number of retries|
+|tlsConfig|[TLS configuration](/docs/config_tls.md) parameters. 
 
 
 #### Dialout
@@ -147,8 +150,6 @@
 |certFile| the certficate file contain PEM encoded data.
 |keyFile| the private key file contain PEM encoded data.
 |insecureSkipVerify|it controls whether a client verifies the server's certificate chain and host name.|
-
----
 
 #### Dialout cisco.mdt
 
