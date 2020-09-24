@@ -28,10 +28,10 @@ func TestStart(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cmd, tmpDir := nsqServer(ctx, t)
-	defer cmd.Process.Kill()
 	defer os.RemoveAll(tmpDir)
+	defer cmd.Process.Kill()
 
-	time.Sleep(time.Second)
+	time.Sleep(3 * time.Second)
 
 	ch := make(telemetry.ExtDSChan, 1)
 	cfg := config.Producer{
@@ -78,6 +78,8 @@ func TestStart(t *testing.T) {
 	select {
 	case v := <-chout:
 		assert.Equal(t, "test", v["test"])
+	case <-time.After(10 * time.Second):
+		assert.Fail(t, "time exceeded")
 	}
 }
 
@@ -95,15 +97,18 @@ func (h *messageHandler) HandleMessage(m *nsq.Message) error {
 }
 
 func nsqServer(ctx context.Context, t *testing.T) (*exec.Cmd, string) {
-	dir, err := ioutil.TempDir("", "nsq")
+	dir, err := ioutil.TempDir("", "nsq*")
+	if err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", dir, "-tcp-address", "127.0.0.1:4165", "-http-address", "127.0.0.1:4167")
+	err = cmd.Start()
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", dir, "-tcp-address", "127.0.0.1:4165")
-	cmd.Start()
-
 	t.Log(cmd.String())
+	t.Log(cmd.CombinedOutput())
 
 	return cmd, dir
 }

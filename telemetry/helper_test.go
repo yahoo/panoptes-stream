@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/openconfig/gnmi/proto/gnmi"
+	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
 
 	"git.vzbuilders.com/marshadrad/panoptes/config"
@@ -87,4 +88,110 @@ func TestGetKey(t *testing.T) {
 	key, labels = GetKey(buf, path.Elem)
 	assert.Equal(t, "interfaces/interface/state/counters/out-octets", key)
 	assert.Equal(t, map[string]string{"name": "Ethernet1", "/interfaces/interface/state/name": "test"}, labels)
+}
+
+func TestGetDefaultOutput(t *testing.T) {
+	sensors := []*config.Sensor{
+		{
+			Output: "kafka1::mytopic",
+		},
+		{
+			Output: "kafka1::mytopic",
+		},
+	}
+	assert.Equal(t, "kafka1::mytopic", GetDefaultOutput(sensors))
+
+	sensors = []*config.Sensor{
+		{
+			Output: "kafka1::mytopic1",
+		},
+		{
+			Output: "kafka1::mytopic2",
+		},
+	}
+	assert.Equal(t, "", GetDefaultOutput(sensors))
+}
+
+func TestGetValue(t *testing.T) {
+	tt := []struct {
+		tv *gpb.TypedValue
+		v  interface{}
+	}{
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_BoolVal{BoolVal: true}},
+			v:  true,
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_DecimalVal{
+				DecimalVal: &gpb.Decimal64{Digits: 55},
+			}},
+			v: float64(55),
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_BytesVal{
+				BytesVal: []byte("gnmi"),
+			}},
+			v: []byte("gnmi"),
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_IntVal{
+				IntVal: 55,
+			}},
+			v: int64(55),
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_StringVal{
+				StringVal: "gnmi",
+			}},
+			v: "gnmi",
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_FloatVal{
+				FloatVal: 0.55,
+			}},
+			v: float32(0.55),
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_AsciiVal{
+				AsciiVal: "gnmi",
+			}},
+			v: "gnmi",
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_UintVal{
+				UintVal: 55,
+			}},
+			v: uint64(55),
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_JsonIetfVal{
+				JsonIetfVal: []byte("{\"key\":\"value\"}"),
+			}},
+			v: map[string]interface{}{"key": "value"},
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_JsonVal{
+				JsonVal: []byte("{\"key\":\"value\"}"),
+			}},
+			v: map[string]interface{}{"key": "value"},
+		},
+		{
+			tv: &gpb.TypedValue{Value: &gpb.TypedValue_LeaflistVal{
+				LeaflistVal: &gpb.ScalarArray{
+					Element: []*gpb.TypedValue{{
+						Value: &gpb.TypedValue_StringVal{
+							StringVal: "gnmi",
+						},
+					}},
+				},
+			}},
+			v: []interface{}([]interface{}{"gnmi"}),
+		},
+	}
+
+	for _, row := range tt {
+		v, err := GetValue(row.tv)
+		assert.NoError(t, err)
+		assert.Equal(t, row.v, v)
+	}
 }

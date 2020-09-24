@@ -21,10 +21,10 @@ func TestMQ(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	cmd, tmpDir := nsqServer(ctx, t)
-	defer cmd.Process.Kill()
 	defer os.RemoveAll(tmpDir)
+	defer cmd.Process.Kill()
 
-	time.Sleep(2 * time.Second)
+	time.Sleep(5 * time.Second)
 
 	t.Run("testBatchDrainer", testBatchDrainer)
 	t.Run("testPublish", testPublish)
@@ -99,14 +99,18 @@ func testBatchDrainer(t *testing.T) {
 }
 
 func nsqServer(ctx context.Context, t *testing.T) (*exec.Cmd, string) {
-	dir, err := ioutil.TempDir("", "nsq")
+	dir, err := ioutil.TempDir("", "nsq*")
 	if err != nil {
 		t.Fatal(err)
 	}
-	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", dir, "-tcp-address", "127.0.0.1:4150", "-http-address", "127.0.0.1:4153")
-	cmd.Start()
+	cmd := exec.CommandContext(ctx, "nsqd", "-data-path", dir, "-tcp-address", "127.0.0.1:4150", "-http-address", "127.0.0.1:4153", "-node-id", "55")
+	err = cmd.Start()
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	t.Log(cmd.String())
+	t.Log(cmd.CombinedOutput())
 
 	return cmd, dir
 }

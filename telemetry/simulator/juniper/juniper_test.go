@@ -45,6 +45,7 @@ func TestJuniper(t *testing.T) {
 			Output: "test::test"},
 	}
 	conn, err := grpc.DialContext(ctx, ln.Addr().String(), grpc.WithInsecure())
+	assert.NoError(t, err)
 	g := jGNMI.New(cfg.Logger(), conn, sensors, ch)
 	g.Start(ctx)
 

@@ -141,6 +141,7 @@ func TestGetTLSConfigRemote(t *testing.T) {
 		BasicConstraintsValid: true,
 	}
 	derCertBytes, err := x509.CreateCertificate(rand.Reader, &template, &template, &privateKey.PublicKey, privateKey)
+	assert.NoError(t, err)
 	buf := &bytes.Buffer{}
 	pem.Encode(buf, &pem.Block{Type: "CERTIFICATE", Bytes: derCertBytes})
 	certPem := buf.String()
