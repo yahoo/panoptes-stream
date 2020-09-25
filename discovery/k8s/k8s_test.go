@@ -58,6 +58,16 @@ func TestNew(t *testing.T) {
 	assert.Contains(t, err.Error(), "unable to load in-cluster configuration")
 }
 
+func TestConvPhaseToStatus(t *testing.T) {
+	assert.Equal(t, "passing", convPhaseToStatus("Running"))
+	assert.Equal(t, "warning", convPhaseToStatus("NonRunning"))
+}
+
+func TestDeregister(t *testing.T) {
+	k := &k8s{}
+	k.Deregister()
+}
+
 func pod(namespace string) *v1.Pod {
 	return &v1.Pod{
 		ObjectMeta: metav1.ObjectMeta{
