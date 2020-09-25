@@ -99,6 +99,7 @@ func (n *NSQ) start(config *nsqConfig, ch chan telemetry.DataStore, topic string
 
 	pConfig := gonsq.NewConfig()
 	pConfig.UserAgent = "panoptes"
+	pConfig.DialTimeout = 2 * time.Second
 	producer, _ := gonsq.NewProducer(config.Addr, pConfig)
 	producer.SetLogger(&noLogger{}, 0)
 

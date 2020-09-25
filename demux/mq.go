@@ -59,6 +59,8 @@ func NewMQ(ctx context.Context, lg *zap.Logger, chMap *extDSChanMap) (*MQ, error
 		return nil, err
 	}
 	config := nsq.NewConfig()
+	config.UserAgent = "panoptes"
+	config.DialTimeout = 2 * time.Second
 	producer, _ := nsq.NewProducer(mqConfig.Addr, config)
 	producer.SetLogger(&noLogger{}, 0)
 
