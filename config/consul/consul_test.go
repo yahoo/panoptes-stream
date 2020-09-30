@@ -5,6 +5,7 @@ package consul
 
 import (
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -29,6 +30,7 @@ func TestConsul(t *testing.T) {
 
 	t.Run("testNewConsul", testNewConsul)
 	t.Run("testEmptyConfig", testEmptyConfig)
+	t.Run("testSignalHandler", testSignalHandler)
 }
 
 func testNewConsul(t *testing.T) {
@@ -99,4 +101,33 @@ func testEmptyConfig(t *testing.T) {
 
 	_, err := New("-")
 	assert.Equal(t, nil, err)
+}
+
+func testSignalHandler(t *testing.T) {
+	ch := make(chan struct{}, 1)
+	cfg := config.NewMockConfig()
+	c := &consul{
+		informer: ch,
+		logger:   cfg.Logger(),
+	}
+
+	go c.signalHandler()
+	time.Sleep(time.Second)
+
+	proc, err := os.FindProcess(os.Getpid())
+	assert.NoError(t, err)
+	proc.Signal(syscall.SIGHUP)
+
+	select {
+	case <-ch:
+	case <-time.After(time.Second):
+		assert.Fail(t, "time exceeded")
+	}
+
+	proc.Signal(syscall.SIGHUP)
+	time.Sleep(100 * time.Millisecond)
+	proc.Signal(syscall.SIGHUP)
+
+	time.Sleep(time.Second)
+	assert.Contains(t, cfg.LogOutput.String(), "dropped")
 }
