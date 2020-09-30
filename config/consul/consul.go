@@ -6,9 +6,12 @@ package consul
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
 	"path"
 	"runtime"
 	"strings"
+	"syscall"
 
 	"github.com/hashicorp/consul/api"
 	"github.com/hashicorp/consul/api/watch"
@@ -101,6 +104,8 @@ func New(filename string) (config.Config, error) {
 				c.logger.Fatal("consul.watcher", zap.Error(err))
 			}
 		}()
+	} else {
+		go c.signalHandler()
 	}
 
 	return c, nil
@@ -331,4 +336,21 @@ func getTLSConfig(cfg *consulConfig) (api.TLSConfig, error) {
 		CAFile:             cfg.TLSConfig.CAFile,
 		InsecureSkipVerify: cfg.TLSConfig.InsecureSkipVerify,
 	}, nil
+}
+
+func (c *consul) signalHandler() {
+	var signalCh = make(chan os.Signal, 1)
+
+	signal.Notify(signalCh, syscall.SIGHUP)
+
+	for {
+		<-signalCh
+		c.logger.Info("consul.sighup", zap.String("event", "triggered"))
+
+		select {
+		case c.informer <- struct{}{}:
+		default:
+			c.logger.Warn("consul.sighub", zap.String("event", "notification has been dropped"))
+		}
+	}
 }
