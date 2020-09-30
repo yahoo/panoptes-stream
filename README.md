@@ -4,12 +4,12 @@
 
 
 
-Panoptes Streaming is a cloud native distributed streaming network telemetry. It can be installed as a single binary without any dependencies or clustered nodes to collect network telemetry through gRPC and produce or ingest them to the given destinations. Panoptes can grow horizontally through auto sharding of devices to achieve scalability and fault tolerance by itself or by using a 3rd party service discovery also it runs on the Kubernetes as a cloud native application. you can check the dockerized [demonstrations](/docs/demo_list.md) on your laptop quickly and see how it works in real-time through pre-provisioned grafana dashboards and device simulator.
+Panoptes Streaming is a cloud native distributed streaming network telemetry. It can be installed as a single binary without any dependencies or clustered nodes to collect network telemetry through gRPC and produce or ingest them to given destinations. Panoptes can grow horizontally by auto sharding of devices to achieve scalability and availability. It runs on Kubernetes as a cloud native application and its helm chart supports multiple of use cases of Panoptes on Kubernetes. you can check the dockerized [demonstrations](/docs/demo_list.md) on your laptop quickly and see how it works in real-production through pre-provisioned grafana dashboards and device simulator.
 
 ### Features
 - Supports gNMI, Juniper JTI and Cisco MDT.
 - Routes sensors to producers and databases. 
-- Fault tolerance and scalability through auto sharding.
+- Availability and scalability by auto sharding.
 - Dynamic configuration management.
 - Guaranteed telemetry delivery.
 - Plugin and cloud friendly architecture.
