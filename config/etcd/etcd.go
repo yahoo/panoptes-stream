@@ -8,9 +8,12 @@ import (
 	"crypto/tls"
 	"encoding/json"
 	"fmt"
+	"os"
+	"os/signal"
 	"path"
 	"runtime"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/kelseyhightower/envconfig"
@@ -109,6 +112,8 @@ func New(filename string) (config.Config, error) {
 
 	if !etcd.global.WatcherDisabled {
 		go etcd.watch(etcd.informer)
+	} else {
+		go etcd.signalHandler()
 	}
 
 	return etcd, nil
@@ -283,6 +288,23 @@ func (e *etcd) watch(ch chan<- struct{}) {
 			default:
 				e.logger.Info("config.etcd watcher response dropped")
 			}
+		}
+	}
+}
+
+func (e *etcd) signalHandler() {
+	var signalCh = make(chan os.Signal, 1)
+
+	signal.Notify(signalCh, syscall.SIGHUP)
+
+	for {
+		<-signalCh
+		e.logger.Info("etcd.sighup", zap.String("event", "triggered"))
+
+		select {
+		case e.informer <- struct{}{}:
+		default:
+			e.logger.Warn("etcd.sighub", zap.String("event", "notification has been dropped"))
 		}
 	}
 }

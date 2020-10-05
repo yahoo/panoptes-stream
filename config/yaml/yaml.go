@@ -5,7 +5,10 @@ package yaml
 
 import (
 	"io/ioutil"
+	"os"
+	"os/signal"
 	"runtime"
+	"syscall"
 
 	"github.com/fsnotify/fsnotify"
 	"github.com/kelseyhightower/envconfig"
@@ -68,6 +71,8 @@ func New(filename string) (config.Config, error) {
 			}
 
 		}()
+	} else {
+		go y.signalHandler()
 	}
 
 	return y, nil
@@ -279,4 +284,21 @@ func (y *yaml) watcher() error {
 
 func (y *yaml) Informer() chan struct{} {
 	return y.informer
+}
+
+func (y *yaml) signalHandler() {
+	var signalCh = make(chan os.Signal, 1)
+
+	signal.Notify(signalCh, syscall.SIGHUP)
+
+	for {
+		<-signalCh
+		y.logger.Info("yaml.sighup", zap.String("event", "triggered"))
+
+		select {
+		case y.informer <- struct{}{}:
+		default:
+			y.logger.Warn("yaml.sighub", zap.String("event", "notification has been dropped"))
+		}
+	}
 }
