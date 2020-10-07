@@ -3,6 +3,7 @@ module git.vzbuilders.com/marshadrad/panoptes
 go 1.14
 
 require (
+	github.com/Shopify/sarama v1.19.0
 	github.com/cisco-ie/nx-telemetry-proto v0.0.0-20190531143454-82441e232cf6
 	github.com/fsnotify/fsnotify v1.4.9
 	github.com/golang/protobuf v1.4.2
@@ -13,8 +14,9 @@ require (
 	github.com/hashicorp/vault/api v1.0.5-0.20200317185738-82f498082f02
 	github.com/hashicorp/vault/sdk v0.1.14-0.20200702114606-96dd7d6e10db
 	github.com/influxdata/influxdb v1.8.1
-	github.com/influxdata/influxdb-client-go v1.4.0
+	github.com/influxdata/influxdb-client-go/v2 v2.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/openconfig/ygot v0.8.1
