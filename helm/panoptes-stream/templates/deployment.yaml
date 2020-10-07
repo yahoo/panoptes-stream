@@ -78,6 +78,8 @@ spec:
           volumeMounts:
             - name: panoptes-config
               mountPath: /etc/panoptes
+          ports:
+            - containerPort: 8081    
 
       volumes:
         - name: panoptes-config
