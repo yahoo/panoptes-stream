@@ -17,11 +17,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/authentication"
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/status"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/juniper/proto/authentication"
+	jpb "github.com/yahoo/panoptes-stream/telemetry/juniper/proto/telemetry"
 )
 
 var jtiVersion = "1.0"

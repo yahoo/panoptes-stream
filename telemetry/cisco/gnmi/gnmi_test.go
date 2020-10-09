@@ -9,9 +9,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/mock"
 )
 
 func TestGetPrefix(t *testing.T) {

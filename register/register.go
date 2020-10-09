@@ -4,15 +4,15 @@
 package register
 
 import (
-	"git.vzbuilders.com/marshadrad/panoptes/database"
-	"git.vzbuilders.com/marshadrad/panoptes/database/tsdb"
-	"git.vzbuilders.com/marshadrad/panoptes/producer"
-	"git.vzbuilders.com/marshadrad/panoptes/producer/console"
-	"git.vzbuilders.com/marshadrad/panoptes/producer/mqueue"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/arista"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper"
+	"github.com/yahoo/panoptes-stream/database"
+	"github.com/yahoo/panoptes-stream/database/tsdb"
+	"github.com/yahoo/panoptes-stream/producer"
+	"github.com/yahoo/panoptes-stream/producer/console"
+	"github.com/yahoo/panoptes-stream/producer/mqueue"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/arista"
+	"github.com/yahoo/panoptes-stream/telemetry/cisco"
+	"github.com/yahoo/panoptes-stream/telemetry/juniper"
 )
 
 // Telemetry registers all available telemetries

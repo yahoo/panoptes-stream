@@ -4,8 +4,8 @@
 package arista
 
 import (
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/arista/gnmi"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/arista/gnmi"
 )
 
 // Register Arista telemetries

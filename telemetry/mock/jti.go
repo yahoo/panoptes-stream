@@ -9,7 +9,7 @@ import (
 
 	"google.golang.org/grpc"
 
-	jpb "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/telemetry"
+	jpb "github.com/yahoo/panoptes-stream/telemetry/juniper/proto/telemetry"
 )
 
 // JTIResponse represents mock JTI response

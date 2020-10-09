@@ -19,10 +19,10 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/protobuf/types/known/anypb"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/status"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/juniper/proto/GnmiJuniperTelemetryHeader"
 )
 
 var gnmiVersion = "0.7.0"

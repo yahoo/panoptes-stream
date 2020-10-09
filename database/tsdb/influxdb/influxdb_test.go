@@ -15,8 +15,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 func TestLineProtocol(t *testing.T) {

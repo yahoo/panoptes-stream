@@ -12,7 +12,7 @@ import (
 	"github.com/hashicorp/consul/sdk/testutil"
 	"github.com/stretchr/testify/assert"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 var srv *testutil.TestServer

@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/metadata"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 func TestUnsubscribe(t *testing.T) {

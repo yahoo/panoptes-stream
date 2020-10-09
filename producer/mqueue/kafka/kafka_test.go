@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"github.com/Shopify/sarama"
 	"github.com/stretchr/testify/assert"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 var mockConfig = config.NewMockConfig()

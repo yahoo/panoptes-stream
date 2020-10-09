@@ -13,9 +13,9 @@ import (
 	gonsq "github.com/nsqio/go-nsq"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/producer"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/producer"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 type nsqConfig struct {

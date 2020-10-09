@@ -11,9 +11,9 @@ import (
 	"strings"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/openconfig/ygot/ygot"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 // GetKey returns telemetry key and extracted labels.

@@ -14,7 +14,7 @@ import (
 	"github.com/nsqio/go-nsq"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 // MQ represents MQ

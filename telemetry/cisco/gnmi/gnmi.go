@@ -11,10 +11,10 @@ import (
 	"net"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/status"
+	"github.com/yahoo/panoptes-stream/telemetry"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 )

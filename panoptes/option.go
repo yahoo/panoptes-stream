@@ -10,10 +10,10 @@ import (
 
 	cli "github.com/urfave/cli/v2"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/config/consul"
-	"git.vzbuilders.com/marshadrad/panoptes/config/etcd"
-	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/config/consul"
+	"github.com/yahoo/panoptes-stream/config/etcd"
+	"github.com/yahoo/panoptes-stream/config/yaml"
 )
 
 type cmd struct {

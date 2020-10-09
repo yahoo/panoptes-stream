@@ -1,4 +1,4 @@
-module git.vzbuilders.com/marshadrad/panoptes
+module github.com/yahoo/panoptes-stream
 
 go 1.14
 

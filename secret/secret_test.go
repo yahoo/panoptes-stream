@@ -23,7 +23,7 @@ import (
 	"github.com/hashicorp/vault/vault"
 	"github.com/stretchr/testify/assert"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 func TestGetTLSConfigLocal(t *testing.T) {

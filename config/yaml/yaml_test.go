@@ -13,7 +13,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	yml "gopkg.in/yaml.v3"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 var yamlContent = `

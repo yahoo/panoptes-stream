@@ -9,7 +9,7 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 // NMIFactory is a function that returns a new instance of a NMI

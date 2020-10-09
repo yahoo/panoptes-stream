@@ -14,8 +14,8 @@ import (
 	"github.com/openconfig/gnmi/proto/gnmi"
 	"google.golang.org/grpc"
 
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/simulator/juniper"
+	"github.com/yahoo/panoptes-stream/telemetry/mock"
+	"github.com/yahoo/panoptes-stream/telemetry/simulator/juniper"
 )
 
 func main() {

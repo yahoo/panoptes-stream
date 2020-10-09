@@ -20,9 +20,9 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/discovery"
+	"github.com/yahoo/panoptes-stream/secret"
 )
 
 // pseudo represents pseudo service discovery.

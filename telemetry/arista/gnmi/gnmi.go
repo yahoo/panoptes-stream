@@ -17,9 +17,9 @@ import (
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/status"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 var gnmiVersion = "0.0.1"

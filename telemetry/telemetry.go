@@ -20,9 +20,9 @@ import (
 	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/metadata"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/secret"
+	"github.com/yahoo/panoptes-stream/status"
 )
 
 // Telemetry represents telemetry

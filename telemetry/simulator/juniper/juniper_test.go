@@ -12,11 +12,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	jGNMI "git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/gnmi"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/mock"
 	"github.com/openconfig/gnmi/proto/gnmi"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	jGNMI "github.com/yahoo/panoptes-stream/telemetry/juniper/gnmi"
+	"github.com/yahoo/panoptes-stream/telemetry/mock"
 	"google.golang.org/grpc"
 )
 

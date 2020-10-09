@@ -4,9 +4,9 @@
 package juniper
 
 import (
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/gnmi"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/juniper/jti"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/juniper/gnmi"
+	"github.com/yahoo/panoptes-stream/telemetry/juniper/jti"
 )
 
 // Register Juniper telemetries

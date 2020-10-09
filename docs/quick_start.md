@@ -75,4 +75,4 @@ docker logs -f panoptes
 #### Do you need troubleshooting?
 - check our [troubleshooting page](troubleshooting.md)
 - ask your questions at our [slack channel]()
-- If you're seeing a bug please [open an issue](https://git.vzbuilders.com/marshadrad/panoptes/issues)
+- If you're seeing a bug please [open an issue](https://github.com/yahoo/panoptes-stream/issues)

@@ -9,7 +9,7 @@ import (
 	"github.com/hashicorp/vault/api"
 	"github.com/kelseyhightower/envconfig"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
+	"github.com/yahoo/panoptes-stream/config"
 )
 
 // Vault represents Hashicorp Vault

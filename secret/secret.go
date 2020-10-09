@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"regexp"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/secret/vault"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/secret/vault"
 )
 
 // Secret represents Secret interface.

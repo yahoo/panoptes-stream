@@ -6,9 +6,9 @@ package dialout
 import (
 	"context"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/mdt"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/cisco/mdt"
 )
 
 // Dialout represents dial-out mode for all telemetries.

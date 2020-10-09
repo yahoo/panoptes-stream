@@ -12,10 +12,10 @@ import (
 	"testing"
 	"time"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
 	"github.com/nsqio/go-nsq"
 	"github.com/stretchr/testify/assert"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 type messageHandler struct {

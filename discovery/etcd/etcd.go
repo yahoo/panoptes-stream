@@ -18,9 +18,9 @@ import (
 	"go.etcd.io/etcd/clientv3/concurrency"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/discovery"
+	"github.com/yahoo/panoptes-stream/secret"
 )
 
 // etcd represents the etcd as service discovery.

@@ -20,9 +20,9 @@ import (
 	"go.etcd.io/etcd/clientv3"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/config/yaml"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/config/yaml"
+	"github.com/yahoo/panoptes-stream/secret"
 )
 
 // etcd represents etcd configuration management.

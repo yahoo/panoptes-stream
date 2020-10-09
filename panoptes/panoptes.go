@@ -13,19 +13,19 @@ import (
 
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/database"
-	"git.vzbuilders.com/marshadrad/panoptes/demux"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery/consul"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery/etcd"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery/k8s"
-	"git.vzbuilders.com/marshadrad/panoptes/discovery/pseudo"
-	"git.vzbuilders.com/marshadrad/panoptes/producer"
-	"git.vzbuilders.com/marshadrad/panoptes/register"
-	"git.vzbuilders.com/marshadrad/panoptes/status"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/dialout"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/database"
+	"github.com/yahoo/panoptes-stream/demux"
+	"github.com/yahoo/panoptes-stream/discovery"
+	"github.com/yahoo/panoptes-stream/discovery/consul"
+	"github.com/yahoo/panoptes-stream/discovery/etcd"
+	"github.com/yahoo/panoptes-stream/discovery/k8s"
+	"github.com/yahoo/panoptes-stream/discovery/pseudo"
+	"github.com/yahoo/panoptes-stream/producer"
+	"github.com/yahoo/panoptes-stream/register"
+	"github.com/yahoo/panoptes-stream/status"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/dialout"
 )
 
 var (

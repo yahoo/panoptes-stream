@@ -18,10 +18,10 @@ import (
 	"github.com/kelseyhightower/envconfig"
 	"go.uber.org/zap"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/database"
-	"git.vzbuilders.com/marshadrad/panoptes/secret"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/database"
+	"github.com/yahoo/panoptes-stream/secret"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 // InfluxDB represents InfluxDB.

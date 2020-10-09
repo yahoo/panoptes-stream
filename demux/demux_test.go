@@ -10,11 +10,11 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"git.vzbuilders.com/marshadrad/panoptes/config"
-	"git.vzbuilders.com/marshadrad/panoptes/database"
-	"git.vzbuilders.com/marshadrad/panoptes/producer"
-	"git.vzbuilders.com/marshadrad/panoptes/register"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
+	"github.com/yahoo/panoptes-stream/config"
+	"github.com/yahoo/panoptes-stream/database"
+	"github.com/yahoo/panoptes-stream/producer"
+	"github.com/yahoo/panoptes-stream/register"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 var cfg = config.NewMockConfig()

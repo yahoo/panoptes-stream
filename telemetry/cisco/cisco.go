@@ -4,9 +4,9 @@
 package cisco
 
 import (
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/gnmi"
-	"git.vzbuilders.com/marshadrad/panoptes/telemetry/cisco/mdt"
+	"github.com/yahoo/panoptes-stream/telemetry"
+	"github.com/yahoo/panoptes-stream/telemetry/cisco/gnmi"
+	"github.com/yahoo/panoptes-stream/telemetry/cisco/mdt"
 )
 
 // Register Cisco telemetries
