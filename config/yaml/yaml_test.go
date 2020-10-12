@@ -4,9 +4,7 @@
 package yaml
 
 import (
-	"context"
 	"io/ioutil"
-	"os"
 	"testing"
 	"time"
 
@@ -16,7 +14,9 @@ import (
 	"github.com/yahoo/panoptes-stream/config"
 )
 
-var yamlContent = `
+var (
+	tempDir     string
+	yamlContent = `
 devices:
   - host: "192.168.59.3"
     password: admin
@@ -63,11 +63,20 @@ shards:
 deviceOptions:
   username: juniper
 `
+)
 
-func TestNewYaml(t *testing.T) {
-	cfgFile, err := ioutil.TempFile("", "config")
+func TestYaml(t *testing.T) {
+	tempDir = t.TempDir()
+
+	t.Run("NewYaml", testNewYaml)
+	t.Run("Watcher", testWatcher)
+	t.Run("NewYamlFileNotExist", testNewYamlFileNotExist)
+	t.Run("ConfigDevices", testConfigDevices)
+}
+
+func testNewYaml(t *testing.T) {
+	cfgFile, err := ioutil.TempFile(tempDir, "config")
 	assert.Equal(t, nil, err)
-	defer os.Remove(cfgFile.Name())
 
 	// write main config
 	cfgFile.WriteString(yamlContent)
@@ -131,12 +140,12 @@ func TestNewYaml(t *testing.T) {
 	}
 }
 
-func TestNewYamlFileNotExist(t *testing.T) {
+func testNewYamlFileNotExist(t *testing.T) {
 	_, err := New("not_exist.yaml")
 	assert.Error(t, err)
 }
 
-func TestConfigDevices(t *testing.T) {
+func testConfigDevices(t *testing.T) {
 	y := &yaml{}
 	yamlCfg := &yamlConfig{}
 	yml.Unmarshal([]byte(yamlContent), yamlCfg)
@@ -146,18 +155,17 @@ func TestConfigDevices(t *testing.T) {
 	}
 }
 
-func TestWatcher(t *testing.T) {
-	cfgFile, err := ioutil.TempFile("", "config")
+func testWatcher(t *testing.T) {
+	cfgFile, err := ioutil.TempFile(tempDir, "configWatcher")
 	assert.Equal(t, nil, err)
-	defer os.Remove(cfgFile.Name())
-	cfgFile.WriteString("foo")
+	defer cfgFile.Close()
 
-	cfg := config.NewMockConfig()
+	cfgFile.WriteString("foo")
 
 	y := &yaml{
 		filename: cfgFile.Name(),
 		informer: make(chan struct{}, 1),
-		logger:   cfg.Logger(),
+		logger:   config.GetDefaultLogger(),
 	}
 
 	go func() {
@@ -165,16 +173,13 @@ func TestWatcher(t *testing.T) {
 		assert.Equal(t, nil, err)
 	}()
 
-	time.Sleep(time.Millisecond * 500)
+	time.Sleep(time.Second)
 
 	cfgFile.WriteString("bar")
 
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
-	defer cancel()
-
 	select {
 	case <-y.Informer():
-	case <-ctx.Done():
+	case <-time.After(time.Second):
 		assert.Fail(t, "context deadline exceeded")
 	}
 }
