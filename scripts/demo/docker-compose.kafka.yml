@@ -1,7 +1,7 @@
 version: "3"
 services:
   panoptes:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-node
     depends_on:
       - simulator
@@ -12,7 +12,7 @@ services:
     ports:
       - "8081:8081"
   simulator:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-simulator
     entrypoint: ["/usr/bin/simulator", "-interval", "5"]
 

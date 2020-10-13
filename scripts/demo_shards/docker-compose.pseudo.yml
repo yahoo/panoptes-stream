@@ -1,7 +1,7 @@
 version: "3"
 services:
   panoptes-node1:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-node1
     volumes:
       - ./:/etc/panoptes
@@ -10,7 +10,7 @@ services:
       - demo-net
 
   panoptes-node2:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-node2
     volumes:
       - ./:/etc/panoptes
@@ -18,7 +18,7 @@ services:
     networks:
       - demo-net
   simulator:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-simulator
     entrypoint: ["/usr/bin/simulator", "-interval", "5"]
     networks:

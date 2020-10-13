@@ -23,7 +23,7 @@ services:
       - demo-net
 
   panoptes-node1:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-node1
     depends_on:
       - consul
@@ -39,7 +39,7 @@ services:
       - demo-net
 
   panoptes-node2:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-node2
     depends_on:
       - consul
@@ -55,7 +55,7 @@ services:
       - demo-net
 
   simulator:
-    image: panoptes-stream:latest
+    image: panoptes/panoptes-stream:latest
     container_name: panoptes-simulator
     entrypoint: ["/usr/bin/simulator", "-interval", "5"]
     networks:
