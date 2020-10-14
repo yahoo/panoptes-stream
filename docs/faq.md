@@ -11,4 +11,4 @@
 * How to monitor Panoptes?
     >Panoptes provides local monitoring information and exposes them through http endpoint with Prometheus format.
 * Panoptes vs Panoptes Streaming
-    >Here we call it Panoptes instead of Panoptes-Stream or Panoptes streaming. In fact there is another [Panoptes](https://github.com/yahoo/panoptes) which that's a Python based network telemetry ecosystem that implements discovery, enrichment and polling (SNMP). We highly recommend it.
+    >Here we called Panoptes-stream as Panoptes but in fact [Panoptes](https://github.com/yahoo/panoptes) is our Python based network telemetry ecosystem that implements discovery, enrichment and polling (SNMP) but Panoptes-stream is a cloud native distributed streaming network telemetry (gRPC/OpenConfig/Yang).

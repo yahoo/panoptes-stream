@@ -237,7 +237,7 @@ Example Device Options configuration:
 #### Initializing Consul
 
 ```
-curl https://github.com/yahoo/panoptes-stream/blob/master/scripts/consul/init_config.json | consul kv import -
+curl https://raw.githubusercontent.com/yahoo/panoptes-stream/master/scripts/consul/init_config.json | consul kv import -
 
 ```
 

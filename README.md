@@ -2,9 +2,9 @@
 
 ## Panoptes Streaming
 
+[![Github Actions](https://github.com/yahoo/panoptes-stream/workflows/panoptes-stream/badge.svg)](https://github.com/yahoo/panoptes-stream/actions?query=workflow%3Apanoptes-stream) [![Go report](https://goreportcard.com/badge/github.com/yahoo/panoptes-stream)](https://goreportcard.com/report/github.com/yahoo/panoptes-stream)  [![Coverage Status](https://coveralls.io/repos/github/yahoo/panoptes-stream/badge.svg?branch=master)](https://coveralls.io/github/yahoo/panoptes-stream)
 
-
-Panoptes Streaming is a cloud native distributed streaming network telemetry. It can be installed as a single binary without any dependencies or clustered nodes to collect network telemetry through gRPC and produce or ingest them to given destinations. Panoptes can grow horizontally by auto sharding of devices to achieve scalability and availability. It runs on Kubernetes as a cloud native application and its helm chart supports multiple of use cases of Panoptes on Kubernetes. you can check the dockerized [demonstrations](/docs/demo_list.md) on your laptop quickly and see how it works in real-production through pre-provisioned grafana dashboards and device simulator.
+Panoptes Streaming is a cloud native distributed streaming network telemetry. It can be installed as a single binary or clustered nodes to collect network telemetry through gRPC and produce or ingest them to given destinations. Panoptes can grow horizontally by auto sharding of devices to achieve scalability and availability. It runs on Kubernetes as a cloud native application and its helm chart supports multiple use cases of Panoptes on Kubernetes. you can check out the dockerized [demonstrations](/docs/demo_list.md) on your laptop quickly and see how it works in real-production through pre-provisioned grafana dashboards and gNMI-simulator.
 
 ### Features
 - Supports gNMI, Juniper JTI and Cisco MDT.
@@ -19,9 +19,8 @@ Panoptes Streaming is a cloud native distributed streaming network telemetry. It
 - [Getting Started](/docs/getting_started.md)
 - [Architecture](/docs/architecture.md)
 - [Demo](/docs/demo_list.md)
-- [FAQ](/docs/faq.md)
 
-###### Sample dashboard
+###### Sample grafana dashboard
 ![demo grafana](/docs/imgs/grafana.png)
 
 ### License
