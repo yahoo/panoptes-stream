@@ -9,7 +9,7 @@ Detailed installation instructions for Panoptes on Kubernetes are found [here](/
 
 
 ```
-helm install panoptes panoptes-stream
+helm install panoptes-stream panoptes-stream
 ```
 
 ##### Tutorials
