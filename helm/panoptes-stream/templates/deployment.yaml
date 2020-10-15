@@ -41,7 +41,6 @@ spec:
       containers:
         - name: panoptes
           image: panoptes/panoptes-stream:latest
-          imagePullPolicy: Never
           {{- if eq .Values.configuration "consul" }} 
           args:
             - "-consul"
