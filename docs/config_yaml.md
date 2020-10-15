@@ -34,7 +34,7 @@ devices:
     sensors:
       - sensor1
 ```
-You can see all available device config keys at [configuration reference](config_reference.md#devices).
+You can see all available device config keys at [configuration reference](config_reference.md#device).
 
 #### Sensors 
 The sensors are defined as a list of sensors. you can assign them to one or more devices under devices configuration.
@@ -49,7 +49,7 @@ sensors:
     output: console::stdout
 ```
 
-You can see all available sensor config keys at [configuration reference](config_reference.md#sensors). 
+You can see all available sensor config keys at [configuration reference](config_reference.md#sensor). 
 
 #### Producers
 The producers are defined as a list of producers. you can assign them to one or more sensors under sensors configuration.
@@ -85,7 +85,7 @@ databases:
 You can set environment variables for config keys with following format: PANOPTES_DATABASE_{{database_name}}_{{config_key}}
 For instance: ```PANOPTES_DATABASE_INFLUXDB1_SERVER=http://influxdb:8086``` 
 
-You can see all available sensor config keys at [configuration reference](config_reference.md#databases).
+You can see all available sensor config keys at [configuration reference](config_reference.md#database).
 
 #### Global
 

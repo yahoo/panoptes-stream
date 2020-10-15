@@ -27,7 +27,7 @@
 |disabled          |disable the sensor.                                                                                      |
 
 
-#### Producers
+#### Producer
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
 | service           | producer name: kafka or nsq               |
@@ -51,14 +51,17 @@
 ##### NSQ
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
-|
+| addr              |
+| topics            |list of topics|
+| batchSize         |size of batch|
+| batchTimeout      |flush at least every batchTimeout|
 
 
-#### Databases
+#### Database
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
 | service           | database name: influxdb               |
-| config            |  depends on the database|
+| config            | depends on the database|
 
 
 ##### InfluxDB
@@ -104,8 +107,8 @@
 #### Discovery
 | key               | description                                          |
 |-------------------|------------------------------------------------------|
-| service           | service discovery name: consul or etcd               |
-| config            |  |
+| service           | service discovery name: consul, etcd or pseudo       |
+| config            | depends on the [discovery](discovery.md) |
 
 #### Pseudo
 | key               | description                                          |
@@ -137,7 +140,7 @@
 #### Global
 | key               | description                                          |
 |-------------------|------------------------------------------------------| 
-|watcherDisabled    |disable watcher (not recommended)                     |
+|watcherDisabled    |disable watcher and switch to sighup mode             |
 |bufferSize         |shared buffer between telemetries                     |
 |outputBufferSize   |output buffer (per producer or database)              |
 

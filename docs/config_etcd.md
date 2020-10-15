@@ -52,7 +52,7 @@ Value:
 }
 ```
 
-You can see all available device config keys at [configuration reference](config_reference.md#devices). 
+You can see all available device config keys at [configuration reference](config_reference.md#device). 
 
 #### Sensors 
 The sensors is a folder which included sensors as key value. key is the sensor name and value is in json format.
@@ -70,7 +70,7 @@ Value:
 }
 ```
 
-You can see all available sensor config keys at [configuration reference](config_reference.md#sensors). 
+You can see all available sensor config keys at [configuration reference](config_reference.md#sensor). 
 
 #### Producers
 The producers is a folder which included producers configurations as key value. key is the producer name and value is in json format.  
@@ -92,7 +92,7 @@ Value:
 The key and topics will assign to the sensor's output like: "output": "kafka1::interface" or "output": "kafka1::bgp"
 Kafka output syntax: KEY::TOPIC 
 
-You can see all available producers config keys at [configuration reference](config_reference.md#producers). 
+You can see all available producers config keys at [configuration reference](config_reference.md#producer). 
 
 #### Databases
 The databases is a folder which included databases as key value. key is the database name and value is in json format.

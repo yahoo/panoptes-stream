@@ -36,11 +36,11 @@ panoptes -config config.yaml
 OR
 #### Execute panoptes by docker run
 ```
-docker run -d --name panoptes -v $PWD:/etc/panoptes panoptes-stream -config /etc/panoptes/config.yaml 
+docker run -d --name panoptes -v $PWD:/etc/panoptes panoptes/panoptes-stream -config /etc/panoptes/config.yaml 
 docker logs -f panoptes
 ```
 
-#### Result is stream of the metrics like below sample every 10 seconds:
+#### Result is stream of the metrics like below every 10 seconds:
 ```json
 {
   "key": "out-discards",
@@ -71,8 +71,3 @@ docker logs -f panoptes
   "value": 4695711345
 }
 ```
-
-#### Do you need troubleshooting?
-- check our [troubleshooting page](troubleshooting.md)
-- ask your questions at our [slack channel]()
-- If you're seeing a bug please [open an issue](https://github.com/yahoo/panoptes-stream/issues)
