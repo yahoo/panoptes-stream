@@ -190,7 +190,7 @@ func (j *JTI) worker(ctx context.Context) {
 
 func (j *JTI) datastore(rBuf, wBuf *bytes.Buffer, data *jpb.OpenConfigData, output string) {
 	var (
-		ds                   = make(telemetry.DataStore)
+		ds                   telemetry.DataStore
 		labels, prefixLabels map[string]string
 		prefix               string
 	)
