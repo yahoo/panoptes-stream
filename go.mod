@@ -1,6 +1,6 @@
 module github.com/yahoo/panoptes-stream
 
-go 1.14
+go 1.15
 
 require (
 	github.com/Shopify/sarama v1.19.0
@@ -16,7 +16,6 @@ require (
 	github.com/influxdata/influxdb v1.8.1
 	github.com/influxdata/influxdb-client-go/v2 v2.0.1
 	github.com/kelseyhightower/envconfig v1.4.0
-	github.com/kubernetes/client-go v11.0.0+incompatible
 	github.com/nsqio/go-nsq v1.0.8
 	github.com/openconfig/gnmi v0.0.0-20200617225440-d2b4e6a45802
 	github.com/openconfig/ygot v0.8.1
@@ -26,7 +25,7 @@ require (
 	github.com/urfave/cli/v2 v2.2.0
 	go.etcd.io/etcd v0.5.0-alpha.5.0.20200520232829-54ba9589114f
 	go.uber.org/zap v1.15.0
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381
+	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sync v0.0.0-20190911185100-cd5d95a43a6e
 	google.golang.org/grpc v1.29.1
 	google.golang.org/protobuf v1.23.0
@@ -36,7 +35,6 @@ require (
 	k8s.io/client-go v0.18.6
 	k8s.io/kube-openapi v0.0.0-20200410145947-bcb3869e6f29 // indirect
 	k8s.io/utils v0.0.0-20200821003339-5e75c0163111 // indirect
-	software.sslmate.com/src/go-pkcs12 v0.0.0-20200619203921-c9ed90bd32dc
 )
 
 replace (
