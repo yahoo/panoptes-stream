@@ -78,7 +78,7 @@ func getCli(args []string) (*cmd, error) {
 
 In case of consul or etcd, if you set dash as argument, Panoptes assumes
 they available at localhost with default configuration.
-for more information visit http://github.com/yahoo/panoptes-stream/docs
+for more information visit https://github.com/yahoo/panoptes-stream
 
 `
 
