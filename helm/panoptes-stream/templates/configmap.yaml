@@ -1,4 +1,5 @@
 # panoptes global configuration when values.configuration set to consul.
+{{- if eq .Values.configuration "consul" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -10,13 +11,13 @@ data:
   global.json: |-
     {
       "status": {
-        "addr": ":{{ .Values.statusPort}}"
+        "addr": ":8081"
       },
       "discovery": {
        "service": "{{ .Values.serviceDiscovery}}",
        "config": {
         "namespace": "{{ .Values.namespace}}",  
-        "healthcheckURL": "http://{{`{{ .POD_IP}}`}}:{{ .Values.statusPort}}/healthcheck"
+        "healthcheckURL": "http://{{`{{ .POD_IP}}`}}:8081/healthcheck"
        }
       },
       "shards" : {
@@ -25,9 +26,10 @@ data:
         "InitializingShards" : {{ .Values.initializingShards}}
       }
     }
-
+{{- end }}
 ---
 # panoptes configuration when values.configuration set to k8s
+{{- if eq .Values.configuration "k8s" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -43,4 +45,4 @@ data:
       enabled: true
       numberOfNodes: {{ .Values.replicaCount}}
       InitializingShards: {{ .Values.initializingShards}}  
-
+{{- end }}

@@ -74,9 +74,11 @@ spec:
               port: 8081
               scheme: HTTP 
             timeoutSeconds: 2
+          {{- if eq .Values.configuration "k8s" }}  
           volumeMounts:
             - name: panoptes-config
               mountPath: /etc/panoptes
+          {{- end }}    
           ports:
             - containerPort: 8081    
 
