@@ -5,6 +5,8 @@ package yaml
 
 import (
 	"io/ioutil"
+	"os"
+	"syscall"
 	"testing"
 	"time"
 
@@ -72,6 +74,7 @@ func TestYaml(t *testing.T) {
 	t.Run("Watcher", testWatcher)
 	t.Run("NewYamlFileNotExist", testNewYamlFileNotExist)
 	t.Run("ConfigDevices", testConfigDevices)
+	t.Run("SignalHandler", testSignalHandler)
 }
 
 func testNewYaml(t *testing.T) {
@@ -182,4 +185,33 @@ func testWatcher(t *testing.T) {
 	case <-time.After(time.Second):
 		assert.Fail(t, "context deadline exceeded")
 	}
+}
+
+func testSignalHandler(t *testing.T) {
+	ch := make(chan struct{}, 1)
+	cfg := config.NewMockConfig()
+	y := &yaml{
+		informer: ch,
+		logger:   cfg.Logger(),
+	}
+
+	go y.signalHandler()
+	time.Sleep(time.Second)
+
+	proc, err := os.FindProcess(os.Getpid())
+	assert.NoError(t, err)
+	proc.Signal(syscall.SIGHUP)
+
+	select {
+	case <-ch:
+	case <-time.After(time.Second):
+		assert.Fail(t, "time exceeded")
+	}
+
+	proc.Signal(syscall.SIGHUP)
+	time.Sleep(100 * time.Millisecond)
+	proc.Signal(syscall.SIGHUP)
+
+	time.Sleep(time.Second)
+	assert.Contains(t, cfg.LogOutput.String(), "dropped")
 }

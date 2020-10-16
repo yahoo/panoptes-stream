@@ -6,10 +6,12 @@ package etcd
 import (
 	"context"
 	"os"
+	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yahoo/panoptes-stream/config"
 	"go.etcd.io/etcd/clientv3"
 	"go.etcd.io/etcd/integration"
 )
@@ -86,4 +88,33 @@ func TestEmptyConfig(t *testing.T) {
 
 	_, err := New("-")
 	assert.Error(t, err)
+}
+
+func TestSignalHandler(t *testing.T) {
+	ch := make(chan struct{}, 1)
+	cfg := config.NewMockConfig()
+	e := &etcd{
+		informer: ch,
+		logger:   cfg.Logger(),
+	}
+
+	go e.signalHandler()
+	time.Sleep(time.Second)
+
+	proc, err := os.FindProcess(os.Getpid())
+	assert.NoError(t, err)
+	proc.Signal(syscall.SIGHUP)
+
+	select {
+	case <-ch:
+	case <-time.After(time.Second):
+		assert.Fail(t, "time exceeded")
+	}
+
+	proc.Signal(syscall.SIGHUP)
+	time.Sleep(100 * time.Millisecond)
+	proc.Signal(syscall.SIGHUP)
+
+	time.Sleep(time.Second)
+	assert.Contains(t, cfg.LogOutput.String(), "dropped")
 }
