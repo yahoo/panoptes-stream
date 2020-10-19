@@ -195,3 +195,13 @@ func TestGetValue(t *testing.T) {
 		assert.Equal(t, row.v, v)
 	}
 }
+
+func TestMergeLabel(t *testing.T) {
+	kl := map[string]string{"a": "b", "c": "q"}
+	pl := map[string]string{"a": "b"}
+	exp := map[string]string{"/prefix/a": "b", "a": "b", "c": "q"}
+
+	m := MergeLabels(kl, pl, "/prefix")
+
+	assert.Equal(t, exp, m)
+}

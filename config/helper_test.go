@@ -5,6 +5,7 @@ package config
 
 import (
 	"encoding/json"
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -84,4 +85,17 @@ func TestSetDefault(t *testing.T) {
 
 	SetDefault(&vv, 6)
 	assert.Equal(t, uint(5), vv)
+}
+
+func TestGetEnvInt(t *testing.T) {
+	v := GetEnvInt("NOT_EXIST", 10)
+	assert.Equal(t, 10, v)
+
+	os.Setenv("PANOPTES_TEST", "11")
+	v = GetEnvInt("TEST", 10)
+	assert.Equal(t, 11, v)
+
+	os.Setenv("PANOPTES_TEST", "CHAR")
+	v = GetEnvInt("TEST", 10)
+	assert.Equal(t, 10, v)
 }
