@@ -131,3 +131,31 @@ func testSignalHandler(t *testing.T) {
 	time.Sleep(time.Second)
 	assert.Contains(t, cfg.LogOutput.String(), "dropped")
 }
+
+func TestMix(t *testing.T) {
+	ch := make(chan struct{}, 1)
+	c := &consul{
+		devices:   []config.Device{},
+		databases: []config.Database{},
+		producers: []config.Producer{},
+		sensors:   []config.Sensor{},
+		global:    &config.Global{BufferSize: 5},
+		informer:  ch,
+		logger:    config.GetDefaultLogger(),
+	}
+
+	g := c.Global()
+	assert.Equal(t, 5, g.BufferSize)
+	i := c.Informer()
+	assert.NotNil(t, i)
+	d := c.Databases()
+	assert.NotNil(t, d)
+	p := c.Producers()
+	assert.NotNil(t, p)
+	s := c.Sensors()
+	assert.NotNil(t, s)
+	dd := c.Devices()
+	assert.NotNil(t, dd)
+	l := c.Logger()
+	assert.NotNil(t, l)
+}

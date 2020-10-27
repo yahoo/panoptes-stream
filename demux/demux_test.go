@@ -25,7 +25,8 @@ func TestStartErrors(t *testing.T) {
 		inChan  = make(telemetry.ExtDSChan, 2)
 	)
 
-	ctx := context.Background()
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 
 	d := New(ctx, cfg, nil, nil, inChan)
 	d.chMap.add("test", outChan)
@@ -128,6 +129,52 @@ func TestRegisteration(t *testing.T) {
 
 	// already unsubscribe
 	d.unsubscribeDatabase(db)
+}
+
+func TestUpdateDatabase(t *testing.T) {
+	cfg.MDatabases = []config.Database{}
+	d := &Demux{
+		cfg: cfg,
+		databases: map[string]config.Database{
+			"influx01": {
+				Name:    "influx01",
+				Service: "influxdb",
+			},
+		},
+	}
+	_, cancel := context.WithCancel(context.Background())
+	d.register = map[string]context.CancelFunc{
+		"influx01": cancel,
+	}
+	ch := make(telemetry.ExtDSChan)
+	d.chMap = &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)}
+	d.chMap.add("influx01", ch)
+
+	d.updateDatabase()
+	assert.Equal(t, 0, len(d.databases))
+}
+
+func TestUpdateProducer(t *testing.T) {
+	cfg.MProducers = []config.Producer{}
+	d := &Demux{
+		cfg: cfg,
+		producers: map[string]config.Producer{
+			"kafka01": {
+				Name:    "kafka01",
+				Service: "kafka",
+			},
+		},
+	}
+	_, cancel := context.WithCancel(context.Background())
+	d.register = map[string]context.CancelFunc{
+		"kafka01": cancel,
+	}
+	ch := make(telemetry.ExtDSChan)
+	d.chMap = &extDSChanMap{eDSChan: make(map[string]telemetry.ExtDSChan)}
+	d.chMap.add("kafka01", ch)
+
+	d.updateProducer()
+	assert.Equal(t, 0, len(d.producers))
 }
 
 func BenchmarkDemux(b *testing.B) {
