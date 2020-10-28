@@ -3,7 +3,32 @@
 
 package mock
 
-import telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+import (
+	"net"
+
+	telemetry "github.com/cisco-ie/nx-telemetry-proto/telemetry_bis"
+	"github.com/golang/protobuf/proto"
+	"google.golang.org/grpc"
+
+	mdtGRPC "github.com/yahoo/panoptes-stream/telemetry/cisco/proto"
+)
+
+type MDTServer struct{}
+
+func (m *MDTServer) CreateSubs(sub *mdtGRPC.SubscribeRequest, g mdtGRPC.GRPCConfigOper_CreateSubsServer) error {
+	tm := MDTInterface()
+	b, err := proto.Marshal(tm)
+	if err != nil {
+		return err
+	}
+
+	subResp := &mdtGRPC.SubscribeResponse{
+		RequestId: 1,
+		Data:      b,
+	}
+
+	return g.Send(subResp)
+}
 
 // MDTInterface returns Cisco MDT mock data included two recursive sets
 func MDTInterface() *telemetry.Telemetry {
@@ -182,4 +207,21 @@ func MDTInterfaceII() *telemetry.Telemetry {
 		},
 		CollectionEndTime: 1597098791977,
 	}
+}
+
+// StartMDTServer starts MDT mock server
+func StartMDTServer(addr string) (net.Listener, error) {
+	ln, err := net.Listen("tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	gServer := grpc.NewServer()
+	mockServer := &MDTServer{}
+	mdtGRPC.RegisterGRPCConfigOperServer(gServer, mockServer)
+
+	go func() {
+		gServer.Serve(ln)
+	}()
+
+	return ln, nil
 }
