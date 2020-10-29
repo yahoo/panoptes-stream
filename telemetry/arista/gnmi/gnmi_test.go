@@ -8,6 +8,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
 	"google.golang.org/grpc"
 
@@ -169,4 +170,67 @@ func BenchmarkDS(b *testing.B) {
 		g.datastore(buf, n, n.Update[0], "127.0.0.1")
 		<-g.outChan
 	}
+}
+
+func TestGetValue(t *testing.T) {
+	i := &gnmi.TypedValue{Value: &gnmi.TypedValue_IntVal{IntVal: 505}}
+	v, err := getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, int64(505), v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_BoolVal{BoolVal: true}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, true, v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_BytesVal{BytesVal: []byte("test")}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, []byte("test"), v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_StringVal{StringVal: "test"}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, "test", v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_UintVal{UintVal: 5}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, uint64(5), v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_FloatVal{FloatVal: 5.5}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, float32(5.5), v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_AsciiVal{AsciiVal: "test"}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, "test", v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_DecimalVal{DecimalVal: &gnmi.Decimal64{Digits: 5, Precision: 1}}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, 0.5, v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_JsonIetfVal{JsonIetfVal: []byte("{\"test\":5}")}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{"test": float64(5)}, v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_JsonVal{JsonVal: []byte("{\"test\":5}")}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, map[string]interface{}{"test": float64(5)}, v)
+
+	i = &gnmi.TypedValue{Value: &gnmi.TypedValue_LeaflistVal{LeaflistVal: &gnmi.ScalarArray{Element: []*gnmi.TypedValue{
+		{Value: &gnmi.TypedValue_UintVal{UintVal: 5}},
+	}}}}
+	v, err = getValue(i)
+	assert.NoError(t, err)
+	assert.Equal(t, []interface{}([]interface{}{uint64(5)}), v)
+}
+
+func TestVersion(t *testing.T) {
+	assert.Equal(t, gnmiVersion, Version())
 }

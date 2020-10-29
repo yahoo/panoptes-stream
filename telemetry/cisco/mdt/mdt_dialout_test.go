@@ -118,3 +118,19 @@ func TestDialoutHandler(t *testing.T) {
 
 	}
 }
+
+func TestUpdate(t *testing.T) {
+	cfg := config.NewMockConfig()
+	m := &Dialout{
+		cfg:        cfg,
+		pathOutput: map[string]string{"Sub3": "console::stdout"},
+	}
+
+	cfg.MSensors = []config.Sensor{
+		{Subscription: "Sub2", Output: "test"},
+	}
+
+	m.Update()
+
+	assert.Equal(t, map[string]string{"Sub2": "test"}, m.pathOutput)
+}

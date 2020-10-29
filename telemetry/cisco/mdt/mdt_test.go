@@ -87,7 +87,7 @@ func TestHandler(t *testing.T) {
 func TestMDTMockServer(t *testing.T) {
 	var (
 		addr    = "127.0.0.1:50555"
-		ch      = make(telemetry.ExtDSChan, 20)
+		ch      = make(telemetry.ExtDSChan, 3)
 		sensors []*config.Sensor
 	)
 
@@ -117,7 +117,7 @@ func TestMDTMockServer(t *testing.T) {
 
 	time.Sleep(time.Second)
 
-	for i := 0; i < 4; i++ {
+	for i := 0; i < 3; i++ {
 		select {
 		case r := <-ch:
 			assert.Equal(t, "test", r.Output)
@@ -136,6 +136,10 @@ func TestGetKeyValue(t *testing.T) {
 	u := mdtTelemetry.TelemetryField_Uint32Value{Uint32Value: 5}
 	r = getKeyValue(&mdtTelemetry.TelemetryField{ValueByType: &u})
 	assert.Equal(t, uint32(5), r)
+
+	uu := mdtTelemetry.TelemetryField_Uint64Value{Uint64Value: 5}
+	r = getKeyValue(&mdtTelemetry.TelemetryField{ValueByType: &uu})
+	assert.Equal(t, uint64(5), r)
 
 	b := mdtTelemetry.TelemetryField_BytesValue{BytesValue: []byte("test")}
 	r = getKeyValue(&mdtTelemetry.TelemetryField{ValueByType: &b})
@@ -160,4 +164,46 @@ func TestGetKeyValue(t *testing.T) {
 	ff := mdtTelemetry.TelemetryField_FloatValue{FloatValue: 5.5}
 	r = getKeyValue(&mdtTelemetry.TelemetryField{ValueByType: &ff})
 	assert.Equal(t, float32(5.5), r)
+}
+
+func TestGetLabelValue(t *testing.T) {
+	f := mdtTelemetry.TelemetryField_StringValue{StringValue: "GigabitEthernet0/0/0/0"}
+	r := getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &f})
+	assert.Equal(t, "GigabitEthernet0/0/0/0", r)
+
+	u := mdtTelemetry.TelemetryField_Uint32Value{Uint32Value: 5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &u})
+	assert.Equal(t, "5", r)
+
+	uu := mdtTelemetry.TelemetryField_Uint64Value{Uint64Value: 5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &uu})
+	assert.Equal(t, "5", r)
+
+	b := mdtTelemetry.TelemetryField_BytesValue{BytesValue: []byte("test")}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &b})
+	assert.Equal(t, "test", r)
+
+	bo := mdtTelemetry.TelemetryField_BoolValue{BoolValue: true}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &bo})
+	assert.Equal(t, "true", r)
+
+	s := mdtTelemetry.TelemetryField_Sint32Value{Sint32Value: 5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &s})
+	assert.Equal(t, "5", r)
+
+	ss := mdtTelemetry.TelemetryField_Sint64Value{Sint64Value: 5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &ss})
+	assert.Equal(t, "5", r)
+
+	d := mdtTelemetry.TelemetryField_DoubleValue{DoubleValue: 5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &d})
+	assert.Equal(t, "5", r)
+
+	ff := mdtTelemetry.TelemetryField_FloatValue{FloatValue: 5.5}
+	r = getLabelValue(&mdtTelemetry.TelemetryField{ValueByType: &ff})
+	assert.Equal(t, "5.5", r)
+}
+
+func TestVersion(t *testing.T) {
+	assert.Equal(t, mdtVersion, Version())
 }
