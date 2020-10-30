@@ -93,7 +93,7 @@ func TestMetricsFunc(t *testing.T) {
 	mg.Dec()
 	assert.Equal(t, uint64(0), mg.Value)
 	mg.Set(55)
-	assert.Equal(t, uint64(55), mg.Value)
+	assert.Equal(t, uint64(55), mg.Get())
 
 	mc := NewCounter("test_errors_total", "")
 	assert.Equal(t, uint64(0), mc.Value)
@@ -102,7 +102,7 @@ func TestMetricsFunc(t *testing.T) {
 	mc.Dec()
 	assert.Equal(t, uint64(1), mc.Value)
 	mc.Set(5)
-	assert.Equal(t, uint64(1), mc.Value)
+	assert.Equal(t, uint64(1), mc.Get())
 
 }
 

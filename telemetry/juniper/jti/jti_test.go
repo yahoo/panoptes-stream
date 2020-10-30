@@ -287,6 +287,21 @@ func TestGetLabelsNumber(t *testing.T) {
 	assert.Equal(t, expectedLabels, labels)
 }
 
+func TestGetValue(t *testing.T) {
+	kv := jpb.KeyValue{Value: &jpb.KeyValue_DoubleValue{DoubleValue: 5.5}}
+	assert.Equal(t, 5.5, getValue(&kv))
+	kv = jpb.KeyValue{Value: &jpb.KeyValue_IntValue{IntValue: 5}}
+	assert.Equal(t, int64(5), getValue(&kv))
+	kv = jpb.KeyValue{Value: &jpb.KeyValue_SintValue{SintValue: 5}}
+	assert.Equal(t, int64(5), getValue(&kv))
+	kv = jpb.KeyValue{Value: &jpb.KeyValue_BytesValue{BytesValue: []byte("test")}}
+	assert.Equal(t, []byte("test"), getValue(&kv))
+}
+
+func TestVersion(t *testing.T) {
+	assert.Equal(t, jtiVersion, Version())
+}
+
 func BenchmarkGetLabels(b *testing.B) {
 	r := new(bytes.Buffer)
 	w := new(bytes.Buffer)
