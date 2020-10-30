@@ -13,8 +13,10 @@ import (
 	mdtGRPC "github.com/yahoo/panoptes-stream/telemetry/cisco/proto"
 )
 
+// MDTServer represents MDT mock server.
 type MDTServer struct{}
 
+// CreateSubs returns MDT gRPC response.
 func (m *MDTServer) CreateSubs(sub *mdtGRPC.SubscribeRequest, g mdtGRPC.GRPCConfigOper_CreateSubsServer) error {
 	tm := MDTInterface()
 	b, err := proto.Marshal(tm)
@@ -30,7 +32,7 @@ func (m *MDTServer) CreateSubs(sub *mdtGRPC.SubscribeRequest, g mdtGRPC.GRPCConf
 	return g.Send(subResp)
 }
 
-// MDTInterface returns Cisco MDT mock data included two recursive sets
+// MDTInterface returns Cisco MDT mock data included two recursive sets.
 func MDTInterface() *telemetry.Telemetry {
 	return &telemetry.Telemetry{
 		NodeId:              &telemetry.Telemetry_NodeIdStr{NodeIdStr: "ios"},
@@ -120,7 +122,7 @@ func MDTInterface() *telemetry.Telemetry {
 
 }
 
-// MDTInterfaceII returns Cisco MDT mock data included two recursive sets (interface counters)
+// MDTInterfaceII returns Cisco MDT mock data included two recursive sets (interface counters).
 func MDTInterfaceII() *telemetry.Telemetry {
 	return &telemetry.Telemetry{
 		NodeId:              &telemetry.Telemetry_NodeIdStr{NodeIdStr: "ios"},
@@ -209,7 +211,7 @@ func MDTInterfaceII() *telemetry.Telemetry {
 	}
 }
 
-// StartMDTServer starts MDT mock server
+// StartMDTServer starts MDT mock server.
 func StartMDTServer(addr string) (net.Listener, error) {
 	ln, err := net.Listen("tcp", addr)
 	if err != nil {
