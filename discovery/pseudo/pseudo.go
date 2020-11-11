@@ -213,6 +213,14 @@ func (p *pseudo) checkHTTP(instance *instance) {
 		retry     int
 	)
 
+	defer func(pStatus string) {
+		if pStatus != instance.status && instance.status == "failure" {
+			p.logger.Warn("pseudo", zap.String("event", "health check failure"), zap.String("node", instance.address))
+		} else if pStatus != instance.status && instance.status == "passing" {
+			p.logger.Info("pseudo", zap.String("event", "health check passing"), zap.String("node", instance.address))
+		}
+	}(instance.status)
+
 	if p.tlsConfig.Enabled {
 		tlsConfig, err = secret.GetTLSConfig(p.tlsConfig)
 		p.logger.Fatal("discovery.panoptes", zap.Error(err))

@@ -95,6 +95,7 @@ func (s *Shards) Start() {
 				continue
 			}
 			s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
+			s.logger.Info("shards", zap.String("event", "shards has been changed"))
 			s.updateRequest <- struct{}{}
 		}
 
