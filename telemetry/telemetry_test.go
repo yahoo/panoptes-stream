@@ -106,12 +106,16 @@ func TestSubscribe(t *testing.T) {
 	telemetryRegistrar.Register("test.gnmi", "0.0.0", testGnmiNew)
 
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	tm := New(ctx, cfg, telemetryRegistrar, outChan)
 
 	device := config.Device{
 		DeviceConfig: config.DeviceConfig{
 			Host: "127.0.0.1",
 			Port: 50055,
+			DeviceOptions: config.DeviceOptions{
+				Timeout: 1,
+			},
 		},
 		Sensors: map[string][]*config.Sensor{
 			"test.gnmi": {},
@@ -122,14 +126,12 @@ func TestSubscribe(t *testing.T) {
 	time.Sleep(time.Second * 1)
 	assert.Len(t, tm.devices, 1)
 	assert.Equal(t, device, tm.devices["127.0.0.1"])
-	assert.Contains(t, cfg.LogOutput.String(), "connect")
-	assert.Equal(t, uint64(1), tm.metrics["gRPConnCurrent"].Get())
+	assert.Equal(t, uint64(0), tm.metrics["gRPConnCurrent"].Get())
 
-	cancel()
-	time.Sleep(time.Second * 1)
+	time.Sleep(time.Second * 2)
 
 	assert.Equal(t, uint64(0), tm.metrics["gRPConnCurrent"].Get())
-	assert.Contains(t, cfg.LogOutput.String(), "terminate")
+	assert.Contains(t, cfg.LogOutput.String(), "context deadline exceeded")
 }
 
 func TestSetCredentials(t *testing.T) {
@@ -170,4 +172,18 @@ func TestSetCredentials(t *testing.T) {
 	device.Username = "__vault::/secrets/path"
 	_, err = tm.setCredentials(context.Background(), device)
 	assert.Error(t, err)
+}
+
+func TestGetTimeout(t *testing.T) {
+	cfg := config.NewMockConfig()
+	tm := &Telemetry{cfg: cfg}
+	to := tm.getTimeout(2)
+	assert.Equal(t, 2*time.Second, to)
+
+	to = tm.getTimeout(0)
+	assert.Equal(t, 5*time.Second, to)
+
+	cfg.MGlobal.DeviceOptions.Timeout = 4
+	to = tm.getTimeout(0)
+	assert.Equal(t, 4*time.Second, to)
 }

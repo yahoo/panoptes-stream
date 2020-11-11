@@ -138,9 +138,13 @@ func (t *Telemetry) subscribe(device config.Device) {
 			backoff := backoff{}
 
 			for {
+				backoffDuration := backoff.next()
+
 				select {
-				case <-time.After(time.Second * backoff.next()):
-					t.metrics["reconnectsTotal"].Inc()
+				case <-time.After(time.Second * backoffDuration):
+					if backoffDuration != 0 {
+						t.metrics["reconnectsTotal"].Inc()
+					}
 
 				case <-ctx.Done():
 					return
@@ -158,9 +162,11 @@ func (t *Telemetry) subscribe(device config.Device) {
 					continue
 				}
 
-				conn, err := grpc.DialContext(ctx, addr, opts...)
+				gCtx, cancel := context.WithTimeout(ctx, t.getTimeout(device.Timeout))
+				conn, err := grpc.DialContext(gCtx, addr, opts...)
+				cancel()
 				if err != nil {
-					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.Error(err))
+					t.logger.Error("subscribe", zap.String("event", "grpc.dial"), zap.String("host", device.Host), zap.Error(err))
 					continue
 				}
 
@@ -300,6 +306,7 @@ func (t *Telemetry) getDialOpts(device *config.Device, service string) ([]grpc.D
 	var opts []grpc.DialOption
 
 	opts = append(opts, grpc.WithUserAgent("Panoptes"))
+	opts = append(opts, grpc.WithBlock())
 
 	if device.TLSConfig.Enabled {
 		creds, err := t.getTransportCredentials(device)
@@ -383,6 +390,18 @@ func (t *Telemetry) setCredentials(ctx context.Context, device *config.Device) (
 	ctx = metadata.AppendToOutgoingContext(ctx, "username", username, "password", password)
 
 	return ctx, nil
+}
+
+func (t *Telemetry) getTimeout(timeout int) time.Duration {
+	gTimeout := t.cfg.Global().DeviceOptions.Timeout
+
+	if timeout != 0 {
+		return time.Second * time.Duration(timeout)
+	} else if gTimeout != 0 {
+		return time.Second * time.Duration(gTimeout)
+	}
+
+	return time.Second * 5
 }
 
 func (m mdtCredentials) GetRequestMetadata(ctx context.Context, uri ...string) (map[string]string, error) {

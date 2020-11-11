@@ -23,6 +23,7 @@ devices:
   - host: "192.168.59.3"
     password: admin
     port: 50051
+    timeout: 5
     sensors:
       - sensor1
 sensors:
@@ -94,6 +95,7 @@ func testNewYaml(t *testing.T) {
 		assert.Equal(t, "192.168.59.3", cfg.Devices()[0].Host)
 		assert.Equal(t, 50051, cfg.Devices()[0].Port)
 		assert.Equal(t, "admin", cfg.Devices()[0].Password)
+		assert.Equal(t, 5, cfg.Devices()[0].Timeout)
 		assert.Contains(t, cfg.Devices()[0].Sensors, "juniper.gnmi")
 		assert.Len(t, cfg.Devices()[0].Sensors["juniper.gnmi"], 1)
 		assert.Equal(t, "console::stdout", cfg.Devices()[0].Sensors["juniper.gnmi"][0].Output)

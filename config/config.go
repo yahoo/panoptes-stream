@@ -3,7 +3,9 @@
 
 package config
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+)
 
 // Config represets panoptes configuration
 type Config interface {
@@ -22,7 +24,7 @@ type DeviceConfig struct {
 	Host string
 	Port int
 
-	GroupID int
+	GroupID int `yaml:"groupID"`
 
 	DeviceOptions `yaml:",inline"`
 }
@@ -113,6 +115,7 @@ type DeviceOptions struct {
 	TLSConfig TLSConfig `yaml:"tlsConfig"`
 	Username  string
 	Password  string
+	Timeout   int
 }
 
 // Dialout represents dialout service
