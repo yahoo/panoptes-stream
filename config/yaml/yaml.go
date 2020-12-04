@@ -128,6 +128,7 @@ func (y *yaml) Logger() *zap.Logger {
 func (y *yaml) getDevices(cfg *yamlConfig) []config.Device {
 	sensors := make(map[string]*config.Sensor)
 	for name, sensor := range cfg.Sensors {
+		config.SensorSanitization(&sensor)
 		if err := config.SensorValidation(sensor); err != nil {
 			y.logger.Error("yaml", zap.Error(err))
 			continue
@@ -218,6 +219,7 @@ func (y *yaml) getDatabases(d map[string]config.Database) []config.Database {
 func (y *yaml) getSensors(s map[string]config.Sensor) []config.Sensor {
 	var sensors []config.Sensor
 	for _, sensor := range s {
+		config.SensorSanitization(&sensor)
 		if err := config.SensorValidation(sensor); err != nil {
 			continue
 		}

@@ -152,10 +152,13 @@ func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[s
 }
 
 // getPathWOKey returns path string without key/value.
-func getPathWithoutKey(path string) string {
+func getPathWithoutKey(path string) (string, error) {
 	var buf bytes.Buffer
 
-	p, _ := ygot.StringToPath(path, ygot.StructuredPath, ygot.StringSlicePath)
+	p, err := ygot.StringToPath(path, ygot.StructuredPath, ygot.StringSlicePath)
+	if err != nil {
+		return "", err
+	}
 
 	for _, elem := range p.Elem {
 		if len(elem.Name) > 0 {
@@ -165,14 +168,14 @@ func getPathWithoutKey(path string) string {
 
 	}
 
-	return buf.String()
+	return buf.String(), nil
 }
 
-// getSensors splits sensors if they have overlap with each other.
+// getSensorsPerService splits sensors if they have overlap with each other.
 // arista.gnmi and cisco.gnmi can not distinguish between overlapped
 // sensors once the metrics returned from devices (multi path use case)
 // the only way to distinguish them is split them to different grpc connections.
-func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.Sensor {
+func getSensorsPerService(deviceSensors map[string][]*config.Sensor) (map[string][]*config.Sensor, error) {
 	var (
 		i        = 0
 		rSensors = map[string][]*config.Sensor{}
@@ -183,7 +186,11 @@ func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.
 
 		if service == "arista.gnmi" || service == "cisco.gnmi" {
 			for _, sensor := range sensors {
-				ps := getPathWithoutKey(sensor.Path)
+				ps, err := getPathWithoutKey(sensor.Path)
+				if err != nil {
+					return nil, err
+				}
+
 				if _, ok := paths[ps]; ok {
 					serviceName := fmt.Sprintf("%s::ext%d", service, i)
 					rSensors[serviceName] = append(rSensors[serviceName], sensor)
@@ -199,7 +206,7 @@ func getSensors(deviceSensors map[string][]*config.Sensor) map[string][]*config.
 		}
 	}
 
-	return rSensors
+	return rSensors, nil
 }
 
 // GetDefaultOutput returns default output if available.

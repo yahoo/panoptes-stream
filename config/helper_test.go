@@ -63,6 +63,12 @@ func TestSensorValidation(t *testing.T) {
 	assert.Error(t, err)
 }
 
+func TestSensorSanitization(t *testing.T) {
+	s := Sensor{Path: "/interfaces//interface/state"}
+	SensorSanitization(&s)
+	assert.Equal(t, "/interfaces/interface/state", s.Path)
+}
+
 func TestSetDefaultGlobal(t *testing.T) {
 	g := Global{}
 	SetDefaultGlobal(&g)

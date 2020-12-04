@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"path"
 	"strconv"
 
 	"go.uber.org/zap"
@@ -105,6 +106,11 @@ func SensorValidation(sensor Sensor) error {
 	}
 
 	return nil
+}
+
+// SensorSanitization sanitizes configured sensor.
+func SensorSanitization(sensor *Sensor) {
+	sensor.Path = path.Clean(sensor.Path)
 }
 
 // SetDefaultGlobal set global default value.

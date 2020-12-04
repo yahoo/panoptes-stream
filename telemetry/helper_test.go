@@ -52,7 +52,7 @@ func TestGetSensors(t *testing.T) {
 	}
 
 	deviceSensors := map[string][]*config.Sensor{"arista.gnmi": s}
-	newSensors := getSensors(deviceSensors)
+	newSensors, _ := getSensorsPerService(deviceSensors)
 	assert.Len(t, newSensors, 3)
 	assert.Len(t, newSensors["arista.gnmi"], 2)
 	assert.Contains(t, newSensors, "arista.gnmi::ext0")

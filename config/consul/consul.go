@@ -171,7 +171,7 @@ func (c *consul) getRemoteConfig() error {
 			if err := json.Unmarshal(p.Value, &sensor); err != nil {
 				return err
 			}
-
+			config.SensorSanitization(&sensor)
 			if err := config.SensorValidation(sensor); err != nil {
 				c.logger.Error("consul", zap.Error(err))
 				continue
