@@ -26,6 +26,8 @@ type Shards struct {
 	telemetry          *telemetry.Telemetry
 	numberOfNodes      int
 	initializingShards int
+	minimumShards      int
+	isSuspension       bool
 	updateRequest      chan struct{}
 }
 
@@ -39,6 +41,7 @@ func NewShards(cfg config.Config, telemetry *telemetry.Telemetry, discovery disc
 		logger:             cfg.Logger(),
 		numberOfNodes:      cfg.Global().Shards.NumberOfNodes,
 		initializingShards: cfg.Global().Shards.InitializingShards,
+		minimumShards:      cfg.Global().Shards.MinimumShards,
 	}
 
 }
@@ -72,7 +75,8 @@ func (s *Shards) Start() {
 			return
 		}
 
-		if !isAllNodesRunning(s.numberOfNodes, instances) {
+		if !isAllNodesRunning(s.numberOfNodes, instances) &&
+			availableShards(instances) >= s.minimumShards {
 			s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
 			s.updateRequest <- struct{}{}
 		}
@@ -94,8 +98,18 @@ func (s *Shards) Start() {
 				s.logger.Error("discovery shards failed", zap.Error(err))
 				continue
 			}
-			s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
-			s.logger.Info("shards", zap.String("event", "shards has been changed"))
+
+			if availableShards(instances) >= s.minimumShards {
+				s.logger.Info("shards", zap.String("event", "shards has been changed"))
+				s.telemetry.AddFilterOpt("extraShard", extraShards(s.id, s.numberOfNodes, instances))
+
+				if s.isSuspension {
+					s.unsuspend()
+				}
+			} else {
+				s.suspend()
+			}
+
 			s.updateRequest <- struct{}{}
 		}
 
@@ -234,4 +248,34 @@ func (s *Shards) waitForInitialShards() {
 
 		s.logger.Info("shards", zap.String("event", "wait.initial"), zap.Int("available.nodes", currentAvailableNodes))
 	}
+}
+
+func (s *Shards) suspend() {
+	s.telemetry.DelFilterOpt("extraShard")
+	s.telemetry.DelFilterOpt("mainShard")
+	s.isSuspension = true
+
+	s.logger.Warn("shards", zap.String("event", "node has been suspended"))
+}
+
+func (s *Shards) unsuspend() {
+	s.telemetry.AddFilterOpt("mainShard", mainShard(s.id, s.numberOfNodes))
+	s.isSuspension = false
+
+	s.logger.Warn("shards", zap.String("event", "node has been unsuspended"))
+}
+
+func availableShards(instances []discovery.Instance) int {
+	var available int
+
+	for _, instance := range instances {
+		if _, ok := instance.Meta["shards_enabled"]; !ok {
+			continue
+		}
+		if instance.Status == "passing" {
+			available++
+		}
+	}
+
+	return available
 }

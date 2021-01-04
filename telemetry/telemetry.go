@@ -213,10 +213,6 @@ func (t *Telemetry) Start() {
 // Update updates device subscriptions
 // subscribe/unsubscribe/resubscribe devices
 func (t *Telemetry) Update() {
-	if t.cfg.Global().Shards.Enabled && len(t.deviceFilterOpts.getOpts()) < 1 {
-		return
-	}
-
 	newDevices := make(map[string]config.Device)
 	delta := new(delta)
 
@@ -256,10 +252,6 @@ func (t *Telemetry) Update() {
 // GetDevices returns devices based on the filters (if exist)
 func (t *Telemetry) GetDevices() []config.Device {
 	var filteredDevcies []config.Device
-
-	if len(t.deviceFilterOpts.getOpts()) < 1 {
-		return t.cfg.Devices()
-	}
 
 	for _, device := range t.cfg.Devices() {
 		for _, filter := range t.deviceFilterOpts.getOpts() {

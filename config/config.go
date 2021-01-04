@@ -101,6 +101,7 @@ type Status struct {
 type Shards struct {
 	Enabled            bool
 	InitializingShards int `yaml:"initializingShards"`
+	MinimumShards      int `yaml:"minimumShards"`
 	NumberOfNodes      int `yaml:"numberOfNodes"`
 }
 

@@ -62,7 +62,7 @@ func TestGetDevices(t *testing.T) {
 	}
 
 	devicesActual := tm.GetDevices()
-	assert.Equal(t, devices, devicesActual)
+	assert.Len(t, devicesActual, 0)
 
 	tm = Telemetry{
 		cfg:              cfg,
@@ -79,9 +79,7 @@ func TestGetDevices(t *testing.T) {
 
 	tm.DelFilterOpt("filter1")
 	devicesActual = tm.GetDevices()
-	assert.Len(t, devicesActual, 2)
-	assert.Equal(t, devices, devicesActual)
-
+	assert.Len(t, devicesActual, 0)
 }
 
 type testGnmi struct{}

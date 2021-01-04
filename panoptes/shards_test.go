@@ -4,12 +4,14 @@
 package main
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
 	"github.com/yahoo/panoptes-stream/config"
 	"github.com/yahoo/panoptes-stream/discovery"
+	"github.com/yahoo/panoptes-stream/telemetry"
 )
 
 func TestShardThreeNodes(t *testing.T) {
@@ -139,4 +141,56 @@ func TestShard3(t *testing.T) {
 		assert.Equal(t, r[i], f(d), "extraShards failed")
 	}
 
+}
+
+func TestAvailableShards(t *testing.T) {
+	instances := []discovery.Instance{}
+	instances = append(instances, discovery.Instance{
+		ID:     "0",
+		Status: "passing",
+		Meta:   map[string]string{"shards_enabled": "true"},
+	})
+	instances = append(instances, discovery.Instance{
+		ID:     "1",
+		Status: "critical",
+		Meta:   map[string]string{"shards_enabled": "true"},
+	})
+	instances = append(instances, discovery.Instance{
+		ID:     "2",
+		Status: "passing",
+		Meta:   map[string]string{"shards_enabled": "true"},
+	})
+
+	n := availableShards(instances)
+	assert.Equal(t, 2, n)
+}
+
+func TestSuspendUnSuspend(t *testing.T) {
+	//cfg := config.NewMockConfig()
+	devices := []config.Device{
+		{
+			DeviceConfig: config.DeviceConfig{
+				Host: "foo02.bar",
+			},
+		},
+	}
+	cfg := &config.MockConfig{MDevices: devices}
+
+	tm := telemetry.New(context.Background(), cfg, nil, nil)
+
+	s := Shards{
+		cfg:           cfg,
+		id:            "0",
+		logger:        cfg.Logger(),
+		telemetry:     tm,
+		numberOfNodes: 2,
+		updateRequest: make(chan struct{}),
+	}
+
+	s.unsuspend()
+	d := s.telemetry.GetDevices()
+	assert.Len(t, d, 1)
+	s.suspend()
+	d = s.telemetry.GetDevices()
+	assert.Len(t, d, 0)
 }
