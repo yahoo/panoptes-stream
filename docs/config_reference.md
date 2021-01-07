@@ -103,6 +103,7 @@
 |-------------------|---------------------------------------------------|
 |enabled            |enable shard (sharding of network devices)         |
 |initializingShards |minimum number of available nodes required to start|
+|minimumShards      |minimum number of available nodes required         |
 |numberOfNodes      |maximum number of nodes                            |
 
 #### Discovery
