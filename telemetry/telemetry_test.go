@@ -55,20 +55,19 @@ func TestGetDevices(t *testing.T) {
 		},
 	}
 
-	cfg := &config.MockConfig{MDevices: devices}
+	cfg := &config.MockConfig{
+		MDevices: devices,
+		MGlobal:  &config.Global{},
+	}
 	tm := Telemetry{
 		cfg:              cfg,
 		deviceFilterOpts: DeviceFilterOpts{filterOpts: make(map[string]DeviceFilterOpt)},
 	}
 
 	devicesActual := tm.GetDevices()
-	assert.Len(t, devicesActual, 0)
+	assert.Len(t, devicesActual, 2)
 
-	tm = Telemetry{
-		cfg:              cfg,
-		deviceFilterOpts: DeviceFilterOpts{filterOpts: make(map[string]DeviceFilterOpt)},
-	}
-
+	cfg.MGlobal.Shards.Enabled = true
 	tm.AddFilterOpt("filter1", func(d config.Device) bool {
 		return d.Host != "core1.lax"
 	})
