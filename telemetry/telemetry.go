@@ -253,6 +253,10 @@ func (t *Telemetry) Update() {
 func (t *Telemetry) GetDevices() []config.Device {
 	var filteredDevcies []config.Device
 
+	if !t.cfg.Global().Shards.Enabled {
+		return t.cfg.Devices()
+	}
+
 	for _, device := range t.cfg.Devices() {
 		for _, filter := range t.deviceFilterOpts.getOpts() {
 			if filter(device) {
