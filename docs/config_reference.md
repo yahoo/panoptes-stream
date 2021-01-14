@@ -47,6 +47,7 @@
 | keepAlive         |keep-alive period for an active network|
 | compression       |compression codec to compress Kafka messages (gzip, snappy, lz4)|
 | tlsConfig         |[TLS configuration](/docs/config_tls.md) parameters.|
+| protobuf          |enable protobuf serialization                       |
 
 
 ##### NSQ
