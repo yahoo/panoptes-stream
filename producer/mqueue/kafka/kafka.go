@@ -6,20 +6,27 @@ package kafka
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"strings"
 	"time"
 
+	"github.com/golang/protobuf/ptypes"
+	"github.com/golang/protobuf/ptypes/wrappers"
 	"github.com/kelseyhightower/envconfig"
 	"github.com/segmentio/kafka-go"
 	"github.com/segmentio/kafka-go/gzip"
 	"github.com/segmentio/kafka-go/lz4"
 	"github.com/segmentio/kafka-go/snappy"
 	"go.uber.org/zap"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/anypb"
 
 	"github.com/yahoo/panoptes-stream/config"
 	"github.com/yahoo/panoptes-stream/producer"
 	"github.com/yahoo/panoptes-stream/secret"
 	"github.com/yahoo/panoptes-stream/telemetry"
+
+	pb "github.com/yahoo/panoptes-stream/producer/proto"
 )
 
 type kafkaConfig struct {
@@ -32,6 +39,7 @@ type kafkaConfig struct {
 	KeepAlive     int
 	IOTimeout     int
 	Compression   string
+	Protobuf      bool
 
 	TLSConfig config.TLSConfig
 }
@@ -106,6 +114,7 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 	var (
 		batch = make([]kafka.Message, 0, config.BatchSize)
 		flush = false
+		err   error
 	)
 
 	flushTicker := time.NewTicker(time.Second * time.Duration(config.BatchTimeout))
@@ -122,7 +131,14 @@ func (k *Kafka) start(config *kafkaConfig, ch chan telemetry.DataStore, topic st
 	for {
 		select {
 		case v := <-ch:
-			b, err := json.Marshal(v)
+			var b []byte
+
+			if config.Protobuf {
+				b, err = pbMarshal(v)
+			} else {
+				b, err = json.Marshal(v)
+			}
+
 			if err != nil {
 				k.logger.Error("kafka", zap.Error(err))
 				continue
@@ -227,4 +243,62 @@ func (k *Kafka) getWriterConfig(config *kafkaConfig, topic string) (kafka.Writer
 	err = cfg.Validate()
 
 	return cfg, err
+}
+
+func pbMarshal(v telemetry.DataStore) ([]byte, error) {
+	var (
+		anypb *anypb.Any
+		err   error
+	)
+
+	pbMsg := pb.Panoptes{
+		Prefix:    v["prefix"].(string),
+		Labels:    v["labels"].(map[string]string),
+		SystemId:  v["system_id"].(string),
+		Key:       v["key"].(string),
+		Timestamp: v["timestamp"].(int64),
+	}
+
+	switch v["value"].(type) {
+	case string:
+		anypb, err = ptypes.MarshalAny(&wrappers.StringValue{
+			Value: v["value"].(string)})
+	case int:
+		anypb, err = ptypes.MarshalAny(&wrappers.Int64Value{
+			Value: int64(v["value"].(int))})
+	case int32:
+		anypb, err = ptypes.MarshalAny(&wrappers.Int32Value{
+			Value: v["value"].(int32)})
+	case int64:
+		anypb, err = ptypes.MarshalAny(&wrappers.Int64Value{
+			Value: v["value"].(int64)})
+	case uint:
+		anypb, err = ptypes.MarshalAny(&wrappers.UInt64Value{
+			Value: uint64(v["value"].(uint))})
+	case uint32:
+		anypb, err = ptypes.MarshalAny(&wrappers.UInt32Value{
+			Value: v["value"].(uint32)})
+	case uint64:
+		anypb, err = ptypes.MarshalAny(&wrappers.UInt64Value{
+			Value: v["value"].(uint64)})
+	case bool:
+		anypb, err = ptypes.MarshalAny(&wrappers.BoolValue{
+			Value: v["value"].(bool)})
+	case []byte:
+		anypb, err = ptypes.MarshalAny(&wrappers.BytesValue{
+			Value: v["value"].([]byte)})
+
+	default:
+		return nil, errors.New("unknown type")
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	pbMsg.Value = anypb
+
+	b, err := proto.Marshal(&pbMsg)
+
+	return b, err
 }
