@@ -7,7 +7,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"math/rand"
 	"net"
 	"reflect"
 	"strconv"
@@ -61,39 +60,33 @@ type mdtCredentials struct {
 }
 
 type backoff struct {
-	d    time.Duration
-	last time.Time
+	duration time.Duration
+	last     time.Time
 }
 
-func (b *backoff) reset() {
-	rand.Seed(time.Now().UnixNano())
-
-	b.last = time.Now()
-	b.d = time.Duration(20 + rand.Intn(30))
-}
-
+// Next waits for a specific backoff time
 func (b *backoff) next() time.Duration {
-	// first call - bypass backoff
-	if b.d == 0 {
+	if b.duration == 0 {
 		b.reset()
 		return 0
 	}
 
-	// reset back off
-	if time.Since(b.last).Seconds() > float64(30*60) {
+	if time.Since(b.last).Minutes() > 30 {
 		b.reset()
-		return b.d
+		return b.duration
 	}
 
-	// limit backoff
-	if time.Since(b.last).Seconds() < float64(5*60) {
-		if b.d < time.Duration(5*60) {
-			b.d += b.d * 50 / 100
-			b.last = time.Now()
-		}
+	if b.duration.Minutes() < 2 {
+		b.duration += b.duration * 15 / 100
+		b.last = time.Now()
 	}
 
-	return b.d
+	return b.duration
+}
+
+func (b *backoff) reset() {
+	b.last = time.Now()
+	b.duration = 2 * time.Second
 }
 
 // New creates a new telemetry
@@ -146,7 +139,7 @@ func (t *Telemetry) subscribe(device config.Device) {
 				backoffDuration := backoff.next()
 
 				select {
-				case <-time.After(time.Second * backoffDuration):
+				case <-time.After(backoffDuration):
 					if backoffDuration != 0 {
 						t.metrics["reconnectsTotal"].Inc()
 					}
