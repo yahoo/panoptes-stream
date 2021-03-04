@@ -269,6 +269,16 @@ func TestGetLabelsMultiKeys(t *testing.T) {
 	assert.Equal(t, expectedLabels, labels)
 }
 
+func TestGetLabelsDuplicateKey(t *testing.T) {
+	path := `/components/component[name='Routing Engine0']/properties/property[name='cpu-utilization-idle']/`
+	r := new(bytes.Buffer)
+	w := new(bytes.Buffer)
+	labels, _ := getLabels(r, w, path)
+
+	assert.Equal(t, "Routing Engine0", labels["name"])
+	assert.Equal(t, "cpu-utilization-idle", labels["_name"])
+}
+
 func TestGetLabelsWOKeys(t *testing.T) {
 	r := new(bytes.Buffer)
 	w := new(bytes.Buffer)
