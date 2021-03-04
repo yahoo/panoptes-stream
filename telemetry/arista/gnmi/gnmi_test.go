@@ -97,7 +97,7 @@ func TestAristaBGPSimplePath(t *testing.T) {
 	assert.Equal(t, "default", resp.DS["labels"].(map[string]string)["name"])
 	assert.Equal(t, "BGP", resp.DS["labels"].(map[string]string)["identifier"])
 	assert.Equal(t, "IPV6_UNICAST", resp.DS["labels"].(map[string]string)["afi-safi-name"])
-	assert.Equal(t, "BGP", resp.DS["labels"].(map[string]string)["/protocols/protocol/name"])
+	assert.Equal(t, "BGP", resp.DS["labels"].(map[string]string)["_name"])
 	assert.Equal(t, "protocols/protocol/bgp/global/afi-safis/afi-safi/config/afi-safi-name", resp.DS["key"].(string))
 	assert.Equal(t, "openconfig-bgp-types:IPV6_UNICAST", resp.DS["value"].(string))
 	assert.Equal(t, "console::stdout", resp.Output)

@@ -214,7 +214,7 @@ func (j *JTI) datastore(rBuf, wBuf *bytes.Buffer, data *jpb.OpenConfigData, outp
 		}
 
 		keyLabels, key := getLabels(rBuf, wBuf, v.Key)
-		labels = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
+		labels = telemetry.MergeLabels(keyLabels, prefixLabels)
 
 		ds = telemetry.DataStore{
 			"prefix":    prefix,
@@ -298,10 +298,18 @@ func getLabels(r, w *bytes.Buffer, path string) (map[string]string, string) {
 		if len(key) > 0 && len(value) > 0 {
 			if value[0] == '\'' && len(value) > 2 {
 				// string
-				labels[key[:len(key)-1]] = value[1 : len(value)-2]
+				if _, ok := labels[key[:len(key)-1]]; ok {
+					labels["_"+key[:len(key)-1]] = value[1 : len(value)-2]
+				} else {
+					labels[key[:len(key)-1]] = value[1 : len(value)-2]
+				}
 			} else {
 				// number
-				labels[key[:len(key)-1]] = value[:len(value)-1]
+				if _, ok := labels[key[:len(key)-1]]; ok {
+					labels["_"+key[:len(key)-1]] = value[:len(value)-1]
+				} else {
+					labels[key[:len(key)-1]] = value[:len(value)-1]
+				}
 			}
 		}
 	}

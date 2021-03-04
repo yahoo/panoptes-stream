@@ -136,11 +136,11 @@ func getLeafList(elems []*gpb.TypedValue) (interface{}, error) {
 }
 
 // MergeLabels merges key labels with prefix labels.
-func MergeLabels(keyLabels, prefixLabels map[string]string, prefix string) map[string]string {
+func MergeLabels(keyLabels, prefixLabels map[string]string) map[string]string {
 	if len(keyLabels) > 0 {
 		for k, v := range prefixLabels {
 			if _, ok := keyLabels[k]; ok {
-				keyLabels[prefix+"/"+k] = v
+				keyLabels["_"+k] = v
 			} else {
 				keyLabels[k] = v
 			}

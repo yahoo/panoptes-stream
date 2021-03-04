@@ -166,7 +166,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, systemID string
 			continue
 		}
 
-		labels = telemetry.MergeLabels(keyLabels, prefixLabels, prefix)
+		labels = telemetry.MergeLabels(keyLabels, prefixLabels)
 
 		dataStore := telemetry.DataStore{
 			"prefix":    prefix,

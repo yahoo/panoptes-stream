@@ -156,7 +156,7 @@ func TestJunipeDuplicateLabel(t *testing.T) {
 
 	select {
 	case resp := <-ch:
-		assert.Equal(t, map[string]string{"/interfaces/interface/name": "lo0", "name": "fake"}, resp.DS["labels"])
+		assert.Equal(t, map[string]string{"_name": "lo0", "name": "fake"}, resp.DS["labels"])
 	case <-ctx.Done():
 		assert.Fail(t, "context deadline exceeded")
 	}

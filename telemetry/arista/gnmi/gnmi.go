@@ -172,7 +172,7 @@ func (g *GNMI) datastore(buf *bytes.Buffer, n *gpb.Notification, update *gpb.Upd
 			// labels
 			for key, value := range elem.Key {
 				if _, ok := labels[key]; ok {
-					labels[buf.String()+"/"+key] = value
+					labels["_"+key] = value
 				} else {
 					labels[key] = value
 					if i == 1 {
