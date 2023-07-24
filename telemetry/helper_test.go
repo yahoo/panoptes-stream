@@ -7,7 +7,6 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/openconfig/gnmi/proto/gnmi"
 	gpb "github.com/openconfig/gnmi/proto/gnmi"
 	"github.com/stretchr/testify/assert"
 
@@ -61,8 +60,8 @@ func TestGetSensors(t *testing.T) {
 
 func TestGetKey(t *testing.T) {
 	buf := new(bytes.Buffer)
-	path := &gnmi.Path{
-		Elem: []*gnmi.PathElem{
+	path := &gpb.Path{
+		Elem: []*gpb.PathElem{
 			{Name: "interfaces"},
 			{Name: "interface", Key: map[string]string{"name": "Ethernet1"}},
 			{Name: "state"},
@@ -74,8 +73,8 @@ func TestGetKey(t *testing.T) {
 	assert.Equal(t, "interfaces/interface/state/counters/out-octets", key)
 	assert.Equal(t, map[string]string{"name": "Ethernet1"}, labels)
 
-	path = &gnmi.Path{
-		Elem: []*gnmi.PathElem{
+	path = &gpb.Path{
+		Elem: []*gpb.PathElem{
 			{Name: "interfaces"},
 			{Name: "interface", Key: map[string]string{"name": "Ethernet1"}},
 			{Name: "state", Key: map[string]string{"name": "test"}},
